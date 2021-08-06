@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>detectron2_semantic_pointcloud</name>
+  <name>semantic_recolor_nodelet</name>
   <version>0.0.1</version>
   <description>Package wrapping detectron2-based models in C++</description>
 
