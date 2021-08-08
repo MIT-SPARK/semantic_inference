@@ -6,7 +6,6 @@ import torch.nn as nn
 import torch.onnx as onnx
 
 from mit_semseg.models import ModelBuilder, SegmentationModule
-from mit_semseg.utils import setup_logger
 from mit_semseg.lib.nn import async_copy_to
 from mit_semseg.config import cfg
 
@@ -32,7 +31,7 @@ class ExportableSegmentationModule(SegmentationModule):
         return pred.squeeze(0)
 
 
-def export(segmentation_module, gpu, image_dim):
+def export(segmentation_module, gpu, image_dim, output, opset_version=12):
     segmentation_module.eval()
     image_height, image_width = image_dim
 
@@ -46,13 +45,13 @@ def export(segmentation_module, gpu, image_dim):
         onnx.export(
             segmentation_module,
             fake_img_gpu,
-            "model.onnx",
-            opset_version=12,
+            output,
+            opset_version=opset_version,
         )
         print("Exported")
 
 
-def main(cfg, gpu, image_dim):
+def main(cfg, gpu, image_dim, output):
     torch.cuda.set_device(gpu)
 
     # Network Builders
@@ -74,45 +73,40 @@ def main(cfg, gpu, image_dim):
     segmentation_module = ExportableSegmentationModule(net_encoder, net_decoder, crit)
     segmentation_module.cuda()
 
-    export(segmentation_module, gpu, image_dim)
+    export(segmentation_module, gpu, image_dim, output)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="onnx exporter for mit semseg models")
+    parser.add_argument("config", metavar="FILE", help="path to config file", type=str)
+    parser.add_argument(
+        "weights_dir", metavar="WEIGHTS_DIR", help="path to weights", type=str
+    )
+    parser.add_argument("--weights_checkpoint", "-w", default="epoch_30.pth")
+    parser.add_argument(
+        "--output", "-o", default="model.onnx", help="onnx model output path"
+    )
     parser.add_argument("--height", default=360, help="image input height", type=int)
     parser.add_argument("--width", default=640, help="image input width", type=int)
+    parser.add_argument(
+        "--opset_version", "-v", default=12, help="onnx opset version to use", type=int
+    )
 
-    parser.add_argument(
-        "--cfg",
-        default="config/ade20k-resnet50dilated-ppm_deepsup.yaml",
-        metavar="FILE",
-        help="path to config file",
-        type=str,
-    )
-    parser.add_argument(
-        "opts",
-        help="Modify config options using the command-line",
-        default=None,
-        nargs=argparse.REMAINDER,
-    )
     args = parser.parse_args()
 
-    cfg.merge_from_file(args.cfg)
-    cfg.merge_from_list(args.opts)
-
-    logger = setup_logger(distributed_rank=0)  # TODO
-    logger.info("Loaded configuration file {}".format(args.cfg))
-    logger.info("Running with config:\n{}".format(cfg))
-
+    cfg.merge_from_file(args.config)
     cfg.MODEL.arch_encoder = cfg.MODEL.arch_encoder.lower()
     cfg.MODEL.arch_decoder = cfg.MODEL.arch_decoder.lower()
 
-    # absolute paths of model weights
-    cfg.MODEL.weights_encoder = os.path.join(cfg.DIR, "encoder_" + cfg.TEST.checkpoint)
-    cfg.MODEL.weights_decoder = os.path.join(cfg.DIR, "decoder_" + cfg.TEST.checkpoint)
+    cfg.MODEL.weights_encoder = os.path.join(
+        args.weights_dir, "encoder_{}".format(args.weights_checkpoint)
+    )
+    cfg.MODEL.weights_decoder = os.path.join(
+        args.weights_dir, "decoder_{}".format(args.weights_checkpoint)
+    )
 
     assert os.path.exists(cfg.MODEL.weights_encoder) and os.path.exists(
         cfg.MODEL.weights_decoder
     ), "checkpoint does not exitst!"
 
-    main(cfg, 0, (args.height, args.width))
+    main(cfg, 0, (args.height, args.width), args.output)
