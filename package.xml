@@ -9,6 +9,7 @@
   <license>TODO</license>
 
   <buildtool_depend>catkin</buildtool_depend>
+  <depend>cv_bridge</depend>
 
   <export>
   </export>
