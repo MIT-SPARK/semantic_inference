@@ -5,6 +5,9 @@ import torch
 import torch.nn as nn
 import torch.onnx as onnx
 
+import onnxruntime as ort
+
+
 from mit_semseg.models import ModelBuilder, SegmentationModule
 from mit_semseg.lib.nn import async_copy_to
 from mit_semseg.config import cfg
@@ -49,6 +52,15 @@ def export(segmentation_module, gpu, image_dim, output, opset_version=12):
             opset_version=opset_version,
         )
         print("Exported")
+
+    options = ort.SessionOptions()
+    options.log_severity_level = 0
+    options.inter_op_num_threads = 4
+    options.intra_op_num_threads = 4
+    options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_BASIC
+    options.optimized_model_filepath = output
+
+    ort.InferenceSession(output, sess_options=options)
 
 
 def main(cfg, gpu, image_dim, output):

@@ -1,0 +1,24 @@
+<launch>
+
+    <arg name="model_name" default="hrnetv2_360_640_v12"/>
+    <arg name="model_path" value="$(find semantic_recolor_nodelet)/models/$(arg model_name).onnx"/>
+    <arg name="engine_path" value="$(find semantic_recolor_nodelet)/engines/$(arg model_name).trt"/>
+    <arg name="filename" default="ADE_val_00001519.jpg"/>
+
+    <arg name="debug" default="false"/>
+    <arg name="launch-prefix" value="gdb --args" if="$(arg debug)"/>
+    <arg name="launch-prefix" value="" unless="$(arg debug)"/>
+
+    <node pkg="semantic_recolor_nodelet" type="semantic_recolor_nodelet" name="test_inference"
+          output="screen"
+          launch-prefix="$(arg launch-prefix)"
+          required="true">
+        <param name="model_path" value="$(arg model_path)"/>
+        <param name="engine_path" value="$(arg engine_path)"/>
+        <param name="image_width" value="640"/>
+        <param name="image_height" value="360"/>
+        <param name="input_file" value="/home/ubuntu/$(arg filename)"/>
+        <param name="output_file" value="/home/ubuntu/tensorrt_test.png"/>
+    </node>
+
+</launch>

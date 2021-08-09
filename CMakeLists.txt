@@ -21,7 +21,7 @@ catkin_package(
 
 add_executable(${PROJECT_NAME} src/segmenter.cpp)
 target_link_libraries(
-  ${PROJECT_NAME} ${catkin_LIBRARIES} nvinfer ${CUDA_LIBRARIES} ${OpenCV_LIBRARIES}
+  ${PROJECT_NAME} ${catkin_LIBRARIES} nvinfer nvonnxparser nvinfer_plugin ${CUDA_LIBRARIES} ${OpenCV_LIBRARIES}
 )
 target_include_directories(
   ${PROJECT_NAME} PRIVATE ${catkin_INCLUDE_DIRS} ${CUDA_INCLUDE_DIRS}
