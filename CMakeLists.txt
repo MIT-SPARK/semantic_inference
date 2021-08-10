@@ -21,9 +21,33 @@ catkin_package(
 
 add_executable(${PROJECT_NAME} src/segmenter.cpp)
 target_link_libraries(
-  ${PROJECT_NAME} ${catkin_LIBRARIES} nvinfer nvonnxparser nvinfer_plugin ${CUDA_LIBRARIES} ${OpenCV_LIBRARIES}
+  ${PROJECT_NAME}
+  ${catkin_LIBRARIES}
+  nvinfer
+  nvonnxparser
+  nvinfer_plugin
+  ${CUDA_LIBRARIES}
+  ${OpenCV_LIBRARIES}
 )
 target_include_directories(
   ${PROJECT_NAME} PRIVATE ${catkin_INCLUDE_DIRS} ${CUDA_INCLUDE_DIRS}
                           ${OpenCV_INCLUDE_DIRS}
+)
+
+find_library(
+  ORT_RUNTIME libonnxruntime.so "/home/ubuntu/packages/onnx_runtime/runtimes/linux-x64/native"
+)
+find_library(
+  ORT_CUDA_PROVIDER onnxruntime_providers_cuda
+  "/home/ubuntu/packages/onnx_runtime/runtimes/linux-x64/native"
+)
+
+add_executable(${PROJECT_NAME}_ort src/ort_segmenter.cpp)
+target_link_libraries(
+  ${PROJECT_NAME}_ort ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${ORT_RUNTIME}
+  ${ORT_CUDA_PROVIDER}
+)
+target_include_directories(
+  ${PROJECT_NAME}_ort PRIVATE ${catkin_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS}
+                              "/home/ubuntu/packages/onnx_runtime/build/native/include"
 )

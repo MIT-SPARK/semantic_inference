@@ -315,6 +315,11 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  double min_value = 0.0;
+  double max_value = 0.0;
+  cv::minMaxLoc(img_float, &min_value, &max_value);
+  ROS_INFO_STREAM("Min: " << min_value << " Max class: " << max_value);
+
   ROS_INFO("Loading model");
   Logger logger(Severity::kINFO);
   std::unique_ptr<TrtRuntime> trt_runtime(nvinfer1::createInferRuntime(logger));
