@@ -49,7 +49,6 @@ void outputDebugImg(const TestConfig &config, const cv::Mat &classes) {
       float *pixel = new_image_hls.ptr<float>(r, c);
       double ratio =
           static_cast<double>(classes.at<int32_t>(r, c) - min_class) / class_diff;
-      ROS_INFO_STREAM("Ratio: " << ratio);
       pixel[0] = ratio * 360.0;
       pixel[1] = config.luminance;
       pixel[2] = config.saturation;

@@ -7,7 +7,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_compile_options(-Wall -Wextra)
 
-# TODO(nathan) compile options
 find_package(catkin REQUIRED roscpp)
 find_package(OpenCV REQUIRED)
 find_package(CUDA REQUIRED)
@@ -32,23 +31,4 @@ target_link_libraries(
 target_include_directories(
   ${PROJECT_NAME} PRIVATE include ${catkin_INCLUDE_DIRS} ${CUDA_INCLUDE_DIRS}
                           ${OpenCV_INCLUDE_DIRS}
-)
-
-find_library(
-  ORT_RUNTIME libonnxruntime.so
-  "/home/ubuntu/packages/onnx_runtime/runtimes/linux-x64/native"
-)
-find_library(
-  ORT_CUDA_PROVIDER onnxruntime_providers_cuda
-  "/home/ubuntu/packages/onnx_runtime/runtimes/linux-x64/native"
-)
-
-add_executable(${PROJECT_NAME}_ort src/ort_segmenter.cpp src/utilities.cpp)
-target_link_libraries(
-  ${PROJECT_NAME}_ort ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${ORT_RUNTIME}
-  ${ORT_CUDA_PROVIDER}
-)
-target_include_directories(
-  ${PROJECT_NAME}_ort PRIVATE include ${catkin_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS}
-                              "/home/ubuntu/packages/onnx_runtime/build/native/include"
 )
