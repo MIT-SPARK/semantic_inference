@@ -1,5 +1,6 @@
 <library path="lib/libsemantic_recolor_nodelet">
-    <class name="semantic_recolor/nodelet" type="semantic_recolor::Nodelet" base_class_type="nodelet::Nodelet">
+    <class name="semantic_recolor/segmentation" type="semantic_recolor::SegmentationNodelet"
+           base_class_type="nodelet::Nodelet">
         <description>
             nodelet to run semantic segmentation
         </description>

@@ -42,15 +42,16 @@ class SemanticColorConfig {
 
   explicit SemanticColorConfig(const ros::NodeHandle &nh);
 
-  void fillColor(int32_t class_id, uint8_t *pixel, size_t pixel_size = 3) const;
+  void fillColor(int32_t class_id, uint8_t *pixel, size_t pixel_size = 3);
 
   private:
   bool initialized_;
   std::map<int32_t, std::vector<uint8_t>> color_map_;
   std::vector<uint8_t> default_color_;
+  std::set<int32_t> seen_unknown_labels_;
 };
 
-void fillSemanticImage(const SemanticColorConfig &config,
+void fillSemanticImage(SemanticColorConfig &config,
                        const cv::Mat &classes,
                        cv::Mat &output);
 

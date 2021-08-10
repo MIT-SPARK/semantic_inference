@@ -25,6 +25,12 @@ SegmentationConfig readSegmenterConfig(const ros::NodeHandle &nh) {
 
 SemanticColorConfig::SemanticColorConfig() : initialized_(false) {}
 
+std::vector<uint8_t> convertToRGB8(const std::vector<double> &color) {
+  return {static_cast<uint8_t>(std::floor(color[0] * 255)),
+          static_cast<uint8_t>(std::floor(color[1] * 255)),
+          static_cast<uint8_t>(std::floor(color[2] * 255))};
+}
+
 SemanticColorConfig::SemanticColorConfig(const ros::NodeHandle &nh) {
   std::vector<int> classes;
   if (!nh.getParam("classes", classes)) {
@@ -52,9 +58,7 @@ SemanticColorConfig::SemanticColorConfig(const ros::NodeHandle &nh) {
       throw std::runtime_error("missing semantic color config param");
     }
 
-    std::vector<uint8_t> actual_color{static_cast<uint8_t>(color[0] * 255),
-                                      static_cast<uint8_t>(color[1] * 255),
-                                      static_cast<uint8_t>(color[2] * 255)};
+    std::vector<uint8_t> actual_color = convertToRGB8(color);
     for (const auto &label : labels) {
       color_map_[label] = actual_color;
     }
@@ -71,14 +75,13 @@ SemanticColorConfig::SemanticColorConfig(const ros::NodeHandle &nh) {
     throw std::runtime_error("invalid semantic color config param");
   }
 
-  default_color_[0] = static_cast<uint8_t>(default_color[0] * 255);
-  default_color_[1] = static_cast<uint8_t>(default_color[1] * 255);
-  default_color_[2] = static_cast<uint8_t>(default_color[2] * 255);
+  default_color_ = convertToRGB8(default_color);
+  initialized_ = true;
 }
 
 void SemanticColorConfig::fillColor(int32_t class_id,
                                     uint8_t *pixel,
-                                    size_t pixel_size) const {
+                                    size_t pixel_size) {
   if (!initialized_) {
     ROS_FATAL("SemanticColorConfig not initialized");
     throw std::runtime_error("uninitialized color config");
@@ -88,29 +91,33 @@ void SemanticColorConfig::fillColor(int32_t class_id,
     const auto &color = color_map_.at(class_id);
     std::memcpy(pixel, color.data(), pixel_size);
   } else {
-    ROS_ERROR_STREAM_ONCE("Encounterer unhandled class id: " << class_id);
+    if (!seen_unknown_labels_.count(class_id)) {
+      ROS_ERROR_STREAM("Encountered unhandled class id: " << class_id);
+      seen_unknown_labels_.insert(class_id);
+    }
     std::memcpy(pixel, default_color_.data(), pixel_size);
   }
 }
 
-void fillSemanticImage(const SemanticColorConfig &config,
+void fillSemanticImage(SemanticColorConfig &config,
                        const cv::Mat &classes,
                        cv::Mat &output) {
   cv::Mat resized_classes;
-  if (classes.rows == output.rows || classes.cols == output.cols) {
-    resized_classes = classes;
-  } else {
+  classes.convertTo(resized_classes, CV_8UC1);
+  if (classes.rows != output.rows || classes.cols != output.cols) {
     // interpolating class labels doesn't make sense
-    cv::resize(classes,
+    cv::resize(resized_classes,
                resized_classes,
                cv::Size(output.cols, output.rows),
+               0.0f,
+               0.0f,
                cv::INTER_NEAREST);
   }
 
   for (int r = 0; r < resized_classes.rows; ++r) {
     for (int c = 0; c < resized_classes.cols; ++c) {
       uint8_t *pixel = output.ptr<uint8_t>(r, c);
-      const auto class_id = classes.at<int32_t>(r, c);
+      const auto class_id = resized_classes.at<uint8_t>(r, c);
       config.fillColor(class_id, pixel);
     }
   }
@@ -176,6 +183,9 @@ void fillNetworkImage(const SegmentationConfig &cfg,
   if (input.cols == cfg.width && input.rows == cfg.height) {
     img = input;
   } else {
+    ROS_DEBUG_STREAM("Resizing from " << input.cols << " x " << input.rows << " x "
+                                      << input.channels() << " to " << cfg.width
+                                      << " x " << cfg.height << " x 3");
     cv::resize(input, img, cv::Size(cfg.width, cfg.height));
   }
 

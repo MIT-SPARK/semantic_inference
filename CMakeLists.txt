@@ -38,7 +38,7 @@ target_include_directories(
 
 add_library(
   ${PROJECT_NAME}_nodelet
-  src/nodelet.cpp
+  src/segmentation_nodelet.cpp
 )
 target_include_directories(
   ${PROJECT_NAME}_nodelet PUBLIC include ${catkin_INCLUDE_DIRS}

@@ -1,9 +1,11 @@
 <launch>
+    <arg name="input_file"/>
+    <arg name="output_file"/>
 
     <arg name="model_name" default="hrnetv2_360_640_v12"/>
     <arg name="model_path" value="$(find semantic_recolor)/models/$(arg model_name).onnx"/>
     <arg name="engine_path" value="$(find semantic_recolor)/engines/$(arg model_name).trt"/>
-    <arg name="filename" default="ADE_val_00001519.jpg"/>
+    <arg name="segmenter_config" value="$(find semantic_recolor)/config/$(arg model_name).yaml"/>
 
     <arg name="debug" default="false"/>
     <arg name="launch-prefix" value="gdb --args" if="$(arg debug)"/>
@@ -13,12 +15,11 @@
           output="screen"
           launch-prefix="$(arg launch-prefix)"
           required="true">
+        <rosparam file="$(arg segmenter_config)" command="load"/>
         <param name="model_file" value="$(arg model_path)"/>
         <param name="engine_file" value="$(arg engine_path)"/>
-        <param name="width" value="640"/>
-        <param name="height" value="360"/>
-        <param name="input_file" value="/home/ubuntu/$(arg filename)"/>
-        <param name="output_file" value="/home/ubuntu/tensorrt_test.png"/>
+        <param name="input_file" value="$(arg input_file)"/>
+        <param name="output_file" value="$(arg output_file)"/>
     </node>
 
 </launch>

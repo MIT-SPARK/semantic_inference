@@ -7,7 +7,7 @@
 
 namespace semantic_recolor {
 
-class Nodelet : public nodelet::Nodelet {
+class SegmentationNodelet : public nodelet::Nodelet {
  public:
   virtual void onInit() override;
 
