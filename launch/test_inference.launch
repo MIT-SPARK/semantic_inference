@@ -9,21 +9,14 @@
     <arg name="launch-prefix" value="gdb --args" if="$(arg debug)"/>
     <arg name="launch-prefix" value="" unless="$(arg debug)"/>
 
-    <arg name="use_ort" default="true"/>
-    <arg name="node_type" value="semantic_recolor_nodelet_ort" if="$(arg use_ort)"/>
-    <arg name="node_type" value="semantic_recolor_nodelet" unless="$(arg use_ort)"/>
-
-    <!--<arg name="ort_path" value="/home/ubuntu/packages/onnx_runtime/runtimes/linux-x64/native"/>-->
-    <!--<env name="LD_LIBRARY_PATH" value="$(arg ort_path):$(env LD_LIBRARY_PATH)"/>-->
-
-    <node pkg="semantic_recolor_nodelet" type="$(arg node_type)" name="test_inference"
+    <node pkg="semantic_recolor_nodelet" type="demo_segmenter" name="test_inference"
           output="screen"
           launch-prefix="$(arg launch-prefix)"
           required="true">
-        <param name="model_path" value="$(arg model_path)"/>
-        <param name="engine_path" value="$(arg engine_path)"/>
-        <param name="image_width" value="640"/>
-        <param name="image_height" value="360"/>
+        <param name="model_file" value="$(arg model_path)"/>
+        <param name="engine_file" value="$(arg engine_path)"/>
+        <param name="width" value="640"/>
+        <param name="height" value="360"/>
         <param name="input_file" value="/home/ubuntu/$(arg filename)"/>
         <param name="output_file" value="/home/ubuntu/tensorrt_test.png"/>
     </node>

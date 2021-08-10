@@ -13,12 +13,15 @@ find_package(CUDA REQUIRED)
 
 catkin_package(
   CATKIN_DEPENDS roscpp
-  DEPENDS
-  INCLUDE_DIRS include
+  DEPENDS OpenCV
+  INCLUDE_DIRS
   LIBRARIES
 )
 
-add_executable(${PROJECT_NAME} src/segmenter.cpp src/utilities.cpp)
+add_library(
+  ${PROJECT_NAME}
+  src/segmenter.cpp src/utilities.cpp
+)
 target_link_libraries(
   ${PROJECT_NAME}
   ${catkin_LIBRARIES}
@@ -29,6 +32,9 @@ target_link_libraries(
   ${OpenCV_LIBRARIES}
 )
 target_include_directories(
-  ${PROJECT_NAME} PRIVATE include ${catkin_INCLUDE_DIRS} ${CUDA_INCLUDE_DIRS}
-                          ${OpenCV_INCLUDE_DIRS}
+  ${PROJECT_NAME} PUBLIC include ${catkin_INCLUDE_DIRS} ${CUDA_INCLUDE_DIRS}
+                         ${OpenCV_INCLUDE_DIRS}
 )
+
+add_executable(demo_segmenter src/demo_segmenter.cpp)
+target_link_libraries(demo_segmenter ${PROJECT_NAME})

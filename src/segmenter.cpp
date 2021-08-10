@@ -1,10 +1,7 @@
+#include "semantic_recolor_nodelet/segmenter.h"
 #include "semantic_recolor_nodelet/utilities.h"
 
-#include <ros/ros.h>
-
-#include <NvInfer.h>
 #include <NvOnnxParser.h>
-#include <cuda_runtime_api.h>
 
 #include <opencv2/imgproc.hpp>
 #include <opencv2/opencv.hpp>
@@ -13,49 +10,10 @@
 #include <memory>
 #include <numeric>
 
-using nvinfer1::ILogger;
-using Severity = nvinfer1::ILogger::Severity;
-using TrtRuntime = nvinfer1::IRuntime;
-using TrtEngine = nvinfer1::ICudaEngine;
-using TrtContext = nvinfer1::IExecutionContext;
+namespace semantic_recolor {
+
 using TrtNetworkDef = nvinfer1::INetworkDefinition;
 using nvinfer1::NetworkDefinitionCreationFlag;
-
-using namespace semantic_recolor;
-
-class Logger : public ILogger {
- public:
-  explicit Logger(Severity severity = Severity::kINFO) : min_severity_(severity) {}
-
-  void log(Severity severity, const char *msg) noexcept override {
-    if (severity < min_severity_) {
-      return;
-    }
-
-    switch (severity) {
-      case Severity::kINTERNAL_ERROR:
-        ROS_FATAL_STREAM(msg);
-        break;
-      case Severity::kERROR:
-        ROS_ERROR_STREAM(msg);
-        break;
-      case Severity::kWARNING:
-        ROS_WARN_STREAM(msg);
-        break;
-      case Severity::kINFO:
-        ROS_INFO_STREAM(msg);
-        break;
-      case Severity::kVERBOSE:
-      default:
-        // ROS_INFO_STREAM(msg);
-        ROS_DEBUG_STREAM(msg);
-        break;
-    }
-  }
-
- private:
-  Severity min_severity_;
-};
 
 std::ostream &operator<<(std::ostream &out, const nvinfer1::Dims &dims) {
   out << "[";
@@ -65,37 +23,6 @@ std::ostream &operator<<(std::ostream &out, const nvinfer1::Dims &dims) {
   out << dims.d[dims.nbDims - 1] << "]";
   return out;
 }
-
-template <typename T>
-struct CudaMemoryHolder {
-  explicit CudaMemoryHolder(const nvinfer1::Dims &dims) : dims(dims) {
-    size =
-        std::accumulate(dims.d, dims.d + dims.nbDims, 1, std::multiplies<int64_t>()) *
-        sizeof(T);
-
-    void *raw_memory = nullptr;
-    auto error = cudaMalloc(&raw_memory, size);
-    ROS_INFO_STREAM("allocated " << size << " bytes of memory for " << dims);
-    if (error != cudaSuccess) {
-      ROS_WARN_STREAM("Failed to malloc memory: " << cudaGetErrorString(error));
-      return;
-    }
-
-    memory.reset(reinterpret_cast<T *>(raw_memory));
-  }
-
-  struct Deleter {
-    void operator()(T *object) {
-      if (object != nullptr) {
-        cudaFree(object);
-      }
-    }
-  };
-
-  std::unique_ptr<T, Deleter> memory;
-  size_t size;
-  nvinfer1::Dims dims;
-};
 
 std::unique_ptr<TrtEngine> deserializeEngine(TrtRuntime &runtime,
                                              const std::string &engine_path) {
@@ -131,7 +58,7 @@ std::unique_ptr<TrtEngine> buildEngineFromOnnx(TrtRuntime &runtime,
 
   std::unique_ptr<nvonnxparser::IParser> parser(
       nvonnxparser::createParser(*network, logger));
-  parser->parseFromFile(model_path.c_str(), static_cast<int>(ILogger::Severity::kINFO));
+  parser->parseFromFile(model_path.c_str(), static_cast<int>(Severity::kINFO));
   for (int i = 0; i < parser->getNbErrors(); ++i) {
     ROS_ERROR_STREAM("Parser Error #" << i << ": " << parser->getError(i)->desc());
   }
@@ -159,120 +86,116 @@ std::unique_ptr<TrtEngine> buildEngineFromOnnx(TrtRuntime &runtime,
   return engine;
 }
 
-int main(int argc, char *argv[]) {
-  ros::init(argc, argv, "test_node");
-
-  ros::NodeHandle nh("~");
-  TestConfig config = readTestConfig(nh);
-
-  std::string engine_path;
-  nh.getParam("engine_path", engine_path);
-
-  cv::Mat img = getImage(config);
-
-  ROS_INFO("Loading model");
-  Logger logger(Severity::kINFO);
-  std::unique_ptr<TrtRuntime> trt_runtime(nvinfer1::createInferRuntime(logger));
-  std::unique_ptr<TrtEngine> engine = deserializeEngine(*trt_runtime, engine_path);
-  if (!engine) {
+TrtSegmenter::TrtSegmenter(const SegmentationConfig &config)
+    : config_(config), logger_(Severity::kINFO), initialized_(false) {
+  runtime_.reset(nvinfer1::createInferRuntime(logger_));
+  engine_ = deserializeEngine(*runtime_, config_.engine_file);
+  if (!engine_) {
     ROS_WARN("TRT engine not found! Rebuilding.");
-    engine = buildEngineFromOnnx(*trt_runtime, logger, config.model_path, engine_path);
+    engine_ = buildEngineFromOnnx(
+        *runtime_, logger_, config_.model_file, config_.engine_file);
   }
 
-  if (!engine) {
-    ROS_FATAL_STREAM("Something went horribly wrong!");
-    return 1;
+  if (!engine_) {
+    ROS_FATAL_STREAM("Building engine from onnx failed!");
+    throw std::runtime_error("failed to load or build engine");
   }
 
-  std::unique_ptr<TrtContext> context(engine->createExecutionContext());
-  if (!context) {
+  context_.reset(engine_->createExecutionContext());
+  if (!context_) {
     ROS_FATAL_STREAM("Failed to create execution context");
-    return 1;
+    throw std::runtime_error("failed to set up trt context");
   }
+}
 
-  int32_t n_bindings = engine->getNbBindings();
-  for (int32_t i = 0; i < n_bindings; ++i) {
-    ROS_INFO_STREAM("Binding " << i << ": " << engine->getBindingName(i));
+TrtSegmenter::~TrtSegmenter() {
+  if (initialized_) {
+    cudaStreamDestroy(stream_);
   }
+}
 
-  auto input_idx = engine->getBindingIndex("input.1");
+bool TrtSegmenter::init() {
+  auto input_idx = engine_->getBindingIndex(config_.input_name.c_str());
   if (input_idx == -1) {
-    ROS_FATAL_STREAM("Failed to get input index");
-    return 1;
+    ROS_FATAL_STREAM("Failed to get index for input: " << config_.input_name);
+    return false;
   }
 
-  nvinfer1::Dims4 input_dims{1, 3, config.height, config.width};
-  context->setBindingDimensions(input_idx, input_dims);
-
-  auto output_idx = engine->getBindingIndex("4464");
-  if (output_idx == -1) {
-    ROS_FATAL_STREAM("Failed to get input index");
-    return 1;
-  }
-
-  auto output_dims = context->getBindingDimensions(output_idx);
-
-  if (engine->getBindingDataType(input_idx) != nvinfer1::DataType::kFLOAT) {
+  if (engine_->getBindingDataType(input_idx) != nvinfer1::DataType::kFLOAT) {
     ROS_FATAL_STREAM("Input type doesn't match expected: "
-                     << static_cast<int32_t>(engine->getBindingDataType(input_idx))
+                     << static_cast<int32_t>(engine_->getBindingDataType(input_idx))
                      << " != " << static_cast<int32_t>(nvinfer1::DataType::kFLOAT));
+    return false;
   }
 
-  if (engine->getBindingDataType(output_idx) != nvinfer1::DataType::kINT32) {
+  nvinfer1::Dims4 input_dims{1, 3, config_.height, config_.width};
+  context_->setBindingDimensions(input_idx, input_dims);
+  input_buffer_.reset(input_dims);
+
+  auto output_idx = engine_->getBindingIndex(config_.output_name.c_str());
+  if (output_idx == -1) {
+    ROS_FATAL_STREAM("Failed to get index for output: " << config_.output_name);
+    return false;
+  }
+
+  if (engine_->getBindingDataType(output_idx) != nvinfer1::DataType::kINT32) {
     ROS_FATAL_STREAM("Output type doesn't match expected: "
-                     << static_cast<int32_t>(engine->getBindingDataType(output_idx))
+                     << static_cast<int32_t>(engine_->getBindingDataType(output_idx))
                      << " != " << static_cast<int32_t>(nvinfer1::DataType::kINT32));
+    return false;
   }
 
-  CudaMemoryHolder<float> input(input_dims);
-  CudaMemoryHolder<int32_t> output(output_dims);
+  auto output_dims = context_->getBindingDimensions(output_idx);
+  output_buffer_.reset(output_dims);
 
-  ROS_INFO("Starting Inference");
+  std::vector<int> nn_dims{3, config_.height, config_.width};
+  nn_img_ = cv::Mat(nn_dims, CV_32FC1);
+  classes_ = cv::Mat(config_.height, config_.width, CV_32S);
 
-  cudaStream_t stream;
-  if (cudaStreamCreate(&stream) != cudaSuccess) {
+  if (cudaStreamCreate(&stream_) != cudaSuccess) {
     ROS_FATAL_STREAM("Creating cuda stream failed!");
-    return 1;
+    return false;
   }
 
-  if (cudaMemcpyAsync(
-          input.memory.get(), img.data, input.size, cudaMemcpyHostToDevice, stream) !=
-      cudaSuccess) {
-    ROS_FATAL_STREAM("Failed to copy image to gpu!");
-    return 1;
-  }
+  initialized_ = true;
+  return true;
+}
 
-  void *bindings[] = {input.memory.get(), output.memory.get()};
-  bool status = context->enqueueV2(bindings, stream, nullptr);
-  if (!status) {
-    ROS_FATAL_STREAM("Inference failed!");
-    return 1;
-  }
+bool TrtSegmenter::infer(const cv::Mat &img) {
+  fillNetworkImage(config_, img, nn_img_);
 
-  cudaStreamSynchronize(stream);
-  auto error = cudaGetLastError();
+  // TODO(nathan) we probably should double check that sizes line up
+  auto error = cudaMemcpyAsync(input_buffer_.memory.get(),
+                               nn_img_.data,
+                               input_buffer_.size,
+                               cudaMemcpyHostToDevice,
+                               stream_);
   if (error != cudaSuccess) {
-    ROS_FATAL_STREAM("inference failed! " << cudaGetErrorString(error));
-    return 1;
+    ROS_FATAL_STREAM("copying image to gpu failed: " << cudaGetErrorString(error));
+    return false;
   }
 
-  cv::Mat classes(config.height, config.width, CV_32S);
-  error = cudaMemcpyAsync(classes.data,
-                          output.memory.get(),
-                          classes.step[0] * classes.rows,
+  void *bindings[] = {input_buffer_.memory.get(), output_buffer_.memory.get()};
+  bool status = context_->enqueueV2(bindings, stream_, nullptr);
+  if (!status) {
+    ROS_FATAL_STREAM("initializing inference failed!");
+    return false;
+  }
+
+  error = cudaMemcpyAsync(classes_.data,
+                          output_buffer_.memory.get(),
+                          classes_.step[0] * classes_.rows,
                           cudaMemcpyDeviceToHost,
-                          stream);
+                          stream_);
   if (error != cudaSuccess) {
     ROS_FATAL_STREAM("Copying output failed: " << cudaGetErrorString(error));
-    return 1;
+    return false;
   }
 
-  cudaStreamSynchronize(stream);
-
-  ROS_INFO("Finished inference");
-
-  showStatistics(classes);
-  outputDebugImg(config, classes);
-
-  return 0;
+  cudaStreamSynchronize(stream_);
+  return true;
 }
+
+const cv::Mat &TrtSegmenter::getClasses() const { return classes_; }
+
+}  // namespace semantic_recolor
