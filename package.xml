@@ -10,7 +10,11 @@
 
   <buildtool_depend>catkin</buildtool_depend>
   <depend>roscpp</depend>
+  <depend>nodelet</depend>
+  <depend>cv_bridge</depend>
+  <depend>image_transport</depend>
 
   <export>
+      <nodelet plugin="${prefix}/nodelet_plugins.xml"/>
   </export>
 </package>

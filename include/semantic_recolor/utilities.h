@@ -6,6 +6,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 
 namespace semantic_recolor {
 
@@ -34,6 +35,24 @@ struct DemoConfig {
   int max_classes = 150;
   int num_timing_inferences = 10;
 };
+
+class SemanticColorConfig {
+  public:
+  SemanticColorConfig();
+
+  explicit SemanticColorConfig(const ros::NodeHandle &nh);
+
+  void fillColor(int32_t class_id, uint8_t *pixel, size_t pixel_size = 3) const;
+
+  private:
+  bool initialized_;
+  std::map<int32_t, std::vector<uint8_t>> color_map_;
+  std::vector<uint8_t> default_color_;
+};
+
+void fillSemanticImage(const SemanticColorConfig &config,
+                       const cv::Mat &classes,
+                       cv::Mat &output);
 
 inline size_t getFileSize(std::istream &to_check) {
   to_check.seekg(0, std::istream::end);

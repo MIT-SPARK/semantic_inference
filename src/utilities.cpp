@@ -23,6 +23,99 @@ SegmentationConfig readSegmenterConfig(const ros::NodeHandle &nh) {
   return config;
 }
 
+SemanticColorConfig::SemanticColorConfig() : initialized_(false) {}
+
+SemanticColorConfig::SemanticColorConfig(const ros::NodeHandle &nh) {
+  std::vector<int> classes;
+  if (!nh.getParam("classes", classes)) {
+    ROS_FATAL("failed to find classes parameter");
+    throw std::runtime_error("missing semantic color config param");
+  }
+
+  for (const auto &class_id : classes) {
+    const std::string param_name = "class_info/" + std::to_string(class_id);
+
+    std::vector<double> color;
+    if (!nh.getParam(param_name + "/color", color)) {
+      ROS_FATAL_STREAM("failed to find color for " << param_name);
+      throw std::runtime_error("missing semantic color config param");
+    }
+
+    if (color.size() != 3) {
+      ROS_FATAL_STREAM("invalid color: num elements " << color.size() << " != 3");
+      throw std::runtime_error("invalid semantic color config param");
+    }
+
+    std::vector<int> labels;
+    if (!nh.getParam(param_name + "/labels", labels)) {
+      ROS_FATAL_STREAM("failed to find labels for " << param_name);
+      throw std::runtime_error("missing semantic color config param");
+    }
+
+    std::vector<uint8_t> actual_color{static_cast<uint8_t>(color[0] * 255),
+                                      static_cast<uint8_t>(color[1] * 255),
+                                      static_cast<uint8_t>(color[2] * 255)};
+    for (const auto &label : labels) {
+      color_map_[label] = actual_color;
+    }
+  }
+
+  std::vector<double> default_color;
+  if (!nh.getParam("default_color", default_color)) {
+    default_color_ = std::vector<uint8_t>(3, 0);
+    return;
+  }
+
+  if (default_color.size() != 3) {
+    ROS_FATAL_STREAM("invalid color: num elements " << default_color.size() << " != 3");
+    throw std::runtime_error("invalid semantic color config param");
+  }
+
+  default_color_[0] = static_cast<uint8_t>(default_color[0] * 255);
+  default_color_[1] = static_cast<uint8_t>(default_color[1] * 255);
+  default_color_[2] = static_cast<uint8_t>(default_color[2] * 255);
+}
+
+void SemanticColorConfig::fillColor(int32_t class_id,
+                                    uint8_t *pixel,
+                                    size_t pixel_size) const {
+  if (!initialized_) {
+    ROS_FATAL("SemanticColorConfig not initialized");
+    throw std::runtime_error("uninitialized color config");
+  }
+
+  if (color_map_.count(class_id)) {
+    const auto &color = color_map_.at(class_id);
+    std::memcpy(pixel, color.data(), pixel_size);
+  } else {
+    ROS_ERROR_STREAM_ONCE("Encounterer unhandled class id: " << class_id);
+    std::memcpy(pixel, default_color_.data(), pixel_size);
+  }
+}
+
+void fillSemanticImage(const SemanticColorConfig &config,
+                       const cv::Mat &classes,
+                       cv::Mat &output) {
+  cv::Mat resized_classes;
+  if (classes.rows == output.rows || classes.cols == output.cols) {
+    resized_classes = classes;
+  } else {
+    // interpolating class labels doesn't make sense
+    cv::resize(classes,
+               resized_classes,
+               cv::Size(output.cols, output.rows),
+               cv::INTER_NEAREST);
+  }
+
+  for (int r = 0; r < resized_classes.rows; ++r) {
+    for (int c = 0; c < resized_classes.cols; ++c) {
+      uint8_t *pixel = output.ptr<uint8_t>(r, c);
+      const auto class_id = classes.at<int32_t>(r, c);
+      config.fillColor(class_id, pixel);
+    }
+  }
+}
+
 void outputDemoImage(const DemoConfig &config, const cv::Mat &classes) {
   cv::Mat new_image_hls(classes.rows, classes.cols, CV_32FC3);
   for (int r = 0; r < classes.rows; ++r) {
@@ -80,7 +173,11 @@ void fillNetworkImage(const SegmentationConfig &cfg,
                       const cv::Mat &input,
                       cv::Mat &output) {
   cv::Mat img;
-  cv::resize(input, img, cv::Size(cfg.width, cfg.height));
+  if (input.cols == cfg.width && input.rows == cfg.height) {
+    img = input;
+  } else {
+    cv::resize(input, img, cv::Size(cfg.width, cfg.height));
+  }
 
   for (int row = 0; row < img.rows; ++row) {
     for (int col = 0; col < img.cols; ++col) {

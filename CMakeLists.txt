@@ -7,12 +7,12 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_compile_options(-Wall -Wextra)
 
-find_package(catkin REQUIRED roscpp)
+find_package(catkin REQUIRED roscpp nodelet cv_bridge image_transport)
 find_package(OpenCV REQUIRED)
 find_package(CUDA REQUIRED)
 
 catkin_package(
-  CATKIN_DEPENDS roscpp
+  CATKIN_DEPENDS roscpp nodelet cv_bridge image_transport
   DEPENDS OpenCV
   INCLUDE_DIRS
   LIBRARIES
@@ -35,6 +35,15 @@ target_include_directories(
   ${PROJECT_NAME} PUBLIC include ${catkin_INCLUDE_DIRS} ${CUDA_INCLUDE_DIRS}
                          ${OpenCV_INCLUDE_DIRS}
 )
+
+add_library(
+  ${PROJECT_NAME}_nodelet
+  src/nodelet.cpp
+)
+target_include_directories(
+  ${PROJECT_NAME}_nodelet PUBLIC include ${catkin_INCLUDE_DIRS}
+)
+target_link_libraries(${PROJECT_NAME}_nodelet ${PROJECT_NAME} ${catkin_LIBRARIES})
 
 add_executable(demo_segmentation src/demo_segmentation.cpp)
 target_link_libraries(demo_segmentation ${PROJECT_NAME})
