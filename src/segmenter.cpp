@@ -1,3 +1,5 @@
+#include "semantic_recolor_nodelet/utilities.h"
+
 #include <ros/ros.h>
 
 #include <NvInfer.h>
@@ -18,6 +20,8 @@ using TrtEngine = nvinfer1::ICudaEngine;
 using TrtContext = nvinfer1::IExecutionContext;
 using TrtNetworkDef = nvinfer1::INetworkDefinition;
 using nvinfer1::NetworkDefinitionCreationFlag;
+
+using namespace semantic_recolor;
 
 class Logger : public ILogger {
  public:
@@ -93,107 +97,6 @@ struct CudaMemoryHolder {
   nvinfer1::Dims dims;
 };
 
-size_t getFileSize(std::istream &to_check) {
-  to_check.seekg(0, std::istream::end);
-  size_t size = to_check.tellg();
-  to_check.seekg(0, std::ifstream::beg);
-  return size;
-}
-
-cv::Mat makeDebugImg(const cv::Mat &classes,
-                     double saturation = 0.85,
-                     double luminance = 0.75) {
-  double max_class = 0.0;
-  double min_class = 0.0;
-  cv::minMaxLoc(classes, &min_class, &max_class);
-  ROS_INFO_STREAM("Min class: " << min_class << " Max class: " << max_class);
-
-  if (max_class - min_class == 0.0) {
-    ROS_WARN_STREAM("Min and max class are the same: " << max_class);
-    return cv::Mat::zeros(classes.rows, classes.cols, CV_8UC3);
-  }
-  const double class_diff = max_class - min_class;
-
-  cv::Mat new_image_hls(classes.rows, classes.cols, CV_32FC3);
-  for (int r = 0; r < classes.rows; ++r) {
-    for (int c = 0; c < classes.cols; ++c) {
-      float *pixel = new_image_hls.ptr<float>(r, c);
-      double ratio =
-          static_cast<double>(classes.at<int32_t>(r, c) - min_class) / class_diff;
-      pixel[0] = ratio * 360.0;
-      pixel[1] = luminance;
-      pixel[2] = saturation;
-    }
-  }
-
-  cv::Mat new_image;
-  cv::cvtColor(new_image_hls, new_image, cv::COLOR_HLS2BGR);
-  cv::imshow("new image", new_image);
-  cv::waitKey(0);
-  return new_image;
-}
-
-void showStatistics(const std::vector<int32_t> &data) {
-  std::map<int32_t, size_t> counts;
-  std::vector<int32_t> unique_classes;
-  for (const auto &class_id : data) {
-    if (!counts.count(class_id)) {
-      counts[class_id] = 0;
-      unique_classes.push_back(class_id);
-    }
-
-    counts[class_id]++;
-  }
-
-  std::sort(unique_classes.begin(),
-            unique_classes.end(),
-            [&](const int32_t &lhs, const int32_t &rhs) {
-              return counts[lhs] > counts[rhs];
-            });
-
-  double total = static_cast<double>(data.size());
-  std::stringstream ss;
-  ss << " Class pixel percentages:" << std::endl;
-  for (const int32_t id : unique_classes) {
-    ss << "  - " << id << ": " << static_cast<double>(counts[id]) / total * 100.0 << "%"
-       << std::endl;
-  }
-
-  ROS_INFO_STREAM(ss.str());
-}
-
-void showStatistics(const cv::Mat &classes) {
-  std::map<int32_t, size_t> counts;
-  std::vector<int32_t> unique_classes;
-  for (int r = 0; r < classes.rows; ++r) {
-    for (int c = 0; c < classes.cols; ++c) {
-      int32_t class_id = classes.at<int32_t>(r, c);
-      if (!counts.count(class_id)) {
-        counts[class_id] = 0;
-        unique_classes.push_back(class_id);
-      }
-
-      counts[class_id]++;
-    }
-  }
-
-  double total = static_cast<double>(classes.rows * classes.cols);
-  std::sort(unique_classes.begin(),
-            unique_classes.end(),
-            [&](const int32_t &lhs, const int32_t &rhs) {
-              return counts[lhs] > counts[rhs];
-            });
-
-  std::stringstream ss;
-  ss << " Class pixel percentages:" << std::endl;
-  for (const int32_t id : unique_classes) {
-    ss << "  - " << id << ": " << static_cast<double>(counts[id]) / total * 100.0 << "%"
-       << std::endl;
-  }
-
-  ROS_INFO_STREAM(ss.str());
-}
-
 std::unique_ptr<TrtEngine> deserializeEngine(TrtRuntime &runtime,
                                              const std::string &engine_path) {
   std::ifstream engine_file(engine_path, std::ios::binary);
@@ -260,65 +163,12 @@ int main(int argc, char *argv[]) {
   ros::init(argc, argv, "test_node");
 
   ros::NodeHandle nh("~");
-
-  std::string model_path;
-  nh.getParam("model_path", model_path);
+  TestConfig config = readTestConfig(nh);
 
   std::string engine_path;
   nh.getParam("engine_path", engine_path);
 
-  int width;
-  nh.getParam("image_width", width);
-
-  int height;
-  nh.getParam("image_height", height);
-
-  std::string input_file = "input.png";
-  nh.getParam("input_file", input_file);
-
-  std::string output_file = "output.png";
-  nh.getParam("output_file", output_file);
-
-  cv::Mat file_img = cv::imread(input_file);
-  if (file_img.empty()) {
-    ROS_FATAL_STREAM("Image not found: " << input_file);
-    return 1;
-  }
-  cv::Mat img(file_img.rows, file_img.cols, CV_8UC3);
-  ROS_INFO_STREAM("Image: " << file_img.rows << " x " << file_img.cols << " x "
-                            << file_img.channels());
-  if (file_img.channels() == 3) {
-    cv::cvtColor(file_img, img, cv::COLOR_BGR2RGB);
-  } else {
-    cv::cvtColor(file_img, img, cv::COLOR_BGRA2RGB);
-  }
-  cv::Mat infer_img;
-  cv::resize(img, infer_img, cv::Size(width, height));
-
-  cv::Mat img_float;
-  infer_img.convertTo(img_float, CV_32FC3);
-  ROS_INFO_STREAM("Image: " << img_float.rows << " x " << img_float.cols << " x "
-                            << img_float.channels());
-
-  ROS_INFO("Finished conversion");
-
-  std::vector<float> mean{0.485f, 0.456f, 0.406f};
-  std::vector<float> stddev{0.229f, 0.224f, 0.225f};
-
-  for (int r = 0; r < img_float.rows; ++r) {
-    for (int c = 0; c < img_float.cols; ++c) {
-      float *pixel = img_float.ptr<float>(r, c);
-      for (int channel = 0; channel < 3; ++channel) {
-        pixel[channel] =
-            ((pixel[channel] / 255.0) - mean.at(channel)) / stddev.at(channel);
-      }
-    }
-  }
-
-  double min_value = 0.0;
-  double max_value = 0.0;
-  cv::minMaxLoc(img_float, &min_value, &max_value);
-  ROS_INFO_STREAM("Min: " << min_value << " Max class: " << max_value);
+  cv::Mat img = getImage(config);
 
   ROS_INFO("Loading model");
   Logger logger(Severity::kINFO);
@@ -326,7 +176,7 @@ int main(int argc, char *argv[]) {
   std::unique_ptr<TrtEngine> engine = deserializeEngine(*trt_runtime, engine_path);
   if (!engine) {
     ROS_WARN("TRT engine not found! Rebuilding.");
-    engine = buildEngineFromOnnx(*trt_runtime, logger, model_path, engine_path);
+    engine = buildEngineFromOnnx(*trt_runtime, logger, config.model_path, engine_path);
   }
 
   if (!engine) {
@@ -351,7 +201,7 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  nvinfer1::Dims4 input_dims{1, 3, height, width};
+  nvinfer1::Dims4 input_dims{1, 3, config.height, config.width};
   context->setBindingDimensions(input_idx, input_dims);
 
   auto output_idx = engine->getBindingIndex("4464");
@@ -385,11 +235,9 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  if (cudaMemcpyAsync(input.memory.get(),
-                      img_float.data,
-                      input.size,
-                      cudaMemcpyHostToDevice,
-                      stream) != cudaSuccess) {
+  if (cudaMemcpyAsync(
+          input.memory.get(), img.data, input.size, cudaMemcpyHostToDevice, stream) !=
+      cudaSuccess) {
     ROS_FATAL_STREAM("Failed to copy image to gpu!");
     return 1;
   }
@@ -408,12 +256,10 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  cv::Mat classes(img_float.rows, img_float.cols, CV_32S);
-  std::vector<int32_t> data(img_float.rows * img_float.cols);
-  error = cudaMemcpyAsync(data.data(),
+  cv::Mat classes(config.height, config.width, CV_32S);
+  error = cudaMemcpyAsync(classes.data,
                           output.memory.get(),
-                          data.size() * sizeof(int32_t),
-                          // classes.step[0] * classes.rows,
+                          classes.step[0] * classes.rows,
                           cudaMemcpyDeviceToHost,
                           stream);
   if (error != cudaSuccess) {
@@ -425,9 +271,8 @@ int main(int argc, char *argv[]) {
 
   ROS_INFO("Finished inference");
 
-  // cv::Mat color_classes = makeDebugImg(classes);
-  // cv::imwrite(output_file, color_classes);
-  showStatistics(data);
+  showStatistics(classes);
+  outputDebugImg(config, classes);
 
   return 0;
 }

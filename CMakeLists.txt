@@ -19,7 +19,7 @@ catkin_package(
   LIBRARIES
 )
 
-add_executable(${PROJECT_NAME} src/segmenter.cpp)
+add_executable(${PROJECT_NAME} src/segmenter.cpp src/utilities.cpp)
 target_link_libraries(
   ${PROJECT_NAME}
   ${catkin_LIBRARIES}
@@ -30,24 +30,25 @@ target_link_libraries(
   ${OpenCV_LIBRARIES}
 )
 target_include_directories(
-  ${PROJECT_NAME} PRIVATE ${catkin_INCLUDE_DIRS} ${CUDA_INCLUDE_DIRS}
+  ${PROJECT_NAME} PRIVATE include ${catkin_INCLUDE_DIRS} ${CUDA_INCLUDE_DIRS}
                           ${OpenCV_INCLUDE_DIRS}
 )
 
 find_library(
-  ORT_RUNTIME libonnxruntime.so "/home/ubuntu/packages/onnx_runtime/runtimes/linux-x64/native"
+  ORT_RUNTIME libonnxruntime.so
+  "/home/ubuntu/packages/onnx_runtime/runtimes/linux-x64/native"
 )
 find_library(
   ORT_CUDA_PROVIDER onnxruntime_providers_cuda
   "/home/ubuntu/packages/onnx_runtime/runtimes/linux-x64/native"
 )
 
-add_executable(${PROJECT_NAME}_ort src/ort_segmenter.cpp)
+add_executable(${PROJECT_NAME}_ort src/ort_segmenter.cpp src/utilities.cpp)
 target_link_libraries(
   ${PROJECT_NAME}_ort ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} ${ORT_RUNTIME}
   ${ORT_CUDA_PROVIDER}
 )
 target_include_directories(
-  ${PROJECT_NAME}_ort PRIVATE ${catkin_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS}
+  ${PROJECT_NAME}_ort PRIVATE include ${catkin_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS}
                               "/home/ubuntu/packages/onnx_runtime/build/native/include"
 )
