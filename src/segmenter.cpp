@@ -1,5 +1,5 @@
-#include "semantic_recolor_nodelet/segmenter.h"
-#include "semantic_recolor_nodelet/utilities.h"
+#include "semantic_recolor/segmenter.h"
+#include "semantic_recolor/utilities.h"
 
 #include <NvOnnxParser.h>
 

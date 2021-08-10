@@ -1,4 +1,4 @@
-#include "semantic_recolor_nodelet/utilities.h"
+#include "semantic_recolor/utilities.h"
 
 #include <opencv2/imgproc.hpp>
 

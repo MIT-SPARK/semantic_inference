@@ -1,5 +1,5 @@
 #pragma once
-#include "semantic_recolor_nodelet/segmenter.h"
+#include "semantic_recolor/segmenter.h"
 
 #include <ros/ros.h>
 #include <opencv2/opencv.hpp>

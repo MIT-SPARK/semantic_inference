@@ -1,15 +1,15 @@
 <launch>
 
     <arg name="model_name" default="hrnetv2_360_640_v12"/>
-    <arg name="model_path" value="$(find semantic_recolor_nodelet)/models/$(arg model_name).onnx"/>
-    <arg name="engine_path" value="$(find semantic_recolor_nodelet)/engines/$(arg model_name).trt"/>
+    <arg name="model_path" value="$(find semantic_recolor)/models/$(arg model_name).onnx"/>
+    <arg name="engine_path" value="$(find semantic_recolor)/engines/$(arg model_name).trt"/>
     <arg name="filename" default="ADE_val_00001519.jpg"/>
 
     <arg name="debug" default="false"/>
     <arg name="launch-prefix" value="gdb --args" if="$(arg debug)"/>
     <arg name="launch-prefix" value="" unless="$(arg debug)"/>
 
-    <node pkg="semantic_recolor_nodelet" type="demo_segmenter" name="test_inference"
+    <node pkg="semantic_recolor" type="demo_segmentation" name="demo_segmentation"
           output="screen"
           launch-prefix="$(arg launch-prefix)"
           required="true">

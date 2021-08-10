@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(semantic_recolor_nodelet)
+project(semantic_recolor)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -36,5 +36,5 @@ target_include_directories(
                          ${OpenCV_INCLUDE_DIRS}
 )
 
-add_executable(demo_segmenter src/demo_segmenter.cpp)
-target_link_libraries(demo_segmenter ${PROJECT_NAME})
+add_executable(demo_segmentation src/demo_segmentation.cpp)
+target_link_libraries(demo_segmentation ${PROJECT_NAME})
