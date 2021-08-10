@@ -2,13 +2,18 @@
 
     <!-- required if used stand-alone -->
     <arg name="start_manager" default="true"/>
+    <arg name="enable_rectification" default="false"/>
 
     <arg name="verbose" default="true"/>
     <arg name="desired_output" value="screen" if="$(arg verbose)"/>
     <arg name="desired_output" value="log" unless="$(arg verbose)"/>
 
     <arg name="rgb_topic" default="rgb/image_raw"/>
+    <arg name="rgb_info_topic" default="rgb/camera_info"/>
+    <arg name="depth_topic" default="depth/image_rect"/>
+    <arg name="depth_info_topic" default="depth/camera_info"/>
     <arg name="semantic_topic" default="semantic/image_raw"/>
+    <arg name="pointcloud_topic" default="/semantic_pointcloud"/>
 
     <arg name="model_name" default="hrnetv2_360_640_v12"/>
     <arg name="model_path" value="$(find semantic_recolor)/models/$(arg model_name).onnx"/>
@@ -21,6 +26,13 @@
     <arg name="debug" default="false"/>
     <arg name="launch-prefix" value="gdb -ex run --args" if="$(arg debug)"/>
     <arg name="launch-prefix" value="" unless="$(arg debug)"/>
+
+    <arg name="throttle_semantics" default="true"/>
+    <arg name="throttle_hz" default="5.0"/>
+
+    <node pkg="topic_tools" type="throttle" name="semantic_throttle"
+          args="messages $(arg rgb_topic) $(arg throttle_hz)"
+          if="$(arg throttle_semantics)"/>
 
     <node pkg="nodelet" type="nodelet" name="nodelet_manager"
           args="manager"
@@ -37,8 +49,30 @@
         <rosparam file="$(arg color_config)" command="load" ns="colors"/>
         <param name="model_file" value="$(arg model_path)"/>
         <param name="engine_file" value="$(arg engine_path)"/>
-        <remap from="rgb/image_raw" to="$(arg rgb_topic)"/>
+        <remap from="rgb/image_raw" to="$(arg rgb_topic)" unless="$(arg throttle_semantics)"/>
+        <remap from="rgb/image_raw" to="$(arg rgb_topic)_throttle" if="$(arg throttle_semantics)"/>
         <remap from="semantic/image_raw" to="$(arg semantic_topic)"/>
+    </node>
+
+    <node pkg="nodelet" type="nodelet" name="depth_rectifier"
+          args="load depth_image_proc/register nodelet_manager --no-bond"
+          output="$(arg desired_output)"
+          if="$(arg enable_rectification)"
+          required="true">
+        <remap from="rgb/camera_info" to="$(arg rgb_info_topic)"/>
+        <remap from="depth/image_rect" to="$(arg depth_topic)"/>
+        <remap from="depth/camera_info" to="$(arg depth_info_topic)"/>
+    </node>
+
+    <node pkg="nodelet" type="nodelet" name="cloudify"
+          args="load depth_image_proc/point_cloud_xyzrgb nodelet_manager --no-bond"
+          output="$(arg desired_output)"
+          required="true">
+        <remap from="rgb/camera_info" to="$(arg rgb_info_topic)"/>
+        <remap from="rgb/image_rect_color" to="$(arg semantic_topic)"/>
+        <remap from="depth_registered/image_rect" to="$(arg depth_topic)" unless="$(arg enable_rectification)"/>
+        <remap from="depth_registered/points" to="$(arg pointcloud_topic)"/>
+        <param name="queue_size" value="20"/>
     </node>
 
 </launch>
