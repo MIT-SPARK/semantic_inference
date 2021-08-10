@@ -24,6 +24,7 @@ struct DemoConfig {
     nh.getParam("saturation", saturation);
     nh.getParam("luminance", luminance);
     nh.getParam("max_classes", max_classes);
+    nh.getParam("num_timing_inferences", num_timing_inferences);
   }
 
   std::string input_file;
@@ -31,6 +32,7 @@ struct DemoConfig {
   double saturation = 0.85;
   double luminance = 0.75;
   int max_classes = 150;
+  int num_timing_inferences = 10;
 };
 
 inline size_t getFileSize(std::istream &to_check) {

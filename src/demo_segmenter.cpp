@@ -24,14 +24,27 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  ros::WallTime start = ros::WallTime::now();
   if (!segmenter.infer(img)) {
     ROS_FATAL("Failed to run inference");
     return 1;
   }
+
+  ros::WallTime start = ros::WallTime::now();
+  size_t num_valid = 0;
+  for (int iter = 0; iter < demo_config.num_timing_inferences; ++iter) {
+    num_valid += (segmenter.infer(img)) ? 1 : 0;
+  }
   ros::WallTime end = ros::WallTime::now();
 
-  ROS_INFO_STREAM("Ran inference in " << (start - end).toSec() << "[s]");
+  double average_period_s =
+      (end - start).toSec() / static_cast<double>(demo_config.num_timing_inferences);
+  double percent_valid = static_cast<double>(num_valid) /
+                         static_cast<double>(demo_config.num_timing_inferences);
+
+  ROS_INFO_STREAM("Inference took an average of "
+                  << average_period_s << " [s] over "
+                  << demo_config.num_timing_inferences << " total iterations of which "
+                  << percent_valid * 100.0 << "% were valid");
 
   const cv::Mat& classes = segmenter.getClasses();
   showStatistics(classes);
