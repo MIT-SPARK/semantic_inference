@@ -111,7 +111,7 @@ def main():
     else:
         colors = sns.color_palette("husl", len(ADE_LABEL_GROUPS))
 
-    random.seed(0)
+    random.seed(args.seed)
     random.shuffle(colors)
 
     config = {}
