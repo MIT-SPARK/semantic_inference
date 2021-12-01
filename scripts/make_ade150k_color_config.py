@@ -94,6 +94,12 @@ ADE_LABEL_GROUPS = {
     "Human": [13],
 }
 
+KNOWN_COLORS = {
+    "Floor": [191,191,181],
+    "Wall": [0, 102, 51],
+    "Couch": [204, 0, 0],
+    "Table": [204, 0, 102]
+}
 
 def main():
     """Export a config."""
@@ -116,15 +122,28 @@ def main():
 
     config = {}
 
+    known_colors = {}
+    for label in KNOWN_COLORS:
+        known_colors[label] = (KNOWN_COLORS[label][0] / 255.0, 
+            KNOWN_COLORS[label][1] / 255.0, KNOWN_COLORS[label][2] / 255.0)
+    # TODO(yun) might want to check for overlaps between random generate color and known colors
+
     keys = []
     for index, group_name in enumerate(ADE_LABEL_GROUPS):
         keys.append(index)
         config_prefix = "class_info/{}".format(index)
-        config["{}/color".format(config_prefix)] = [
-            colors[index][0],
-            colors[index][1],
-            colors[index][2],
-        ]
+        if group_name in known_colors:
+            config["{}/color".format(config_prefix)] = [
+                known_colors[group_name][0],
+                known_colors[group_name][1],
+                known_colors[group_name][2],
+            ]
+        else :
+            config["{}/color".format(config_prefix)] = [
+                colors[index][0],
+                colors[index][1],
+                colors[index][2],
+            ]
         # network and csv are off by 1
         config["{}/labels".format(config_prefix)] = [
             x - 1 for x in ADE_LABEL_GROUPS[group_name]
@@ -142,16 +161,28 @@ def main():
         writer = csv.DictWriter(fout, fieldnames=fields)
         writer.writeheader()
         for index, group_name in enumerate(ADE_LABEL_GROUPS):
-            writer.writerow(
-                {
-                    "name": group_name,
-                    "red": int(math.floor(255.0 * colors[index][0])),
-                    "green": int(math.floor(255.0 * colors[index][1])),
-                    "blue": int(math.floor(255.0 * colors[index][2])),
-                    "alpha": 255,
-                    "id": index,
-                }
-            )
+            if group_name in known_colors:
+                writer.writerow(
+                    {
+                        "name": group_name,
+                        "red": int(math.floor(255.0 * known_colors[group_name][0])),
+                        "green": int(math.floor(255.0 * known_colors[group_name][1])),
+                        "blue": int(math.floor(255.0 * known_colors[group_name][2])),
+                        "alpha": 255,
+                        "id": index,
+                    }
+                )
+            else:
+                writer.writerow(
+                    {
+                        "name": group_name,
+                        "red": int(math.floor(255.0 * colors[index][0])),
+                        "green": int(math.floor(255.0 * colors[index][1])),
+                        "blue": int(math.floor(255.0 * colors[index][2])),
+                        "alpha": 255,
+                        "id": index,
+                    }
+                )
 
 
 if __name__ == "__main__":
