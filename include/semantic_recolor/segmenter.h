@@ -1,5 +1,4 @@
 #pragma once
-#include <ros/ros.h>
 
 #include <NvInfer.h>
 #include <cuda_runtime_api.h>
@@ -45,7 +44,6 @@ struct CudaMemoryHolder {
     void *raw_memory = nullptr;
     auto error = cudaMalloc(&raw_memory, size);
     if (error != cudaSuccess) {
-      ROS_WARN_STREAM("Failed to malloc memory: " << cudaGetErrorString(error));
       return;
     }
 
@@ -69,30 +67,7 @@ class Logger : public nvinfer1::ILogger {
  public:
   explicit Logger(Severity severity = Severity::kINFO) : min_severity_(severity) {}
 
-  void log(Severity severity, const char *msg) noexcept override {
-    if (severity < min_severity_) {
-      return;
-    }
-
-    switch (severity) {
-      case Severity::kINTERNAL_ERROR:
-        ROS_FATAL_STREAM(msg);
-        break;
-      case Severity::kERROR:
-        ROS_ERROR_STREAM(msg);
-        break;
-      case Severity::kWARNING:
-        ROS_WARN_STREAM(msg);
-        break;
-      case Severity::kINFO:
-        ROS_INFO_STREAM(msg);
-        break;
-      case Severity::kVERBOSE:
-      default:
-        ROS_DEBUG_STREAM(msg);
-        break;
-    }
-  }
+  void log(Severity severity, const char *msg) noexcept override;
 
  private:
   Severity min_severity_;

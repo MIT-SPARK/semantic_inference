@@ -3,6 +3,8 @@
 
 #include <NvOnnxParser.h>
 
+#include <ros/ros.h>
+
 #include <opencv2/imgproc.hpp>
 #include <opencv2/opencv.hpp>
 
@@ -14,6 +16,31 @@ namespace semantic_recolor {
 
 using TrtNetworkDef = nvinfer1::INetworkDefinition;
 using nvinfer1::NetworkDefinitionCreationFlag;
+
+void Logger::log(Severity severity, const char *msg) noexcept {
+  if (severity < min_severity_) {
+    return;
+  }
+
+  switch (severity) {
+    case Severity::kINTERNAL_ERROR:
+      ROS_FATAL_STREAM(msg);
+      break;
+    case Severity::kERROR:
+      ROS_ERROR_STREAM(msg);
+      break;
+    case Severity::kWARNING:
+      ROS_WARN_STREAM(msg);
+      break;
+    case Severity::kINFO:
+      ROS_INFO_STREAM(msg);
+      break;
+    case Severity::kVERBOSE:
+    default:
+      ROS_DEBUG_STREAM(msg);
+      break;
+  }
+}
 
 std::ostream &operator<<(std::ostream &out, const nvinfer1::Dims &dims) {
   out << "[";
