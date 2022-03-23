@@ -56,9 +56,9 @@ void fillSemanticImage(SemanticColorConfig &config,
                        cv::Mat &output);
 
 inline size_t getFileSize(std::istream &to_check) {
-  to_check.seekg(0, std::istream::end);
+  to_check.seekg(0, to_check.end);
   size_t size = to_check.tellg();
-  to_check.seekg(0, std::ifstream::beg);
+  to_check.seekg(0, to_check.beg);
   return size;
 }
 
