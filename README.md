@@ -37,5 +37,5 @@ To adapt to a new dataset (or new set of labels), you will have to:
 
   - Modify [this script](scripts/make_ade150k_color_config.py) to change the label groupings (Kimera-Semantics is limited to 20 colors)
   - Run the above modified script to produce a new configuration
-  - Export a model and write a config similar to [this](config/hrnetv2_360_640_v12.yaml). A good naming scheme is `{model_name}_{image_height}_{image_width}_{onnx_instruction_version}.yaml`. To check if the model is valid and show input/output names, run [this](scripts/check_onnx_model.py). script.
+  - Export a model and write a config similar to [this](config/hrnetv2_360_640_v12.yaml). A good naming scheme is `{model_name}_{image_height}_{image_width}_{onnx_instruction_version}.yaml`. To check if the model is valid and show input/output names, run [this](scripts/check_onnx_model.py) script.
   - Pass in the appropriate arguments to the launch file (most likely `model_name` and `dataset_name`
