@@ -123,6 +123,16 @@ void fillSemanticImage(SemanticColorConfig &config,
   }
 }
 
+void createOverlayImage(SemanticColorConfig &config,
+                        const cv::Mat &classes,
+                        const cv::Mat &semantic,
+                        const cv::Mat &original,
+                        cv::Mat &output) {
+  double alpha = 0.4;
+  cv::addWeighted( semantic, alpha, original, (1.0-alpha), 0.0, output);
+  return;
+}
+
 void outputDemoImage(const DemoConfig &config, const cv::Mat &classes) {
   cv::Mat new_image_hls(classes.rows, classes.cols, CV_32FC3);
   for (int r = 0; r < classes.rows; ++r) {

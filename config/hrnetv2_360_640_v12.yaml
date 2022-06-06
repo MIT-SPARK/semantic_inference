@@ -1,6 +1,6 @@
 width: 640
 height: 360
 input_name: "input.1"
-output_name: 4464
+output_name: "4464"
 mean: [0.485, 0.456, 0.406]
 stddev: [0.229, 0.224, 0.225]

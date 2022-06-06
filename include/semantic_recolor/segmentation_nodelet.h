@@ -20,7 +20,10 @@ class SegmentationNodelet : public nodelet::Nodelet {
   std::unique_ptr<image_transport::ImageTransport> transport_;
   image_transport::Subscriber image_sub_;
   image_transport::Publisher semantic_image_pub_;
+  image_transport::Publisher overlay_image_pub_;
   cv_bridge::CvImagePtr semantic_image_;
+  cv_bridge::CvImagePtr overlay_image_;
+  bool create_overlay_;
 };
 
 }  // namespace semantic_recolor

@@ -55,6 +55,12 @@ void fillSemanticImage(SemanticColorConfig &config,
                        const cv::Mat &classes,
                        cv::Mat &output);
 
+void createOverlayImage(SemanticColorConfig &config,
+                        const cv::Mat &classes,
+                        const cv::Mat &semantic,
+                        const cv::Mat &original,
+                        cv::Mat &output);
+
 inline size_t getFileSize(std::istream &to_check) {
   to_check.seekg(0, to_check.end);
   size_t size = to_check.tellg();

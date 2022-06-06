@@ -51,6 +51,27 @@ std::ostream &operator<<(std::ostream &out, const nvinfer1::Dims &dims) {
   return out;
 }
 
+std::ostream &operator<<(std::ostream &out, const nvinfer1::DataType &dtype) {
+  out << "[";
+  if(dtype==nvinfer1::DataType::kFLOAT) {
+    out << "kFLOAT";
+  }
+  else if(dtype==nvinfer1::DataType::kHALF) {
+    out << "kHALF";
+  }
+  else if(dtype==nvinfer1::DataType::kINT8) {
+    out << "kINT8";
+  }
+  else if(dtype==nvinfer1::DataType::kINT32) {
+    out << "kINT32";
+  }
+  else {
+    out << "UNKNOWN";
+  }
+  out << "]";
+  return out;
+}
+
 std::unique_ptr<TrtEngine> deserializeEngine(TrtRuntime &runtime,
                                              const std::string &engine_path) {
   std::ifstream engine_file(engine_path, std::ios::binary);
@@ -72,6 +93,7 @@ std::unique_ptr<TrtEngine> deserializeEngine(TrtRuntime &runtime,
 
   return engine;
 }
+
 
 std::unique_ptr<TrtEngine> buildEngineFromOnnx(TrtRuntime &runtime,
                                                Logger &logger,
@@ -147,12 +169,13 @@ bool TrtSegmenter::init() {
     ROS_FATAL_STREAM("Failed to get index for input: " << config_.input_name);
     return false;
   }
+  ROS_INFO_STREAM("Input binding index: " << engine_->getBindingDataType(input_idx));
 
   if (engine_->getBindingDataType(input_idx) != nvinfer1::DataType::kFLOAT) {
-    ROS_FATAL_STREAM("Input type doesn't match expected: "
-                     << static_cast<int32_t>(engine_->getBindingDataType(input_idx))
-                     << " != " << static_cast<int32_t>(nvinfer1::DataType::kFLOAT));
-    return false;
+    ROS_WARN_STREAM("Input type doesn't match expected: "
+                     << engine_->getBindingDataType(input_idx)
+                     << " != " << nvinfer1::DataType::kFLOAT);
+    // return false;
   }
 
   nvinfer1::Dims4 input_dims{1, 3, config_.height, config_.width};
@@ -164,12 +187,14 @@ bool TrtSegmenter::init() {
     ROS_FATAL_STREAM("Failed to get index for output: " << config_.output_name);
     return false;
   }
+  ROS_INFO_STREAM("Output binding index: " << engine_->getBindingDataType(output_idx));
 
+  //The output datatype controls precision, https://github.com/NVIDIA/TensorRT/issues/717
   if (engine_->getBindingDataType(output_idx) != nvinfer1::DataType::kINT32) {
-    ROS_FATAL_STREAM("Output type doesn't match expected: "
-                     << static_cast<int32_t>(engine_->getBindingDataType(output_idx))
-                     << " != " << static_cast<int32_t>(nvinfer1::DataType::kINT32));
-    return false;
+    ROS_WARN_STREAM("Output type doesn't match expected: "
+                     << engine_->getBindingDataType(output_idx)
+                     << " != " << nvinfer1::DataType::kINT32);
+    // return false;
   }
 
   auto output_dims = context_->getBindingDimensions(output_idx);
@@ -185,6 +210,7 @@ bool TrtSegmenter::init() {
   }
 
   initialized_ = true;
+  ROS_INFO("Segmenter initialized!");
   return true;
 }
 

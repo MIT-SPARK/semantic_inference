@@ -21,7 +21,7 @@ python3 -m venv semantic_recolor  # or whatever you want
 source semantic_recolor/bin/activate
 pip install --upgrade pip
 pip install wheel
-pip install onnx onnxruntime torch torchvision seaborn
+pip install onnx onnxruntime torch torchvision seaborn pip pyyaml
 pip install git+https://github.com/CSAILVision/semantic-segmentation-python.git@master
 ```
 
@@ -37,10 +37,5 @@ To adapt to a new dataset (or new set of labels), you will have to:
 
   - Modify [this script](scripts/make_ade150k_color_config.py) to change the label groupings (Kimera-Semantics is limited to 20 colors)
   - Run the above modified script to produce a new configuration
-  - Export a model and write a config similar to [this](config/hrnetv2_360_640_v12.yaml). A good naming scheme is `{model_name}_{image_height}_{image_width}_{onnx_instruction_version}.yaml`. To get the `input_name` and `output_name`:
-  ```
-  import onnx
-  onnx_model = onnx.load('path/to/the/model.onnx')
-  print(onnx_model)
-  ```
+  - Export a model and write a config similar to [this](config/hrnetv2_360_640_v12.yaml). A good naming scheme is `{model_name}_{image_height}_{image_width}_{onnx_instruction_version}.yaml`. To check if the model is valid and show input/output names, run [this](scripts/check_onnx_model.py). script.
   - Pass in the appropriate arguments to the launch file (most likely `model_name` and `dataset_name`

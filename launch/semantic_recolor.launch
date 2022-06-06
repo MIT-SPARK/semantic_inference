@@ -10,12 +10,12 @@
     <arg name="rgb_topic" default="rgb/image_raw"/>
     <arg name="semantic_topic" default="semantic/image_raw"/>
 
-    <arg name="model_name" default="hrnetv2_360_640_v12"/>
+    <arg name="model_name" default="mobilenetv2_360_640"/>
     <arg name="model_path" value="$(find semantic_recolor)/models/$(arg model_name).onnx"/>
     <arg name="engine_path" value="$(find semantic_recolor)/engines/$(arg model_name).trt"/>
     <arg name="segmenter_config" value="$(find semantic_recolor)/config/$(arg model_name).yaml"/>
 
-    <arg name="dataset_name" default="ade150_config"/>
+    <arg name="dataset_name" default="ade150_expanded_config"/>
     <arg name="color_config" value="$(find semantic_recolor)/config/colors/$(arg dataset_name).yaml"/>
 
     <arg name="debug" default="false"/>

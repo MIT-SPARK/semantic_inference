@@ -1,0 +1,8 @@
+#code to convert topformer model to onnx: https://github.com/hustvl/TopFormer/blob/main/tools/convert2onnx.py
+#TopFormer-S_512x512_2x8_160k.yaml
+width: 512
+height: 512
+input_name: "input"
+output_name: "output"
+mean: [0.485, 0.456, 0.406]
+stddev: [0.229, 0.224, 0.225]
