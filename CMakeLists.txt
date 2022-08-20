@@ -4,7 +4,6 @@ project(semantic_recolor)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-set(CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda")
 
 add_compile_options(-Wall -Wextra)
 
@@ -21,7 +20,7 @@ catkin_package(
 
 add_library(
   ${PROJECT_NAME}
-  src/segmenter.cpp src/utilities.cpp
+  src/rgbd_segmenter.cpp src/segmenter.cpp src/trt_utilities.cpp src/utilities.cpp
 )
 target_link_libraries(
   ${PROJECT_NAME}

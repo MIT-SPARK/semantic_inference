@@ -17,61 +17,6 @@ namespace semantic_recolor {
 using TrtNetworkDef = nvinfer1::INetworkDefinition;
 using nvinfer1::NetworkDefinitionCreationFlag;
 
-void Logger::log(Severity severity, const char *msg) noexcept {
-  if (severity < min_severity_) {
-    return;
-  }
-
-  switch (severity) {
-    case Severity::kINTERNAL_ERROR:
-      ROS_FATAL_STREAM(msg);
-      break;
-    case Severity::kERROR:
-      ROS_ERROR_STREAM(msg);
-      break;
-    case Severity::kWARNING:
-      ROS_WARN_STREAM(msg);
-      break;
-    case Severity::kINFO:
-      ROS_INFO_STREAM(msg);
-      break;
-    case Severity::kVERBOSE:
-    default:
-      ROS_DEBUG_STREAM(msg);
-      break;
-  }
-}
-
-std::ostream &operator<<(std::ostream &out, const nvinfer1::Dims &dims) {
-  out << "[";
-  for (int32_t i = 0; i < dims.nbDims - 1; ++i) {
-    out << dims.d[i] << " x ";
-  }
-  out << dims.d[dims.nbDims - 1] << "]";
-  return out;
-}
-
-std::ostream &operator<<(std::ostream &out, const nvinfer1::DataType &dtype) {
-  out << "[";
-  if(dtype==nvinfer1::DataType::kFLOAT) {
-    out << "kFLOAT";
-  }
-  else if(dtype==nvinfer1::DataType::kHALF) {
-    out << "kHALF";
-  }
-  else if(dtype==nvinfer1::DataType::kINT8) {
-    out << "kINT8";
-  }
-  else if(dtype==nvinfer1::DataType::kINT32) {
-    out << "kINT32";
-  }
-  else {
-    out << "UNKNOWN";
-  }
-  out << "]";
-  return out;
-}
-
 std::unique_ptr<TrtEngine> deserializeEngine(TrtRuntime &runtime,
                                              const std::string &engine_path) {
   std::ifstream engine_file(engine_path, std::ios::binary);
@@ -94,7 +39,6 @@ std::unique_ptr<TrtEngine> deserializeEngine(TrtRuntime &runtime,
   return engine;
 }
 
-
 std::unique_ptr<TrtEngine> buildEngineFromOnnx(TrtRuntime &runtime,
                                                Logger &logger,
                                                const std::string &model_path,
@@ -103,7 +47,6 @@ std::unique_ptr<TrtEngine> buildEngineFromOnnx(TrtRuntime &runtime,
   const auto network_flags =
       1u << static_cast<uint32_t>(NetworkDefinitionCreationFlag::kEXPLICIT_BATCH);
   std::unique_ptr<TrtNetworkDef> network(builder->createNetworkV2(network_flags));
-  builder->setMaxBatchSize(1);
 
   std::unique_ptr<nvonnxparser::IParser> parser(
       nvonnxparser::createParser(*network, logger));
@@ -113,8 +56,6 @@ std::unique_ptr<TrtEngine> buildEngineFromOnnx(TrtRuntime &runtime,
   }
 
   std::unique_ptr<nvinfer1::IBuilderConfig> config(builder->createBuilderConfig());
-  // TODO(nathan) check this (32 MB right now)
-  config->setMaxWorkspaceSize(32 << 20);
 
   std::unique_ptr<nvinfer1::IHostMemory> memory(
       builder->buildSerializedNetwork(*network, *config));
@@ -173,8 +114,8 @@ bool TrtSegmenter::init() {
 
   if (engine_->getBindingDataType(input_idx) != nvinfer1::DataType::kFLOAT) {
     ROS_WARN_STREAM("Input type doesn't match expected: "
-                     << engine_->getBindingDataType(input_idx)
-                     << " != " << nvinfer1::DataType::kFLOAT);
+                    << engine_->getBindingDataType(input_idx)
+                    << " != " << nvinfer1::DataType::kFLOAT);
     // return false;
   }
 
@@ -189,11 +130,12 @@ bool TrtSegmenter::init() {
   }
   ROS_INFO_STREAM("Output binding index: " << engine_->getBindingDataType(output_idx));
 
-  //The output datatype controls precision, https://github.com/NVIDIA/TensorRT/issues/717
+  // The output datatype controls precision,
+  // https://github.com/NVIDIA/TensorRT/issues/717
   if (engine_->getBindingDataType(output_idx) != nvinfer1::DataType::kINT32) {
     ROS_WARN_STREAM("Output type doesn't match expected: "
-                     << engine_->getBindingDataType(output_idx)
-                     << " != " << nvinfer1::DataType::kINT32);
+                    << engine_->getBindingDataType(output_idx)
+                    << " != " << nvinfer1::DataType::kINT32);
     // return false;
   }
 
@@ -214,6 +156,10 @@ bool TrtSegmenter::init() {
   return true;
 }
 
+std::vector<void *> TrtSegmenter::getBindings() const {
+  return {input_buffer_.memory.get(), output_buffer_.memory.get()};
+}
+
 bool TrtSegmenter::infer(const cv::Mat &img) {
   fillNetworkImage(config_, img, nn_img_);
 
@@ -228,8 +174,8 @@ bool TrtSegmenter::infer(const cv::Mat &img) {
     return false;
   }
 
-  void *bindings[] = {input_buffer_.memory.get(), output_buffer_.memory.get()};
-  bool status = context_->enqueueV2(bindings, stream_, nullptr);
+  auto bindings = getBindings();
+  bool status = context_->enqueueV2(bindings.data(), stream_, nullptr);
   if (!status) {
     ROS_FATAL_STREAM("initializing inference failed!");
     return false;
