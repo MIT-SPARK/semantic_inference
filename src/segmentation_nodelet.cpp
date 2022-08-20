@@ -20,9 +20,9 @@ void SegmentationNodelet::onInit() {
       transport_->subscribe("rgb/image_raw", 1, &SegmentationNodelet::callback, this);
   semantic_image_pub_ = transport_->advertise("semantic/image_raw", 1);
 
-  //todo(jared): add parameter for this
-  create_overlay_=true;
-  if(create_overlay_) {
+  // todo(jared): add parameter for this
+  create_overlay_ = true;
+  if (create_overlay_) {
     overlay_image_pub_ = transport_->advertise("semantic/overlay/image_raw", 1);
   }
 }
@@ -37,9 +37,9 @@ void SegmentationNodelet::callback(const sensor_msgs::ImageConstPtr& msg) {
   }
 
   ROS_DEBUG_STREAM("Encoding: " << img_ptr->encoding << " size: " << img_ptr->image.cols
-                               << " x " << img_ptr->image.rows << " x "
-                               << img_ptr->image.channels() << " is right type? "
-                               << (img_ptr->image.type() == CV_8UC3 ? "yes" : "no"));
+                                << " x " << img_ptr->image.rows << " x "
+                                << img_ptr->image.channels() << " is right type? "
+                                << (img_ptr->image.type() == CV_8UC3 ? "yes" : "no"));
   if (!segmenter_->infer(img_ptr->image)) {
     ROS_ERROR("failed to run inference!");
     return;
@@ -48,7 +48,7 @@ void SegmentationNodelet::callback(const sensor_msgs::ImageConstPtr& msg) {
   if (!semantic_image_) {
     semantic_image_.reset(new cv_bridge::CvImage());
     semantic_image_->encoding = "rgb8";
-    //semantic_image_->image = cv::Mat(config_.height, config_.width, CV_8UC3);
+    // semantic_image_->image = cv::Mat(config_.height, config_.width, CV_8UC3);
     semantic_image_->image = cv::Mat(img_ptr->image.rows, img_ptr->image.cols, CV_8UC3);
   }
 
@@ -57,16 +57,15 @@ void SegmentationNodelet::callback(const sensor_msgs::ImageConstPtr& msg) {
   fillSemanticImage(color_config_, segmenter_->getClasses(), semantic_image_->image);
   semantic_image_pub_.publish(semantic_image_->toImageMsg());
 
-  if(create_overlay_) {
+  if (create_overlay_) {
     if (!overlay_image_) {
       overlay_image_.reset(new cv_bridge::CvImage());
       overlay_image_->encoding = "rgb8";
-      overlay_image_->image = cv::Mat(img_ptr->image.rows, img_ptr->image.cols, CV_8UC3);
+      overlay_image_->image =
+          cv::Mat(img_ptr->image.rows, img_ptr->image.cols, CV_8UC3);
     }
     overlay_image_->header = img_ptr->header;
-    createOverlayImage(color_config_,
-                       segmenter_->getClasses(),
-                       img_ptr->image,
+    createOverlayImage(img_ptr->image,
                        semantic_image_->image,
                        overlay_image_->image);
     overlay_image_pub_.publish(overlay_image_->toImageMsg());

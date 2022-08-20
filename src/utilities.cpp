@@ -123,13 +123,11 @@ void fillSemanticImage(SemanticColorConfig &config,
   }
 }
 
-void createOverlayImage(SemanticColorConfig &config,
-                        const cv::Mat &classes,
-                        const cv::Mat &semantic,
+void createOverlayImage(const cv::Mat &semantic,
                         const cv::Mat &original,
                         cv::Mat &output) {
   double alpha = 0.4;
-  cv::addWeighted( semantic, alpha, original, (1.0-alpha), 0.0, output);
+  cv::addWeighted(semantic, alpha, original, (1.0 - alpha), 0.0, output);
   return;
 }
 
@@ -199,15 +197,22 @@ void fillNetworkImage(const SegmentationConfig &cfg,
     cv::resize(input, img, cv::Size(cfg.width, cfg.height));
   }
 
+  SegmentationConfig::ImageAddress input_addr;
+  cfg.fillInputAddress(input_addr);
+
+  SegmentationConfig::OutputImageAddress output_addr;
+  cfg.fillOutputAddress(output_addr);
+
   for (int row = 0; row < img.rows; ++row) {
     for (int col = 0; col < img.cols; ++col) {
+      cfg.updateOutputAddress(output_addr, row, col);
       const uint8_t *pixel = img.ptr<uint8_t>(row, col);
-      output.at<float>(0, row, col) =
-          (static_cast<float>(pixel[2]) / 255.0f - cfg.mean[0]) / cfg.stddev[0];
-      output.at<float>(1, row, col) =
-          (static_cast<float>(pixel[1]) / 255.0f - cfg.mean[1]) / cfg.stddev[1];
-      output.at<float>(2, row, col) =
-          (static_cast<float>(pixel[0]) / 255.0f - cfg.mean[2]) / cfg.stddev[2];
+      output.at<float>(output_addr[0][0], output_addr[1][0], output_addr[2][0]) =
+          cfg.getValue(pixel[input_addr[0]], 0);
+      output.at<float>(output_addr[0][1], output_addr[1][1], output_addr[2][1]) =
+          cfg.getValue(pixel[input_addr[1]], 1);
+      output.at<float>(output_addr[0][2], output_addr[1][2], output_addr[2][2]) =
+          cfg.getValue(pixel[input_addr[2]], 2);
     }
   }
 }

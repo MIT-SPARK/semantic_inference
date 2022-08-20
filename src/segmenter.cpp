@@ -17,6 +17,44 @@ namespace semantic_recolor {
 using TrtNetworkDef = nvinfer1::INetworkDefinition;
 using nvinfer1::NetworkDefinitionCreationFlag;
 
+void SegmentationConfig::fillInputAddress(ImageAddress &addr) const {
+  if (network_uses_rgb_order) {
+    addr = {2, 1, 0};
+  } else {
+    addr = {0, 1, 2};
+  }
+}
+
+void SegmentationConfig::fillOutputAddress(OutputImageAddress &addr) const {
+  if (use_network_order) {
+    addr[0] = {0, 1, 2};
+    addr[1] = {0, 0, 0};
+    addr[2] = {0, 0, 0};
+  } else {
+    addr[0] = {0, 0, 0};
+    addr[1] = {0, 0, 0};
+    addr[2] = {0, 1, 2};
+  }
+}
+
+void SegmentationConfig::updateOutputAddress(OutputImageAddress &addr,
+                                             int row,
+                                             int col) const {
+  if (use_network_order) {
+    addr[1] = {row, row, row};
+    addr[2] = {col, col, col};
+  } else {
+    addr[0] = {row, row, row};
+    addr[1] = {col, col, col};
+  }
+}
+
+float SegmentationConfig::getValue(float input_val, size_t channel) const {
+  float to_return = map_to_unit_range ? input_val / 255.0f : input_val;
+  to_return = normalize ? (input_val - mean[channel]) / stddev[channel] : input_val;
+  return to_return;
+}
+
 std::unique_ptr<TrtEngine> deserializeEngine(TrtRuntime &runtime,
                                              const std::string &engine_path) {
   std::ifstream engine_file(engine_path, std::ios::binary);
@@ -119,6 +157,8 @@ bool TrtSegmenter::init() {
     // return false;
   }
 
+  std::vector<int> nn_dims{3, config_.height, config_.width};
+  nn_img_ = cv::Mat(nn_dims, CV_32FC1);
   nvinfer1::Dims4 input_dims{1, 3, config_.height, config_.width};
   context_->setBindingDimensions(input_idx, input_dims);
   input_buffer_.reset(input_dims);
@@ -142,8 +182,6 @@ bool TrtSegmenter::init() {
   auto output_dims = context_->getBindingDimensions(output_idx);
   output_buffer_.reset(output_dims);
 
-  std::vector<int> nn_dims{3, config_.height, config_.width};
-  nn_img_ = cv::Mat(nn_dims, CV_32FC1);
   classes_ = cv::Mat(config_.height, config_.width, CV_32S);
 
   if (cudaStreamCreate(&stream_) != cudaSuccess) {
