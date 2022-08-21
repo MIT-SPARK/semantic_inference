@@ -4,26 +4,34 @@
 
 namespace semantic_recolor {
 
+#define READ_REQUIRED(nh, config, name)                      \
+  if (!nh.getParam(#name, config.name)) {                    \
+    ROS_FATAL("Missing " #name " when parsing ModelConfig"); \
+    throw std::runtime_error("missing param " #name "!");    \
+  }                                                          \
+  static_assert(true, "")
+
 ModelConfig readModelConfig(const ros::NodeHandle &nh) {
   ModelConfig config;
 
-  if (!nh.getParam("model_file", config.model_file)) {
-    ROS_FATAL("Missing model_file");
-    throw std::runtime_error("missing param!");
-  }
+  READ_REQUIRED(nh, config, model_file);
+  READ_REQUIRED(nh, config, width);
+  READ_REQUIRED(nh, config, height);
+  READ_REQUIRED(nh, config, input_name);
+  READ_REQUIRED(nh, config, output_name);
 
   nh.getParam("engine_file", config.engine_file);
-  nh.getParam("width", config.width);
-  nh.getParam("height", config.height);
-  nh.getParam("input_name", config.input_name);
-  nh.getParam("output_name", config.output_name);
   nh.getParam("mean", config.mean);
   nh.getParam("stddev", config.stddev);
-
-  // TODO(nathan) fill the rest out
+  nh.getParam("map_to_unit_range", config.map_to_unit_range);
+  nh.getParam("normalize", config.normalize);
+  nh.getParam("use_network_order", config.use_network_order);
+  nh.getParam("network_uses_rgb_order", config.network_uses_rgb_order);
 
   return config;
 }
+
+#undef READ_REQUIRED
 
 SemanticColorConfig::SemanticColorConfig() : initialized_(false) {}
 
@@ -123,67 +131,6 @@ void fillSemanticImage(SemanticColorConfig &config,
       config.fillColor(class_id, pixel);
     }
   }
-}
-
-void createOverlayImage(const cv::Mat &semantic,
-                        const cv::Mat &original,
-                        cv::Mat &output) {
-  double alpha = 0.4;
-  cv::addWeighted(semantic, alpha, original, (1.0 - alpha), 0.0, output);
-  return;
-}
-
-void outputDemoImage(const DemoConfig &config, const cv::Mat &classes) {
-  cv::Mat new_image_hls(classes.rows, classes.cols, CV_32FC3);
-  for (int r = 0; r < classes.rows; ++r) {
-    for (int c = 0; c < classes.cols; ++c) {
-      float *pixel = new_image_hls.ptr<float>(r, c);
-
-      const int remainder = classes.at<int32_t>(r, c) % config.max_classes;
-      const double ratio =
-          static_cast<double>(remainder) / static_cast<double>(config.max_classes);
-      pixel[0] = ratio * 360.0;
-      pixel[1] = config.luminance;
-      pixel[2] = config.saturation;
-    }
-  }
-
-  cv::Mat new_image;
-  cv::cvtColor(new_image_hls, new_image, cv::COLOR_HLS2BGR);
-  new_image *= 255.0;
-  cv::imwrite(config.output_file, new_image);
-}
-
-void showStatistics(const cv::Mat &classes) {
-  std::map<int32_t, size_t> counts;
-  std::vector<int32_t> unique_classes;
-  for (int r = 0; r < classes.rows; ++r) {
-    for (int c = 0; c < classes.cols; ++c) {
-      int32_t class_id = classes.at<int32_t>(r, c);
-      if (!counts.count(class_id)) {
-        counts[class_id] = 0;
-        unique_classes.push_back(class_id);
-      }
-
-      counts[class_id]++;
-    }
-  }
-
-  double total = static_cast<double>(classes.rows * classes.cols);
-  std::sort(unique_classes.begin(),
-            unique_classes.end(),
-            [&](const int32_t &lhs, const int32_t &rhs) {
-              return counts[lhs] > counts[rhs];
-            });
-
-  std::stringstream ss;
-  ss << " Class pixel percentages:" << std::endl;
-  for (const int32_t id : unique_classes) {
-    ss << "  - " << id << ": " << static_cast<double>(counts[id]) / total * 100.0 << "%"
-       << std::endl;
-  }
-
-  ROS_INFO_STREAM(ss.str());
 }
 
 void fillNetworkImage(const ModelConfig &cfg, const cv::Mat &input, cv::Mat &output) {

@@ -41,7 +41,15 @@ void NodeletOutputPublisher::publish(const std_msgs::Header& header,
   }
 
   overlay_image_->header = header;
-  createOverlayImage(original, semantic_image_->image, overlay_image_->image);
+
+  double alpha = 0.4;
+  cv::addWeighted(semantic_image_->image,
+                  alpha,
+                  original,
+                  (1.0 - alpha),
+                  0.0,
+                  overlay_image_->image);
+
   overlay_image_pub_.publish(overlay_image_->toImageMsg());
 }
 
