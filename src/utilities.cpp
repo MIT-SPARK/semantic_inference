@@ -4,8 +4,8 @@
 
 namespace semantic_recolor {
 
-SegmentationConfig readSegmenterConfig(const ros::NodeHandle &nh) {
-  SegmentationConfig config;
+ModelConfig readModelConfig(const ros::NodeHandle &nh) {
+  ModelConfig config;
 
   if (!nh.getParam("model_file", config.model_file)) {
     ROS_FATAL("Missing model_file");
@@ -19,6 +19,8 @@ SegmentationConfig readSegmenterConfig(const ros::NodeHandle &nh) {
   nh.getParam("output_name", config.output_name);
   nh.getParam("mean", config.mean);
   nh.getParam("stddev", config.stddev);
+
+  // TODO(nathan) fill the rest out
 
   return config;
 }
@@ -184,9 +186,7 @@ void showStatistics(const cv::Mat &classes) {
   ROS_INFO_STREAM(ss.str());
 }
 
-void fillNetworkImage(const SegmentationConfig &cfg,
-                      const cv::Mat &input,
-                      cv::Mat &output) {
+void fillNetworkImage(const ModelConfig &cfg, const cv::Mat &input, cv::Mat &output) {
   cv::Mat img;
   if (input.cols == cfg.width && input.rows == cfg.height) {
     img = input;
@@ -197,22 +197,53 @@ void fillNetworkImage(const SegmentationConfig &cfg,
     cv::resize(input, img, cv::Size(cfg.width, cfg.height));
   }
 
-  SegmentationConfig::ImageAddress input_addr;
+  ModelConfig::ImageAddress input_addr;
   cfg.fillInputAddress(input_addr);
 
-  SegmentationConfig::OutputImageAddress output_addr;
-  cfg.fillOutputAddress(output_addr);
-
+  // TODO(nathan) check
   for (int row = 0; row < img.rows; ++row) {
     for (int col = 0; col < img.cols; ++col) {
-      cfg.updateOutputAddress(output_addr, row, col);
       const uint8_t *pixel = img.ptr<uint8_t>(row, col);
-      output.at<float>(output_addr[0][0], output_addr[1][0], output_addr[2][0]) =
-          cfg.getValue(pixel[input_addr[0]], 0);
-      output.at<float>(output_addr[0][1], output_addr[1][1], output_addr[2][1]) =
-          cfg.getValue(pixel[input_addr[1]], 1);
-      output.at<float>(output_addr[0][2], output_addr[1][2], output_addr[2][2]) =
-          cfg.getValue(pixel[input_addr[2]], 2);
+      if (cfg.use_network_order) {
+        output.at<float>(0, row, col) = cfg.getValue(pixel[input_addr[0]], 0);
+        output.at<float>(1, row, col) = cfg.getValue(pixel[input_addr[1]], 1);
+        output.at<float>(2, row, col) = cfg.getValue(pixel[input_addr[2]], 2);
+      } else {
+        output.at<float>(row, col, 0) = cfg.getValue(pixel[input_addr[0]], 0);
+        output.at<float>(row, col, 1) = cfg.getValue(pixel[input_addr[1]], 1);
+        output.at<float>(row, col, 2) = cfg.getValue(pixel[input_addr[2]], 2);
+      }
+    }
+  }
+}
+
+void fillNetworkDepthImage(const ModelConfig &cfg,
+                           const cv::Mat &input,
+                           cv::Mat &output) {
+  const bool size_ok = input.cols == cfg.width && input.rows == cfg.height;
+  if (size_ok && !cfg.use_network_order) {
+    output = input;
+    return;
+  }
+
+  if (!size_ok && !cfg.use_network_order) {
+    cv::resize(input, output, cv::Size(cfg.width, cfg.height), 0, 0, cv::INTER_NEAREST);
+    return;
+  }
+
+  cv::Mat img;
+  if (size_ok) {
+    img = input;
+  } else {
+    ROS_DEBUG_STREAM("Resizing from " << input.cols << " x " << input.rows << " to "
+                                      << cfg.width << " x " << cfg.height);
+    cv::resize(input, img, cv::Size(cfg.width, cfg.height), 0, 0, cv::INTER_NEAREST);
+  }
+
+  // TODO(nathan) check
+  for (int row = 0; row < img.rows; ++row) {
+    for (int col = 0; col < img.cols; ++col) {
+      output.at<float>(0, row, col) = input.at<float>(row, col);
     }
   }
 }

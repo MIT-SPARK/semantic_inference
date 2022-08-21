@@ -1,5 +1,5 @@
 #pragma once
-#include "semantic_recolor/segmenter.h"
+#include "semantic_recolor/model_config.h"
 
 #include <ros/ros.h>
 #include <opencv2/opencv.hpp>
@@ -59,21 +59,16 @@ void createOverlayImage(const cv::Mat &semantic,
                         const cv::Mat &original,
                         cv::Mat &output);
 
-inline size_t getFileSize(std::istream &to_check) {
-  to_check.seekg(0, to_check.end);
-  size_t size = to_check.tellg();
-  to_check.seekg(0, to_check.beg);
-  return size;
-}
-
-SegmentationConfig readSegmenterConfig(const ros::NodeHandle &nh);
+ModelConfig readModelConfig(const ros::NodeHandle &nh);
 
 void outputDemoImage(const DemoConfig &config, const cv::Mat &classes);
 
 void showStatistics(const cv::Mat &classes);
 
-void fillNetworkImage(const SegmentationConfig &config,
-                      const cv::Mat &input,
-                      cv::Mat &output);
+void fillNetworkImage(const ModelConfig &config, const cv::Mat &input, cv::Mat &output);
+
+void fillNetworkDepthImage(const ModelConfig &cfg,
+                           const cv::Mat &input,
+                           cv::Mat &output);
 
 }  // namespace semantic_recolor

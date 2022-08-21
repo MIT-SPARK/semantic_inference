@@ -6,7 +6,7 @@ PLUGINLIB_EXPORT_CLASS(semantic_recolor::SegmentationNodelet, nodelet::Nodelet)
 namespace semantic_recolor {
 void SegmentationNodelet::onInit() {
   ros::NodeHandle& pnh = getPrivateNodeHandle();
-  config_ = readSegmenterConfig(pnh);
+  config_ = readModelConfig(pnh);
   color_config_ = SemanticColorConfig(ros::NodeHandle(pnh, "colors"));
   segmenter_.reset(new TrtSegmenter(config_));
   if (!segmenter_->init()) {

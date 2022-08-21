@@ -3,14 +3,9 @@
 
 namespace semantic_recolor {
 
-struct DepthConfig {
-  std::string input_name{"input.1"};
-  double conversion_factor = 1.0;
-};
-
 class TrtRgbdSegmenter : public TrtSegmenter {
  public:
-  TrtRgbdSegmenter(const SegmentationConfig &config, const DepthConfig &depth_config);
+  TrtRgbdSegmenter(const ModelConfig &config, const std::string &depth_input_name);
 
   virtual ~TrtRgbdSegmenter();
 
@@ -19,10 +14,13 @@ class TrtRgbdSegmenter : public TrtSegmenter {
   bool infer(const cv::Mat &img, const cv::Mat &depth_img);
 
  protected:
+  bool createDepthBuffer();
+
   std::vector<void *> getBindings() const override;
 
-  DepthConfig depth_config_;
+  std::string depth_input_name_;
   CudaMemoryHolder<float> depth_input_buffer_;
+  cv::Mat nn_depth_img_;
 };
 
 }  // namespace semantic_recolor

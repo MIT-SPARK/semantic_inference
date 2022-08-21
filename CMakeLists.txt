@@ -20,7 +20,8 @@ catkin_package(
 
 add_library(
   ${PROJECT_NAME}
-  src/rgbd_segmenter.cpp src/segmenter.cpp src/trt_utilities.cpp src/utilities.cpp
+  src/model_config.cpp src/rgbd_segmenter.cpp src/segmenter.cpp src/trt_utilities.cpp
+  src/utilities.cpp
 )
 target_link_libraries(
   ${PROJECT_NAME}

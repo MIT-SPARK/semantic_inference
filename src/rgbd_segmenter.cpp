@@ -10,18 +10,19 @@
 
 namespace semantic_recolor {
 
-TrtRgbdSegmenter::TrtRgbdSegmenter(const SegmentationConfig &config,
-                                   const DepthConfig &depth_config)
-    : TrtSegmenter(config), depth_config_(depth_config) {}
+TrtRgbdSegmenter::TrtRgbdSegmenter(const ModelConfig &config,
+                                   const std::string &depth_input_name)
+    : TrtSegmenter(config), depth_input_name_(depth_input_name) {}
 
 TrtRgbdSegmenter::~TrtRgbdSegmenter() {}
 
-bool TrtRgbdSegmenter::init() {
-  auto input_idx = engine_->getBindingIndex(depth_config_.input_name.c_str());
+bool TrtRgbdSegmenter::createDepthBuffer() {
+  auto input_idx = engine_->getBindingIndex(depth_input_name_.c_str());
   if (input_idx == -1) {
-    ROS_FATAL_STREAM("Failed to get index for input: " << depth_config_.input_name);
+    ROS_FATAL_STREAM("Failed to get index for input: " << depth_input_name_);
     return false;
   }
+
   ROS_INFO_STREAM("Input binding index: " << engine_->getBindingDataType(input_idx));
 
   if (engine_->getBindingDataType(input_idx) != nvinfer1::DataType::kFLOAT) {
@@ -30,9 +31,17 @@ bool TrtRgbdSegmenter::init() {
                     << " != " << nvinfer1::DataType::kFLOAT);
   }
 
-  nvinfer1::Dims4 input_dims{1, 1, config_.height, config_.width};
-  context_->setBindingDimensions(input_idx, input_dims);
-  depth_input_buffer_.reset(input_dims);
+  context_->setBindingDimensions(input_idx, config_.getInputDims(1));
+  input_buffer_.reset(config_.getInputDims(1));
+
+  nn_depth_img_ = cv::Mat(config_.getInputMatDims(1), CV_32FC1);
+  return true;
+}
+
+bool TrtRgbdSegmenter::init() {
+  if (!createDepthBuffer()) {
+    return false;
+  }
 
   return TrtSegmenter::init();
 }
@@ -44,10 +53,9 @@ std::vector<void *> TrtRgbdSegmenter::getBindings() const {
 }
 
 bool TrtRgbdSegmenter::infer(const cv::Mat &img, const cv::Mat &depth_img) {
-  // TODO(nathan) handle depth image copy
-  fillNetworkImage(config_, img, nn_img_);
+  fillNetworkDepthImage(config_, depth_img, nn_depth_img_);
   auto error = cudaMemcpyAsync(depth_input_buffer_.memory.get(),
-                               nn_img_.data,
+                               nn_depth_img_.data,
                                depth_input_buffer_.size,
                                cudaMemcpyHostToDevice,
                                stream_);

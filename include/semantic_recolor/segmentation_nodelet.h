@@ -1,5 +1,6 @@
 #pragma once
 #include "semantic_recolor/utilities.h"
+#include "semantic_recolor/segmenter.h"
 
 #include <image_transport/image_transport.h>
 #include <cv_bridge/cv_bridge.h>
@@ -14,7 +15,7 @@ class SegmentationNodelet : public nodelet::Nodelet {
  private:
   void callback(const sensor_msgs::ImageConstPtr& msg);
 
-  SegmentationConfig config_;
+  ModelConfig config_;
   SemanticColorConfig color_config_;
   std::unique_ptr<TrtSegmenter> segmenter_;
   std::unique_ptr<image_transport::ImageTransport> transport_;

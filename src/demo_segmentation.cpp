@@ -10,7 +10,7 @@ int main(int argc, char* argv[]) {
 
   ros::NodeHandle nh("~");
   DemoConfig demo_config(nh);
-  SegmentationConfig config = readSegmenterConfig(nh);
+  const auto config = readModelConfig(nh);
 
   cv::Mat img = cv::imread(demo_config.input_file);
   if (img.empty()) {

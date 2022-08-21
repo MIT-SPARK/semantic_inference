@@ -1,10 +1,11 @@
+#pragma once
 #include <NvInfer.h>
 #include <cuda_runtime_api.h>
 
+#include <iostream>
 #include <memory>
 #include <numeric>
 #include <string>
-#include <iostream>
 
 namespace semantic_recolor {
 
@@ -62,5 +63,13 @@ class Logger : public nvinfer1::ILogger {
  private:
   Severity min_severity_;
 };
+
+std::unique_ptr<TrtEngine> deserializeEngine(TrtRuntime &runtime,
+                                             const std::string &engine_path);
+
+std::unique_ptr<TrtEngine> buildEngineFromOnnx(TrtRuntime &runtime,
+                                               Logger &logger,
+                                               const std::string &model_path,
+                                               const std::string &engine_path);
 
 }  // namespace semantic_recolor
