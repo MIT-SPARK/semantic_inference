@@ -27,7 +27,7 @@ void NodeletOutputPublisher::publish(const std_msgs::Header& header,
   }
 
   semantic_image_->header = header;
-  fillSemanticImage(color_config_, classes, semantic_image_->image);
+  color_config_.fillImage(classes, semantic_image_->image);
   semantic_image_pub_.publish(semantic_image_->toImageMsg());
 
   if (!create_overlay_) {

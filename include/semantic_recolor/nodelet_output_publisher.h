@@ -1,5 +1,5 @@
 #pragma once
-#include "semantic_recolor/utilities.h"
+#include "semantic_recolor/semantic_color_config.h"
 
 #include <cv_bridge/cv_bridge.h>
 #include <image_transport/image_transport.h>

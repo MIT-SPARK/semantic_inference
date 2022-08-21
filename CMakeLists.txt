@@ -20,8 +20,13 @@ catkin_package(
 
 add_library(
   ${PROJECT_NAME}
-  src/model_config.cpp src/rgbd_segmenter.cpp src/segmenter.cpp src/trt_utilities.cpp
-  src/utilities.cpp
+  src/image_utilities.cpp
+  src/model_config.cpp
+  src/rgbd_segmenter.cpp
+  src/ros_utilities.cpp
+  src/segmenter.cpp
+  src/semantic_color_config.cpp
+  src/trt_utilities.cpp
 )
 target_link_libraries(
   ${PROJECT_NAME}
@@ -53,7 +58,7 @@ target_link_libraries(demo_segmentation ${PROJECT_NAME})
 if(CATKIN_ENABLE_TESTING)
   catkin_add_gtest(
     utest_${PROJECT_NAME} tests/utest_main.cpp tests/utest_config.cpp
-                          tests/utest_conversion.cpp
+                          tests/utest_image_utilities.cpp
   )
   target_link_libraries(utest_${PROJECT_NAME} ${PROJECT_NAME})
 endif()

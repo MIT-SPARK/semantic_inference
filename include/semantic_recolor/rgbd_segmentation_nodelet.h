@@ -1,7 +1,7 @@
 #pragma once
+#include "semantic_recolor/model_config.h"
 #include "semantic_recolor/nodelet_output_publisher.h"
 #include "semantic_recolor/rgbd_segmenter.h"
-#include "semantic_recolor/utilities.h"
 
 #include <cv_bridge/cv_bridge.h>
 #include <image_transport/image_transport.h>

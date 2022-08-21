@@ -1,5 +1,5 @@
 #include "semantic_recolor/rgbd_segmenter.h"
-#include "semantic_recolor/utilities.h"
+#include "semantic_recolor/image_utilities.h"
 
 #include <NvOnnxParser.h>
 
