@@ -1,0 +1,7 @@
+width: 640
+height: 480
+input_name: "onnx::Transpose_0"
+depth_input_name: "onnx::Transpose_1"
+output_name: "1457"
+normalize: false
+use_network_order: false
