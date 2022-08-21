@@ -35,8 +35,8 @@ def _verify_palette(colors_by_group):
             if not _colors_equal(color, other_color):
                 continue
 
-            invalid_groups.insert(group)
-            invalid_groups.insert(other_group)
+            invalid_groups.add(group)
+            invalid_groups.add(other_group)
             click.secho(
                 f"[ERROR]: {group} and {other_group} share color {_int_color(color)}",
                 fg="red",

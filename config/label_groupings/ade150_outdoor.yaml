@@ -1,0 +1,58 @@
+---
+groups:
+  - {name: Unknown, labels: [50, 79, 110, 114]}
+  - {name: Sky, labels: [3]}
+  - {name: Tree, labels: [5, 73]}
+  - {name: Water, labels: [22, 27, 61, 129]}
+  - {name: Ground, labels: [10, 14, 30, 47, 95]}
+  - {name: Sidewalk, labels: [12, 141]}
+  - {name: Road, labels: [7, 53, 55, 92]}
+  - {name: Vehicle, labels: [21, 81, 84, 91, 103, 117]}
+  - {name: Building, labels: [2, 26, 49, 52, 80, 85, 115]}
+  - {name: Signal, labels: [137]}
+  - {name: Rock, labels: [35]}
+  - {name: Fence, labels: [33]}
+  - {name: Boat, labels: [77, 104]}
+  - {name: Sign, labels: [124]}
+  - {name: Slope, labels: [17, 69]}
+  - {name: Bridge, labels: [62]}
+  - {name: Wall, labels: [1]}
+  - {name: Floor, labels: [4, 29, 102, 106]}
+  - {name: Ceiling, labels: [6, 87, 107]}
+  - {name: Door, labels: [15, 59]}
+  - {name: Stairs, labels: [54, 60, 97, 122]}
+  - {name: Structure, labels: [19, 39, 41, 43, 64, 89, 94, 96, 105, 123]}
+  - {name: Window, labels: [9]}
+  - {name: Shelf, labels: [25, 63, 71, 74, 78, 100]}
+  - {name: Plant, labels: [18, 67, 136]}
+  - {name: Bed, labels: [8, 58, 118]}
+  - {name: Storage, labels: [11, 36, 42, 45, 56, 112, 113, 116]}
+  - {name: Table, labels: [16, 34, 46, 57, 65]}
+  - {name: Chair, labels: [20, 31, 32, 76, 111]}
+  - {name: Wall_Decoration, labels: [23, 28, 44, 101, 145, 149, 150]}
+  - {name: Couch, labels: [24, 40, 70, 98]}
+  - {name: Light, labels: [37, 83, 86, 88, 135, 140]}
+  - {name: Appliance, labels: [38, 48, 51, 66, 72, 108, 119, 125, 130, 134, 146, 147]}
+  - {name: Thing, labels: [68, 75, 90, 109, 120, 128, 131, 133, 138, 139, 142, 144,
+      99, 121, 126, 136, 143, 148]}
+  - {name: Deformable, labels: [82, 93, 132]}
+  - {name: Dynamic_NonHuman, labels: [127]}
+  - {name: Human, labels: [13]}
+specified_colors:
+  - {name: Sky, color: [0.530, 0.810, 0.922]}
+  - {name: Water, color: [0.0, 0.0, 0.883]}
+  - {name: Tree, color: [0.0, 0.424, 0.0]}
+  - {name: Plant, color: [0.0, 1.0, 0.0]}
+  - {name: Vehicle, color: [0.0, 1.0, 1.0]}
+  - {name: Rock, color: [0.0, 0.0, 0.0]}
+  - {name: Ground, color: [0.547, 0.271, 0.075]}
+  - {name: Slope, color: [0.883, 0.883, 0.0]}
+  - {name: Road, color: [0.393, 0.393, 0.393]}
+  - {name: Sidewalk, color: [0.863, 0.863, 0.863]}
+  - {name: Floor, color: [0.502, 0.502, 0.502]}
+  - {name: Wall, color: [0.295, 0.0, 0.510]}
+  - {name: Building, color: [0.730, 0.334, 0.830]}
+  - {name: Couch, color: [0.883, 0.0, 0.0]}
+  - {name: Table, color: [0.883, 0.0, 0.883]}
+  - {name: Window, color: [1.0, 0.471, 0.471]}
+default_color: [0.9677975592919913, 0.44127456009157356, 0.5358103155058701]
