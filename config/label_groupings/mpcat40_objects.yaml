@@ -1,0 +1,86 @@
+---
+groups:
+  - {name: void, labels: [0, 41]}
+  - {name: wall, labels: [1]}
+  - {name: floor, labels: [2]}
+  - {name: chair, labels: [3]}
+  - {name: door, labels: [4]}
+  - {name: table, labels: [5]}
+  - {name: picture, labels: [6]}
+  - {name: cabinet, labels: [7]}
+  - {name: cushion, labels: [8]}
+  - {name: window, labels: [9]}
+  - {name: sofa, labels: [10]}
+  - {name: bed, labels: [11]}
+  - {name: curtain, labels: [12]}
+  - {name: chest_of_drawers, labels: [13]}
+  - {name: plant, labels: [14]}
+  - {name: sink, labels: [15]}
+  - {name: stairs, labels: [16]}
+  - {name: ceiling, labels: [17]}
+  - {name: toilet, labels: [18]}
+  - {name: stool, labels: [19]}
+  - {name: towel, labels: [20]}
+  - {name: mirror, labels: [21]}
+  - {name: tv_monitor, labels: [22]}
+  - {name: shower, labels: [23]}
+  - {name: column, labels: [24]}
+  - {name: bathtub, labels: [25]}
+  - {name: counter, labels: [26]}
+  - {name: fireplace, labels: [27]}
+  - {name: lighting, labels: [28]}
+  - {name: beam, labels: [29]}
+  - {name: railing, labels: [30]}
+  - {name: shelving, labels: [31]}
+  - {name: blinds, labels: [32]}
+  - {name: gym_equipment, labels: [33]}
+  - {name: seating, labels: [34]}
+  - {name: board_panel, labels: [35]}
+  - {name: furniture, labels: [36]}
+  - {name: appliances, labels: [37]}
+  - {name: clothes, labels: [38]}
+  - {name: objects, labels: [39]}
+  - {name: misc, labels: [40]}
+specified_colors: []
+palette:
+  - [0, 0, 0]
+  - [31, 119, 180]
+  - [174, 199, 232]
+  - [255, 127, 14]
+  - [255, 187, 120]
+  - [44, 160, 44]
+  - [152, 223, 138]
+  - [214, 39, 40]
+  - [255, 152, 150]
+  - [148, 103, 189]
+  - [197, 176, 213]
+  - [140, 86, 75]
+  - [196, 156, 148]
+  - [227, 119, 194]
+  - [247, 182, 210]
+  - [127, 127, 127]
+  - [199, 199, 199]
+  - [188, 189, 34]
+  - [219, 219, 141]
+  - [23, 190, 207]
+  - [158, 218, 229]
+  - [57, 59, 121]
+  - [82, 84, 163]
+  - [107, 110, 207]
+  - [156, 158, 222]
+  - [99, 121, 57]
+  - [140, 162, 82]
+  - [181, 207, 107]
+  - [206, 219, 156]
+  - [140, 109, 49]
+  - [189, 158, 57]
+  - [231, 186, 82]
+  - [231, 203, 148]
+  - [132, 60, 57]
+  - [173, 73, 74]
+  - [214, 97, 107]
+  - [231, 150, 156]
+  - [123, 65, 115]
+  - [165, 81, 148]
+  - [206, 109, 189]
+  - [222, 158, 214]

@@ -5,6 +5,8 @@
 
 namespace semantic_recolor {
 
-ModelConfig readModelConfig(const ros::NodeHandle &nh);
+ModelConfig readModelConfig(const ros::NodeHandle& nh);
+
+void showModelConfig(const ModelConfig& config);
 
 }  // namespace semantic_recolor

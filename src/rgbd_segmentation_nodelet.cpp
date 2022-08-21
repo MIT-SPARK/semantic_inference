@@ -10,6 +10,7 @@ namespace semantic_recolor {
 void RgbdSegmentationNodelet::onInit() {
   ros::NodeHandle& pnh = getPrivateNodeHandle();
   config_ = readModelConfig(pnh);
+  showModelConfig(config_);
 
   std::string depth_input_name;
   if (!pnh.getParam("depth_input_name", depth_input_name)) {

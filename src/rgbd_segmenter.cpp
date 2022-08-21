@@ -32,7 +32,7 @@ bool TrtRgbdSegmenter::createDepthBuffer() {
   }
 
   context_->setBindingDimensions(input_idx, config_.getInputDims(1));
-  input_buffer_.reset(config_.getInputDims(1));
+  depth_input_buffer_.reset(config_.getInputDims(1));
 
   nn_depth_img_ = cv::Mat(config_.getInputMatDims(1), CV_32FC1);
   return true;

@@ -1,0 +1,46 @@
+<launch>
+
+    <!-- required if used stand-alone -->
+    <arg name="start_manager" default="true"/>
+
+    <arg name="verbose" default="true"/>
+    <arg name="desired_output" value="screen" if="$(arg verbose)"/>
+    <arg name="desired_output" value="log" unless="$(arg verbose)"/>
+
+    <arg name="rgb_topic" default="rgb/image_raw"/>
+    <arg name="depth_topic" default="depth/image_rect"/>
+    <arg name="semantic_topic" default="semantic/image_raw"/>
+
+    <arg name="model_name" default="rednet_480_640_v13"/>
+    <arg name="model_path" value="$(find semantic_recolor)/models/$(arg model_name).onnx"/>
+    <arg name="engine_path" value="$(find semantic_recolor)/engines/$(arg model_name).trt"/>
+    <arg name="segmenter_config" value="$(find semantic_recolor)/config/$(arg model_name).yaml"/>
+
+    <arg name="dataset_name" default="mpcat40_objects"/>
+    <arg name="color_config" value="$(find semantic_recolor)/config/colors/$(arg dataset_name).yaml"/>
+
+    <arg name="debug" default="false"/>
+    <arg name="launch-prefix" value="gdb -ex run --args" if="$(arg debug)"/>
+    <arg name="launch-prefix" value="" unless="$(arg debug)"/>
+
+    <node pkg="nodelet" type="nodelet" name="nodelet_manager"
+          args="manager"
+          if="$(arg start_manager)"
+          launch-prefix="$(arg launch-prefix)"
+          output="$(arg desired_output)"
+          required="true"/>
+
+    <node pkg="nodelet" type="nodelet" name="semantic_recolor"
+          args="load semantic_recolor/rgbd_segmentation nodelet_manager --no-bond"
+          output="$(arg desired_output)"
+          required="true">
+        <rosparam file="$(arg segmenter_config)" command="load"/>
+        <rosparam file="$(arg color_config)" command="load" ns="colors"/>
+        <param name="model_file" value="$(arg model_path)"/>
+        <param name="engine_file" value="$(arg engine_path)"/>
+        <remap from="rgb/image_raw" to="$(arg rgb_topic)"/>
+        <remap from="depth/image_rect" to="$(arg depth_topic)"/>
+        <remap from="semantic/image_raw" to="$(arg semantic_topic)"/>
+    </node>
+
+</launch>
