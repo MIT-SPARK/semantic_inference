@@ -39,6 +39,7 @@ target_include_directories(
 
 add_library(
   ${PROJECT_NAME}_nodelet
+  src/nodelet_output_publisher.cpp src/rgbd_segmentation_nodelet.cpp
   src/segmentation_nodelet.cpp
 )
 target_include_directories(

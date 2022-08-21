@@ -6,8 +6,8 @@ PLUGINLIB_EXPORT_CLASS(semantic_recolor::SegmentationNodelet, nodelet::Nodelet)
 namespace semantic_recolor {
 void SegmentationNodelet::onInit() {
   ros::NodeHandle& pnh = getPrivateNodeHandle();
+
   config_ = readModelConfig(pnh);
-  color_config_ = SemanticColorConfig(ros::NodeHandle(pnh, "colors"));
   segmenter_.reset(new TrtSegmenter(config_));
   if (!segmenter_->init()) {
     ROS_FATAL("unable to init semantic segmentation model memory");
@@ -16,15 +16,10 @@ void SegmentationNodelet::onInit() {
 
   ros::NodeHandle nh = getNodeHandle();
   transport_.reset(new image_transport::ImageTransport(nh));
+  output_pub_.reset(new NodeletOutputPublisher(pnh, *transport_));
+
   image_sub_ =
       transport_->subscribe("rgb/image_raw", 1, &SegmentationNodelet::callback, this);
-  semantic_image_pub_ = transport_->advertise("semantic/image_raw", 1);
-
-  // todo(jared): add parameter for this
-  create_overlay_ = true;
-  if (create_overlay_) {
-    overlay_image_pub_ = transport_->advertise("semantic/overlay/image_raw", 1);
-  }
 }
 
 void SegmentationNodelet::callback(const sensor_msgs::ImageConstPtr& msg) {
@@ -45,31 +40,7 @@ void SegmentationNodelet::callback(const sensor_msgs::ImageConstPtr& msg) {
     return;
   }
 
-  if (!semantic_image_) {
-    semantic_image_.reset(new cv_bridge::CvImage());
-    semantic_image_->encoding = "rgb8";
-    // semantic_image_->image = cv::Mat(config_.height, config_.width, CV_8UC3);
-    semantic_image_->image = cv::Mat(img_ptr->image.rows, img_ptr->image.cols, CV_8UC3);
-  }
-
-  semantic_image_->header = img_ptr->header;
-
-  fillSemanticImage(color_config_, segmenter_->getClasses(), semantic_image_->image);
-  semantic_image_pub_.publish(semantic_image_->toImageMsg());
-
-  if (create_overlay_) {
-    if (!overlay_image_) {
-      overlay_image_.reset(new cv_bridge::CvImage());
-      overlay_image_->encoding = "rgb8";
-      overlay_image_->image =
-          cv::Mat(img_ptr->image.rows, img_ptr->image.cols, CV_8UC3);
-    }
-    overlay_image_->header = img_ptr->header;
-    createOverlayImage(img_ptr->image,
-                       semantic_image_->image,
-                       overlay_image_->image);
-    overlay_image_pub_.publish(overlay_image_->toImageMsg());
-  }
+  output_pub_->publish(img_ptr->header, img_ptr->image, segmenter_->getClasses());
 }
 
 }  // namespace semantic_recolor

@@ -5,4 +5,10 @@
             nodelet to run semantic segmentation
         </description>
     </class>
+    <class name="semantic_recolor/rgbd_segmentation" type="semantic_recolor::RgbdSegmentationNodelet"
+           base_class_type="nodelet::Nodelet">
+        <description>
+            nodelet to run rgbd semantic segmentation
+        </description>
+    </class>
 </library>
