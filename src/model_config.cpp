@@ -10,9 +10,9 @@ void ModelConfig::fillInputAddress(ImageAddress &addr) const {
   }
 }
 
-float ModelConfig::getValue(float input_val, size_t channel) const {
-  float to_return = map_to_unit_range ? input_val / 255.0f : input_val;
-  to_return = normalize ? (input_val - mean[channel]) / stddev[channel] : input_val;
+float ModelConfig::getValue(uint8_t input_val, size_t channel) const {
+  float to_return = map_to_unit_range ? (input_val / 255.0f) : input_val;
+  to_return = normalize ? (to_return - mean[channel]) / stddev[channel] : to_return;
   return to_return;
 }
 

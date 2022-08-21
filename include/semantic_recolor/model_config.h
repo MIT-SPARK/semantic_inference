@@ -24,7 +24,7 @@ struct ModelConfig {
 
   void fillInputAddress(ImageAddress &addr) const;
 
-  float getValue(float input_val, size_t channel) const;
+  float getValue(uint8_t input_val, size_t channel) const;
 
   nvinfer1::Dims4 getInputDims(int channels) const;
 

@@ -49,3 +49,11 @@ target_link_libraries(${PROJECT_NAME}_nodelet ${PROJECT_NAME} ${catkin_LIBRARIES
 
 add_executable(demo_segmentation src/demo_segmentation.cpp)
 target_link_libraries(demo_segmentation ${PROJECT_NAME})
+
+if(CATKIN_ENABLE_TESTING)
+  catkin_add_gtest(
+    utest_${PROJECT_NAME} tests/utest_main.cpp tests/utest_config.cpp
+                          tests/utest_conversion.cpp
+  )
+  target_link_libraries(utest_${PROJECT_NAME} ${PROJECT_NAME})
+endif()
