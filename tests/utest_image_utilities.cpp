@@ -176,7 +176,7 @@ TEST(ImageConversion, fillDepthImageNetworkOrder) {
   }
 
   cv::Mat output = cv::Mat(config.getInputMatDims(3), CV_32FC1);
-  fillNetworkDepthImage(config, input, output);
+  fillNetworkDepthImage(config, {}, input, output);
 
   for (int r = 0; r < input.rows; ++r) {
     for (int c = 0; c < input.cols; ++c) {
@@ -186,7 +186,6 @@ TEST(ImageConversion, fillDepthImageNetworkOrder) {
     }
   }
 }
-
 
 TEST(ImageConversion, fillDepthImageRowMajorOrder) {
   const float TEST_TOLERANCE = 1.0e-6;
@@ -205,7 +204,7 @@ TEST(ImageConversion, fillDepthImageRowMajorOrder) {
   }
 
   cv::Mat output = cv::Mat(config.getInputMatDims(3), CV_32FC1);
-  fillNetworkDepthImage(config, input, output);
+  fillNetworkDepthImage(config, {}, input, output);
 
   for (int r = 0; r < input.rows; ++r) {
     for (int c = 0; c < input.cols; ++c) {

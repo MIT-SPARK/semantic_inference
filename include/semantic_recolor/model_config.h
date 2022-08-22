@@ -1,8 +1,8 @@
 #pragma once
 #include "semantic_recolor/trt_utilities.h"
 
-#include <vector>
 #include <array>
+#include <vector>
 
 namespace semantic_recolor {
 
@@ -29,6 +29,16 @@ struct ModelConfig {
   nvinfer1::Dims4 getInputDims(int channels) const;
 
   std::vector<int> getInputMatDims(int channels) const;
+};
+
+struct DepthConfig {
+  std::string input_name;
+
+  float mean = 0.213;
+  float stddev = 0.285;
+  bool normalize_depth = false;
+
+  float getValue(float input_val) const;
 };
 
 }  // namespace semantic_recolor

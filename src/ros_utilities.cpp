@@ -29,6 +29,20 @@ ModelConfig readModelConfig(const ros::NodeHandle& nh) {
   return config;
 }
 
+DepthConfig readDepthModelConfig(const ros::NodeHandle& nh) {
+  DepthConfig config;
+
+  if (!nh.getParam("depth_input_name", config.input_name)) {
+    ROS_FATAL("Depth input name required!");
+    throw std::runtime_error("depth_input_name required");
+  }
+
+  nh.getParam("depth_mean", config.mean);
+  nh.getParam("depth_stddev", config.stddev);
+  nh.getParam("normalize_depth", config.normalize_depth);
+  return config;
+}
+
 #undef READ_REQUIRED
 
 template <typename T>
@@ -72,6 +86,14 @@ void showModelConfig(const ModelConfig& config) {
   ROS_INFO_STREAM("rgb trt dimensions: " << config.getInputDims(3));
   ROS_INFO_STREAM("depth dimensions: " << config.getInputMatDims(1));
   ROS_INFO_STREAM("depth trt dimensions: " << config.getInputDims(1));
+}
+
+void showDepthModelConfig(const DepthConfig& config) {
+  ROS_INFO_STREAM("ModelConfig:");
+  SHOW_PARAM(config, input_name);
+  SHOW_PARAM(config, mean);
+  SHOW_PARAM(config, stddev);
+  SHOW_PARAM(config, normalize_depth);
 }
 
 #undef SHOW_PARAM

@@ -11,15 +11,15 @@
 namespace semantic_recolor {
 
 TrtRgbdSegmenter::TrtRgbdSegmenter(const ModelConfig &config,
-                                   const std::string &depth_input_name)
-    : TrtSegmenter(config), depth_input_name_(depth_input_name) {}
+                                   const DepthConfig &depth_config)
+    : TrtSegmenter(config), depth_config_(depth_config) {}
 
 TrtRgbdSegmenter::~TrtRgbdSegmenter() {}
 
 bool TrtRgbdSegmenter::createDepthBuffer() {
-  auto input_idx = engine_->getBindingIndex(depth_input_name_.c_str());
+  auto input_idx = engine_->getBindingIndex(depth_config_.input_name.c_str());
   if (input_idx == -1) {
-    ROS_FATAL_STREAM("Failed to get index for input: " << depth_input_name_);
+    ROS_FATAL_STREAM("Failed to get index for input: " << depth_config_.input_name);
     return false;
   }
 
@@ -53,7 +53,7 @@ std::vector<void *> TrtRgbdSegmenter::getBindings() const {
 }
 
 bool TrtRgbdSegmenter::infer(const cv::Mat &img, const cv::Mat &depth_img) {
-  fillNetworkDepthImage(config_, depth_img, nn_depth_img_);
+  fillNetworkDepthImage(config_, depth_config_, depth_img, nn_depth_img_);
   auto error = cudaMemcpyAsync(depth_input_buffer_.memory.get(),
                                nn_depth_img_.data,
                                depth_input_buffer_.size,

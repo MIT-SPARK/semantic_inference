@@ -12,18 +12,14 @@ void RgbdSegmentationNodelet::onInit() {
   config_ = readModelConfig(pnh);
   showModelConfig(config_);
 
-  std::string depth_input_name;
-  if (!pnh.getParam("depth_input_name", depth_input_name)) {
-    ROS_FATAL("depth input name required!");
-    throw std::runtime_error("missing depth input name");
-  }
-
   depth_scale_ = 1.0;
   if (!pnh.getParam("depth_scale", depth_scale_)) {
     ROS_WARN("missing depth scale, default to 1.0");
   }
 
-  segmenter_.reset(new TrtRgbdSegmenter(config_, depth_input_name));
+  const auto depth_config = readDepthModelConfig(pnh);
+  showDepthModelConfig(depth_config);
+  segmenter_.reset(new TrtRgbdSegmenter(config_, depth_config));
   if (!segmenter_->init()) {
     ROS_FATAL("unable to init semantic segmentation model memory");
     throw std::runtime_error("bad segmenter init");

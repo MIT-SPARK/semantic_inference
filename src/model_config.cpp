@@ -32,4 +32,12 @@ std::vector<int> ModelConfig::getInputMatDims(int channels) const {
   }
 }
 
+float DepthConfig::getValue(float input_val) const {
+  if (!normalize_depth) {
+    return input_val;
+  }
+
+  return (input_val - mean) / stddev;
+}
+
 }  // namespace semantic_recolor

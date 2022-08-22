@@ -15,7 +15,6 @@ void fillNetworkImage(const ModelConfig &cfg, const cv::Mat &input, cv::Mat &out
   ModelConfig::ImageAddress input_addr;
   cfg.fillInputAddress(input_addr);
 
-  // TODO(nathan) check
   for (int row = 0; row < img.rows; ++row) {
     for (int col = 0; col < img.cols; ++col) {
       const uint8_t *pixel = img.ptr<uint8_t>(row, col);
@@ -33,6 +32,7 @@ void fillNetworkImage(const ModelConfig &cfg, const cv::Mat &input, cv::Mat &out
 }
 
 void fillNetworkDepthImage(const ModelConfig &cfg,
+                           const DepthConfig &depth_config,
                            const cv::Mat &input,
                            cv::Mat &output) {
   const bool size_ok = input.cols == cfg.width && input.rows == cfg.height;
@@ -53,10 +53,9 @@ void fillNetworkDepthImage(const ModelConfig &cfg,
     cv::resize(input, img, cv::Size(cfg.width, cfg.height), 0, 0, cv::INTER_NEAREST);
   }
 
-  // TODO(nathan) check
   for (int row = 0; row < img.rows; ++row) {
     for (int col = 0; col < img.cols; ++col) {
-      output.at<float>(0, row, col) = input.at<float>(row, col);
+      output.at<float>(0, row, col) = depth_config.getValue(input.at<float>(row, col));
     }
   }
 }

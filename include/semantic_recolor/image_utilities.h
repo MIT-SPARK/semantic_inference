@@ -8,6 +8,7 @@ namespace semantic_recolor {
 void fillNetworkImage(const ModelConfig &config, const cv::Mat &input, cv::Mat &output);
 
 void fillNetworkDepthImage(const ModelConfig &cfg,
+                           const DepthConfig &depth_config,
                            const cv::Mat &input,
                            cv::Mat &output);
 

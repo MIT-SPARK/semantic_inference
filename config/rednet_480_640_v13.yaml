@@ -4,5 +4,8 @@ input_name: "input.1"
 depth_input_name: "input.7"
 output_name: "1444"
 normalize: true
+normalize_depth: true
 map_to_unit_range: true
 use_network_order: true
+depth_mean: 0.213
+depth_stddev: 0.285
