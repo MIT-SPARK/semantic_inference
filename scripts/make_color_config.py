@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Script to make color config."""
+import matplotlib.colors as mcolors
 import seaborn as sns
 import pathlib
 import random
@@ -7,6 +8,32 @@ import click
 import math
 import yaml
 import sys
+
+
+EXPANDED_COLORS = {
+    "black": [0, 0, 0],
+    "white": [255, 255, 255],
+    "blue": [0, 0, 225],
+    "orange": [255, 140, 0],
+    "green": [0, 200, 0],
+    "red": [225, 0, 0],
+    "purple": [120, 0, 120],
+    "brown": [139, 69, 19],
+    "grey": [128, 128, 128],
+    "yellow": [225, 225, 0],
+    "magenta": [225, 0, 225],
+    "cyan": [0, 255, 255],
+    "lightgrey": [220, 220, 220],
+    "darkgrey": [100, 100, 100],
+    "lightblue": [135, 206, 235],
+    "darkblue": [0, 0, 128],
+    "lightgreen": [0, 255, 0],
+    "darkgreen": [0, 108, 0],
+    "lightred": [255, 120, 120],
+    "darkred": [128, 0, 0],
+    "lightpurple": [186, 85, 211],
+    "darkpurple": [75, 0, 130],
+}
 
 
 def _read_label_config(category_groups_path):
@@ -45,9 +72,29 @@ def _verify_palette(colors_by_group):
     return len(invalid_groups) == 0
 
 
+def _get_specified_color(group_color):
+    if group_color["source"] == "raw":
+        return [float(x) for x in group_color["color"][:3]]
+
+    color_name = group_color["color"]
+    if group_color["source"] == "expanded":
+        if color_name not in EXPANDED_COLORS:
+            click.secho(f"failed to find {color_name} in EXPANDED_COLORS", fg="red")
+            return None
+
+        return [x / 255.0 for x in EXPANDED_COLORS[color_name][:3]]
+
+    if group_color["source"] == "mpl":
+        if color_name not in mcolors.CSS4_COLORS:
+            click.secho(f"failed to find {color_name} in CSS4_COLORS", fg="red")
+            return None
+
+        return [x for x in mcolors.to_rgb(mcolors.CSS4_COLORS[color_name])]
+
+
 def _get_palette(label_config, palette, seed, force_compatible=False):
     colors_by_group = {
-        group_color["name"]: [float(x) for x in group_color["color"]]
+        group_color["name"]: _get_specified_color(group_color)
         for group_color in label_config["specified_colors"]
     }
     N_groups = len(label_config["groups"])
@@ -109,11 +156,11 @@ def _write_configs(label_config, group_colors, output_dir, config_name):
         fout.write(yaml.dump(config))
 
     with csv_output.open("w") as fout:
-        fout.write("name,red,green,blue,alpha,id\n")
+        fout.write("name,red,green,blue,alpha,id\r\n")
         for index, group in enumerate(label_config["groups"]):
             name = group["name"]
             color = _int_color(group_colors[name])
-            fout.write(f"{name},{color[0]},{color[1]},{color[2]},255,{index}\n")
+            fout.write(f"{name},{color[0]},{color[1]},{color[2]},255,{index}\r\n")
 
 
 @click.command()
@@ -121,7 +168,7 @@ def _write_configs(label_config, group_colors, output_dir, config_name):
 @click.argument("output_dir")
 @click.option("-p", "--palette", default="husl", help="fallback color palette")
 @click.option("-s", "--seed", default=0, type=int, help="random seed")
-@click.option("-n", "--config-name", default="test_config", help="output config name")
+@click.option("-n", "--config-name", default=None, help="output config name")
 @click.option(
     "-f",
     "--force-compatible",
@@ -150,10 +197,17 @@ def main(
         label_config, palette, seed, force_compatible=force_compatible
     )
     if not _verify_palette(colors):
-        click.echo("[FATAL]: color collision in color palette")
+        click.secho("[FATAL]: color collision in color palette", fg="red")
         sys.exit(1)
 
-    _write_configs(label_config, colors, output_path, config_name)
+    name_to_use = (
+        config_name if config_name is not None else label_config.get("name", "test")
+    )
+    if name_to_use == "test":
+        click.secho(
+            "[WARN]: config name not specifying, defaulting to test", fg="yellow"
+        )
+    _write_configs(label_config, colors, output_path, name_to_use)
 
 
 if __name__ == "__main__":

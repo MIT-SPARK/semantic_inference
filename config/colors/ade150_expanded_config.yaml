@@ -306,9 +306,9 @@ class_info/6/labels:
 - 54
 - 91
 class_info/7/color:
-- 0.8823529411764706
 - 0.0
-- 0.8823529411764706
+- 1.0
+- 1.0
 class_info/7/labels:
 - 20
 - 80

@@ -1,4 +1,5 @@
 ---
+name: "ade150_expanded_config"
 groups:
   - {name: Unknown, labels: [50, 79, 110, 114]}
   - {name: Sky, labels: [3]}
@@ -39,20 +40,20 @@ groups:
   - {name: Dynamic_NonHuman, labels: [127]}
   - {name: Human, labels: [13]}
 specified_colors:
-  - {name: Sky, color: [0.530, 0.810, 0.922]}
-  - {name: Water, color: [0.0, 0.0, 0.883]}
-  - {name: Tree, color: [0.0, 0.424, 0.0]}
-  - {name: Plant, color: [0.0, 1.0, 0.0]}
-  - {name: Vehicle, color: [0.0, 1.0, 1.0]}
-  - {name: Rock, color: [0.0, 0.0, 0.0]}
-  - {name: Ground, color: [0.547, 0.271, 0.075]}
-  - {name: Slope, color: [0.883, 0.883, 0.0]}
-  - {name: Road, color: [0.393, 0.393, 0.393]}
-  - {name: Sidewalk, color: [0.863, 0.863, 0.863]}
-  - {name: Floor, color: [0.502, 0.502, 0.502]}
-  - {name: Wall, color: [0.295, 0.0, 0.510]}
-  - {name: Building, color: [0.730, 0.334, 0.830]}
-  - {name: Couch, color: [0.883, 0.0, 0.0]}
-  - {name: Table, color: [0.883, 0.0, 0.883]}
-  - {name: Window, color: [1.0, 0.471, 0.471]}
+  - {name: Sky, source: expanded, color: "lightblue"}
+  - {name: Water, source: expanded, color: "blue"}
+  - {name: Tree, source: expanded, color: "darkgreen"}
+  - {name: Plant, source: expanded, color: "lightgreen"}
+  - {name: Vehicle, source: expanded, color: "cyan"}
+  - {name: Rock, source: expanded, color: "black"}
+  - {name: Ground, source: expanded, color: "brown"}
+  - {name: Slope, source: expanded, color: "yellow"}
+  - {name: Road, source: expanded, color: "darkgrey"}
+  - {name: Sidewalk, source: expanded, color: "lightgrey"}
+  - {name: Floor, source: expanded, color: "grey"}
+  - {name: Wall, source: expanded, color: "darkpurple"}
+  - {name: Building, source: expanded, color: "lightpurple"}
+  - {name: Couch, source: expanded, color: "red"}
+  - {name: Table, source: expanded, color: "magenta"}
+  - {name: Window, source: expanded, color: "lightred"}
 default_color: [0.9677975592919913, 0.44127456009157356, 0.5358103155058701]
