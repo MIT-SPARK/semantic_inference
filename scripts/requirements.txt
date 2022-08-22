@@ -2,3 +2,4 @@ click
 pyyaml
 seaborn
 onnx
+onnxruntime
