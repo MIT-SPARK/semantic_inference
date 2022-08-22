@@ -76,6 +76,9 @@ def _get_specified_color(group_color):
     if group_color["source"] == "raw":
         return [float(x) for x in group_color["color"][:3]]
 
+    if group_color["source"] == "raw_int":
+        return [float(x) / 255.0 for x in group_color["color"][:3]]
+
     color_name = group_color["color"]
     if group_color["source"] == "expanded":
         if color_name not in EXPANDED_COLORS:

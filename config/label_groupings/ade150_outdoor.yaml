@@ -1,5 +1,5 @@
 ---
-name: "ade150_expanded_config"
+name: ade150_expanded_config
 groups:
   - {name: Unknown, labels: [50, 79, 110, 114]}
   - {name: Sky, labels: [3]}
@@ -40,20 +40,20 @@ groups:
   - {name: Dynamic_NonHuman, labels: [127]}
   - {name: Human, labels: [13]}
 specified_colors:
-  - {name: Sky, source: expanded, color: "lightblue"}
-  - {name: Water, source: expanded, color: "blue"}
-  - {name: Tree, source: expanded, color: "darkgreen"}
-  - {name: Plant, source: expanded, color: "lightgreen"}
-  - {name: Vehicle, source: expanded, color: "cyan"}
-  - {name: Rock, source: expanded, color: "black"}
-  - {name: Ground, source: expanded, color: "brown"}
-  - {name: Slope, source: expanded, color: "yellow"}
-  - {name: Road, source: expanded, color: "darkgrey"}
-  - {name: Sidewalk, source: expanded, color: "lightgrey"}
-  - {name: Floor, source: expanded, color: "grey"}
-  - {name: Wall, source: expanded, color: "darkpurple"}
-  - {name: Building, source: expanded, color: "lightpurple"}
-  - {name: Couch, source: expanded, color: "red"}
-  - {name: Table, source: expanded, color: "magenta"}
-  - {name: Window, source: expanded, color: "lightred"}
+  - {name: Sky, source: expanded, color: lightblue}
+  - {name: Water, source: expanded, color: blue}
+  - {name: Tree, source: expanded, color: darkgreen}
+  - {name: Plant, source: expanded, color: lightgreen}
+  - {name: Vehicle, source: expanded, color: cyan}
+  - {name: Rock, source: expanded, color: black}
+  - {name: Ground, source: expanded, color: brown}
+  - {name: Slope, source: expanded, color: yellow}
+  - {name: Road, source: expanded, color: darkgrey}
+  - {name: Sidewalk, source: expanded, color: lightgrey}
+  - {name: Floor, source: expanded, color: grey}
+  - {name: Wall, source: expanded, color: darkpurple}
+  - {name: Building, source: expanded, color: lightpurple}
+  - {name: Couch, source: expanded, color: red}
+  - {name: Table, source: expanded, color: magenta}
+  - {name: Window, source: expanded, color: lightred}
 default_color: [0.9677975592919913, 0.44127456009157356, 0.5358103155058701]

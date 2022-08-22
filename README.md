@@ -53,3 +53,6 @@ To adapt to a new dataset (or new set of labels), you will have to:
   - Make a new grouping config (see [this](config/label_groupings/ade150_outdoor.yaml) or [this](config/label_groupings/ade150_indoor.yaml) for examples)
   - Run [this](scripts/make_color_config.py) to export the color configuration. A typical invocation is `python scripts/make_color_config.py config/label_groupings/new_config.yaml config/colors/` from the root repo directory with your environment sourced.
   - Pass in the appropriate arguments to the launch file (`dataset_name`)
+
+You can view the groupings for a particular category label space by running [this](scripts/show_label_groupings.py).
+A typical invocation is `python scripts/show_label_groupings.py resources/ade20k_categories.csv config/label_groupings/ade150_indoor.yaml` or `python scripts/show_label_groupings.py resources/mpcat40.tsv config/label_groupings/mpcat40_objects.yaml -n 1`.

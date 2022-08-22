@@ -1,0 +1,51 @@
+---
+name: ade150_mp3d_config
+groups:
+  - {name: Unknown, labels: [3, 7, 10, 12, 14, 17, 21, 22, 26, 27, 30, 33, 35, 47,
+      49, 50, 52, 53, 55, 61, 62, 69, 77, 79, 80, 81, 84, 85, 91, 92, 95, 103, 104,
+      106, 110, 114, 115, 117, 123, 124, 129, 137, 141]}
+  - {name: Wall, labels: [1, 2]}
+  - {name: Floor, labels: [4, 29, 102]}
+  - {name: Ceiling, labels: [6, 87, 107]}
+  - {name: Door, labels: [15, 59]}
+  - {name: Stairs, labels: [54, 60, 97, 122]}
+  - {name: Structure, labels: [39, 41, 43, 46, 50, 89, 94, 96, 105, 140]}
+  - {name: Plant, labels: [5, 18, 67, 73, 126, 136]}
+  - {name: Bed, labels: [8, 58, 118, 132]}
+  - {name: Storage, labels: [11, 36, 45, 56]}
+  - {name: Table, labels: [16, 65]}
+  - {name: Wall_Decoration, labels: [23, 28, 44, 101, 145, 149, 150]}
+  - {name: Light, labels: [37, 83, 86, 88, 135]}
+  - {name: Appliance, labels: [51, 72, 108, 119, 125, 130, 134, 147]}
+  - {name: Thing, labels: [42, 68, 75, 90, 109, 112, 113, 116, 120, 128, 131, 133,
+      138, 139, 142, 144, 99, 121, 143, 148]}
+  - {name: Shelf, labels: [25, 71, 74, 78, 100]}
+  - {name: Plumbing_Fixture, labels: [38, 48, 66, 146]}
+  - {name: Window, labels: [9, 19, 64]}
+  - {name: Furniture, labels: [34, 57, 63]}
+  - {name: Clothing, labels: [82, 93]}
+  - {name: Seating, labels: [20, 31, 32, 76, 111, 24, 40, 70, 98]}
+  - {name: Dynamic, labels: [127, 13]}
+specified_colors:
+  - {name: Unknown, source: raw_int, color: [0, 0, 0]}
+  - {name: Wall, source: raw_int, color: [174, 199, 232]}
+  - {name: Floor, source: raw_int, color: [255, 127, 14]}
+  - {name: Ceiling, source: raw_int, color: [219, 219, 141]}
+  - {name: Door, source: raw_int, color: [44, 160, 44]}
+  - {name: Stairs, source: raw_int, color: [188, 189, 34]}
+  - {name: Structure, source: raw_int, color: [189, 158, 57]}
+  - {name: Plant, source: raw_int, color: [127, 127, 127]}
+  - {name: Bed, source: raw_int, color: [196, 156, 148]}
+  - {name: Storage, source: raw_int, color: [255, 152, 150]}
+  - {name: Table, source: raw_int, color: [152, 223, 138]}
+  - {name: Wall_Decoration, source: raw_int, color: [214, 39, 40]}
+  - {name: Light, source: raw_int, color: [140, 109, 49]}
+  - {name: Appliance, source: raw_int, color: [165, 81, 148]}
+  - {name: Thing, source: raw_int, color: [222, 158, 214]}
+  - {name: Shelf, source: raw_int, color: [231, 203, 148]}
+  - {name: Plumbing_Fixture, source: raw_int, color: [156, 158, 222]}
+  - {name: Window, source: raw_int, color: [227, 119, 194]}
+  - {name: Furniture, source: raw_int, color: [123, 65, 115]}
+  - {name: Clothing, source: raw_int, color: [206, 109, 189]}
+  - {name: Seating, source: raw_int, color: [214, 97, 107]}
+  - {name: Dynamic, source: raw_int, color: [255, 0, 0]}
