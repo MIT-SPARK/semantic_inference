@@ -15,7 +15,7 @@
     <arg name="engine_path" value="$(find semantic_recolor)/engines/$(arg model_name).trt"/>
     <arg name="segmenter_config" value="$(find semantic_recolor)/config/$(arg model_name).yaml"/>
 
-    <arg name="dataset_name" default="ade150_expanded_config"/>
+    <arg name="dataset_name" default="ade150_config"/>
     <arg name="color_config" value="$(find semantic_recolor)/config/colors/$(arg dataset_name).yaml"/>
 
     <arg name="debug" default="false"/>
