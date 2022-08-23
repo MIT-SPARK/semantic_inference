@@ -3,3 +3,4 @@ pyyaml
 seaborn
 onnx
 onnxruntime
+pandas

@@ -56,3 +56,6 @@ To adapt to a new dataset (or new set of labels), you will have to:
 
 You can view the groupings for a particular category label space by running [this](scripts/show_label_groupings.py).
 A typical invocation is `python scripts/show_label_groupings.py resources/ade20k_categories.csv config/label_groupings/ade150_indoor.yaml` or `python scripts/show_label_groupings.py resources/mpcat40.tsv config/label_groupings/mpcat40_objects.yaml -n 1`.
+
+You can also view the groupings for a particular color csv files via [this](scripts/show_csv_groupings.py).
+For most color configs exported by this package, the group names will be one-to-one with the category labels.
