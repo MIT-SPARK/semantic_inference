@@ -10,12 +10,13 @@ add_compile_options(-Wall -Wextra)
 find_package(catkin REQUIRED roscpp nodelet cv_bridge image_transport)
 find_package(OpenCV REQUIRED)
 find_package(CUDA REQUIRED)
+find_package(yaml-cpp REQUIRED)
 
 catkin_package(
   CATKIN_DEPENDS roscpp nodelet cv_bridge image_transport
-  DEPENDS OpenCV
-  INCLUDE_DIRS
-  LIBRARIES
+  DEPENDS OpenCV CUDA
+  INCLUDE_DIRS include
+  LIBRARIES ${PROJECT_NAME} nvinfer nvonnxparser nvinfer_plugin
 )
 
 add_library(
@@ -27,6 +28,7 @@ add_library(
   src/segmenter.cpp
   src/semantic_color_config.cpp
   src/trt_utilities.cpp
+  src/yaml_utilities.cpp
 )
 target_link_libraries(
   ${PROJECT_NAME}
@@ -36,6 +38,7 @@ target_link_libraries(
   nvinfer_plugin
   ${CUDA_LIBRARIES}
   ${OpenCV_LIBRARIES}
+  yaml-cpp
 )
 target_include_directories(
   ${PROJECT_NAME} PUBLIC include ${catkin_INCLUDE_DIRS} ${CUDA_INCLUDE_DIRS}
@@ -54,6 +57,9 @@ target_link_libraries(${PROJECT_NAME}_nodelet ${PROJECT_NAME} ${catkin_LIBRARIES
 
 add_executable(demo_segmentation src/demo_segmentation.cpp)
 target_link_libraries(demo_segmentation ${PROJECT_NAME})
+
+add_executable(demo_rgbd_segmentation src/demo_rgbd_segmentation.cpp)
+target_link_libraries(demo_rgbd_segmentation ${PROJECT_NAME})
 
 if(CATKIN_ENABLE_TESTING)
   catkin_add_gtest(

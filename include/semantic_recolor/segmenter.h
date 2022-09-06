@@ -10,6 +10,15 @@
 
 namespace semantic_recolor {
 
+#define LOG_TO_LOGGER(level, message)             \
+  {                                               \
+    std::stringstream ss;                         \
+    ss << message;                                \
+    const std::string to_log = ss.str();          \
+    logger_.log(Severity::level, to_log.c_str()); \
+  }                                               \
+  static_assert(true, "")
+
 class TrtSegmenter {
  public:
   explicit TrtSegmenter(const ModelConfig &config);

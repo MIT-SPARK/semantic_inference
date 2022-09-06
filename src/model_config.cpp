@@ -37,7 +37,12 @@ float DepthConfig::getValue(float input_val) const {
     return input_val;
   }
 
-  return (input_val - mean) / stddev;
+  const float new_value = (input_val - depth_mean) / depth_stddev;
+  if (new_value < 0.0f) {
+    return 0.0f;
+  }
+
+  return new_value;
 }
 
 }  // namespace semantic_recolor

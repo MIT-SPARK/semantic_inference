@@ -14,6 +14,8 @@ class TrtRgbdSegmenter : public TrtSegmenter {
   bool infer(const cv::Mat &img, const cv::Mat &depth_img);
 
  protected:
+  void showStats(const cv::Mat &img, int channel, const std::string &name) const;
+
   bool createDepthBuffer();
 
   std::vector<void *> getBindings() const override;

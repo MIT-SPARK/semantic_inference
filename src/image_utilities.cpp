@@ -55,7 +55,7 @@ void fillNetworkDepthImage(const ModelConfig &cfg,
 
   for (int row = 0; row < img.rows; ++row) {
     for (int col = 0; col < img.cols; ++col) {
-      output.at<float>(0, row, col) = depth_config.getValue(input.at<float>(row, col));
+      output.at<float>(0, row, col) = depth_config.getValue(img.at<float>(row, col));
     }
   }
 }

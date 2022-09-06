@@ -56,12 +56,14 @@ struct CudaMemoryHolder {
 
 class Logger : public nvinfer1::ILogger {
  public:
-  explicit Logger(Severity severity = Severity::kINFO) : min_severity_(severity) {}
+  explicit Logger(Severity severity = Severity::kINFO, bool use_ros = true)
+      : min_severity_(severity), use_ros_(use_ros) {}
 
   void log(Severity severity, const char *msg) noexcept override;
 
  private:
   Severity min_severity_;
+  bool use_ros_;
 };
 
 std::unique_ptr<TrtEngine> deserializeEngine(TrtRuntime &runtime,
@@ -70,6 +72,7 @@ std::unique_ptr<TrtEngine> deserializeEngine(TrtRuntime &runtime,
 std::unique_ptr<TrtEngine> buildEngineFromOnnx(TrtRuntime &runtime,
                                                Logger &logger,
                                                const std::string &model_path,
-                                               const std::string &engine_path);
+                                               const std::string &engine_path,
+                                               bool set_builder_flags);
 
 }  // namespace semantic_recolor

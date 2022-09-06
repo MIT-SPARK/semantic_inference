@@ -1,8 +1,6 @@
 #include "semantic_recolor/segmenter.h"
 #include "semantic_recolor/image_utilities.h"
 
-#include <ros/ros.h>
-
 #include <opencv2/imgproc.hpp>
 #include <opencv2/opencv.hpp>
 
@@ -12,30 +10,35 @@
 namespace semantic_recolor {
 
 TrtSegmenter::TrtSegmenter(const ModelConfig &config)
-    : config_(config), logger_(Severity::kINFO), initialized_(false) {
+    : config_(config),
+      logger_(config.log_severity, config.use_ros_logging),
+      initialized_(false) {
   runtime_.reset(nvinfer1::createInferRuntime(logger_));
   engine_ = deserializeEngine(*runtime_, config_.engine_file);
   if (!engine_) {
-    ROS_WARN("TRT engine not found! Rebuilding.");
-    engine_ = buildEngineFromOnnx(
-        *runtime_, logger_, config_.model_file, config_.engine_file);
-    ROS_INFO_STREAM("Finished building engine");
+    LOG_TO_LOGGER(kWARNING, "TRT engine not found! Rebuilding.");
+    engine_ = buildEngineFromOnnx(*runtime_,
+                                  logger_,
+                                  config_.model_file,
+                                  config_.engine_file,
+                                  config_.set_builder_flags);
+    LOG_TO_LOGGER(kINFO, "Finished building engine");
   }
 
   if (!engine_) {
-    ROS_FATAL_STREAM("Building engine from onnx failed!");
+    LOG_TO_LOGGER(kERROR, "Building engine from onnx failed!");
     throw std::runtime_error("failed to load or build engine");
   }
 
-  ROS_INFO_STREAM("Loaded TRT engine");
+  LOG_TO_LOGGER(kINFO, "Loaded TRT engine");
 
   context_.reset(engine_->createExecutionContext());
   if (!context_) {
-    ROS_FATAL_STREAM("Failed to create execution context");
+    LOG_TO_LOGGER(kERROR, "Failed to create execution context");
     throw std::runtime_error("failed to set up trt context");
   }
 
-  ROS_INFO_STREAM("TRT execution context started");
+  LOG_TO_LOGGER(kINFO, "TRT execution context started");
 }
 
 TrtSegmenter::~TrtSegmenter() {
@@ -47,16 +50,18 @@ TrtSegmenter::~TrtSegmenter() {
 bool TrtSegmenter::createInputBuffer() {
   auto input_idx = engine_->getBindingIndex(config_.input_name.c_str());
   if (input_idx == -1) {
-    ROS_FATAL_STREAM("Failed to get index for input: " << config_.input_name);
+    LOG_TO_LOGGER(kERROR, "Failed to get index for input: " << config_.input_name);
     return false;
   }
 
-  ROS_INFO_STREAM("Input binding index: " << engine_->getBindingDataType(input_idx));
+  LOG_TO_LOGGER(kINFO,
+                "Input binding index: " << engine_->getBindingDataType(input_idx));
 
   if (engine_->getBindingDataType(input_idx) != nvinfer1::DataType::kFLOAT) {
-    ROS_WARN_STREAM("Input type doesn't match expected: "
-                    << engine_->getBindingDataType(input_idx)
-                    << " != " << nvinfer1::DataType::kFLOAT);
+    LOG_TO_LOGGER(
+        kWARNING,
+        "Input type doesn't match expected: " << engine_->getBindingDataType(input_idx)
+                                              << " != " << nvinfer1::DataType::kFLOAT);
   }
 
   context_->setBindingDimensions(input_idx, config_.getInputDims(3));
@@ -69,18 +74,20 @@ bool TrtSegmenter::createInputBuffer() {
 bool TrtSegmenter::createOutputBuffer() {
   auto output_idx = engine_->getBindingIndex(config_.output_name.c_str());
   if (output_idx == -1) {
-    ROS_FATAL_STREAM("Failed to get index for output: " << config_.output_name);
+    LOG_TO_LOGGER(kERROR, "Failed to get index for output: " << config_.output_name);
     return false;
   }
 
-  ROS_INFO_STREAM("Output binding index: " << engine_->getBindingDataType(output_idx));
+  LOG_TO_LOGGER(kINFO,
+                "Output binding index: " << engine_->getBindingDataType(output_idx));
 
   // The output datatype controls precision,
   // https://github.com/NVIDIA/TensorRT/issues/717
   if (engine_->getBindingDataType(output_idx) != nvinfer1::DataType::kINT32) {
-    ROS_WARN_STREAM("Output type doesn't match expected: "
-                    << engine_->getBindingDataType(output_idx)
-                    << " != " << nvinfer1::DataType::kINT32);
+    LOG_TO_LOGGER(kWARNING,
+                  "Output type doesn't match expected: "
+                      << engine_->getBindingDataType(output_idx)
+                      << " != " << nvinfer1::DataType::kINT32);
   }
 
   auto output_dims = context_->getBindingDimensions(output_idx);
@@ -100,12 +107,12 @@ bool TrtSegmenter::init() {
   }
 
   if (cudaStreamCreate(&stream_) != cudaSuccess) {
-    ROS_FATAL_STREAM("Creating cuda stream failed!");
+    LOG_TO_LOGGER(kERROR, "Creating cuda stream failed!");
     return false;
   }
 
   initialized_ = true;
-  ROS_INFO("Segmenter initialized!");
+  LOG_TO_LOGGER(kINFO, "Segmenter initialized!");
   return true;
 }
 
@@ -123,14 +130,15 @@ bool TrtSegmenter::infer(const cv::Mat &img) {
                                cudaMemcpyHostToDevice,
                                stream_);
   if (error != cudaSuccess) {
-    ROS_FATAL_STREAM("copying image to gpu failed: " << cudaGetErrorString(error));
+    LOG_TO_LOGGER(kERROR, "copying image to gpu failed: " << cudaGetErrorString(error));
     return false;
   }
 
   auto bindings = getBindings();
+  cudaStreamSynchronize(stream_);
   bool status = context_->enqueueV2(bindings.data(), stream_, nullptr);
   if (!status) {
-    ROS_FATAL_STREAM("initializing inference failed!");
+    LOG_TO_LOGGER(kERROR, "initializing inference failed!");
     return false;
   }
 
@@ -140,7 +148,7 @@ bool TrtSegmenter::infer(const cv::Mat &img) {
                           cudaMemcpyDeviceToHost,
                           stream_);
   if (error != cudaSuccess) {
-    ROS_FATAL_STREAM("Copying output failed: " << cudaGetErrorString(error));
+    LOG_TO_LOGGER(kERROR, "Copying output failed: " << cudaGetErrorString(error));
     return false;
   }
 

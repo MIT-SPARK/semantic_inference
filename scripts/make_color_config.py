@@ -152,7 +152,6 @@ def _write_configs(label_config, group_colors, output_dir, config_name):
         config["classes"].append(index)
         config_prefix = "class_info/{}".format(index)
         config[f"{config_prefix}/color"] = group_colors[group_name]
-        # network and csv are off by 1
         config[f"{config_prefix}/labels"] = [x - 1 for x in group["labels"]]
 
     with yaml_output.open("w") as fout:
@@ -163,7 +162,7 @@ def _write_configs(label_config, group_colors, output_dir, config_name):
         for index, group in enumerate(label_config["groups"]):
             name = group["name"]
             color = _int_color(group_colors[name])
-            fout.write(f"{name},{color[0]},{color[1]},{color[2]},255,{index}\r\n")
+            fout.write(f"{name},{color[0]},{color[1]},{color[2]},255,{index + 1}\r\n")
 
 
 @click.command()

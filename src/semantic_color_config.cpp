@@ -1,5 +1,7 @@
 #include <semantic_recolor/semantic_color_config.h>
 
+#include <ros/ros.h>
+
 namespace semantic_recolor {
 
 SemanticColorConfig::SemanticColorConfig() : initialized_(false) {}
@@ -11,42 +13,53 @@ std::vector<uint8_t> convertToRGB8(const std::vector<double> &color) {
 }
 
 SemanticColorConfig::SemanticColorConfig(const ros::NodeHandle &nh) {
-  std::vector<int> classes;
-  if (!nh.getParam("classes", classes)) {
+  std::vector<int> class_ids;
+  if (!nh.getParam("classes", class_ids)) {
     ROS_FATAL("failed to find classes parameter");
     throw std::runtime_error("missing semantic color config param");
   }
 
-  for (const auto &class_id : classes) {
+  std::map<int, ColorLabelPair> classes;
+  for (const auto &class_id : class_ids) {
     const std::string param_name = "class_info/" + std::to_string(class_id);
 
-    std::vector<double> color;
-    if (!nh.getParam(param_name + "/color", color)) {
+    ColorLabelPair class_info;
+    if (!nh.getParam(param_name + "/color", class_info.color)) {
       ROS_FATAL_STREAM("failed to find color for " << param_name);
       throw std::runtime_error("missing semantic color config param");
     }
 
-    if (color.size() != 3) {
-      ROS_FATAL_STREAM("invalid color: num elements " << color.size() << " != 3");
-      throw std::runtime_error("invalid semantic color config param");
-    }
-
     std::vector<int> labels;
-    if (!nh.getParam(param_name + "/labels", labels)) {
+    if (!nh.getParam(param_name + "/labels", class_info.labels)) {
       ROS_FATAL_STREAM("failed to find labels for " << param_name);
       throw std::runtime_error("missing semantic color config param");
     }
 
-    std::vector<uint8_t> actual_color = convertToRGB8(color);
-    for (const auto &label : labels) {
-      color_map_[label] = actual_color;
-    }
+    classes[class_id] = class_info;
   }
 
   std::vector<double> default_color;
   if (!nh.getParam("default_color", default_color)) {
-    default_color_ = std::vector<uint8_t>(3, 0);
-    return;
+    default_color = std::vector<double>(3, 0.0);
+  }
+
+  initialize(classes, default_color);
+}
+
+void SemanticColorConfig::initialize(const std::map<int, ColorLabelPair> &classes,
+                                     const std::vector<double> &default_color) {
+  for (const auto &id_info_pair : classes) {
+    const auto &class_info = id_info_pair.second;
+    if (class_info.color.size() != 3) {
+      ROS_FATAL_STREAM("invalid color: num elements " << class_info.color.size()
+                                                      << " != 3");
+      throw std::runtime_error("invalid semantic color config param");
+    }
+
+    std::vector<uint8_t> actual_color = convertToRGB8(class_info.color);
+    for (const auto &label : class_info.labels) {
+      color_map_[label] = actual_color;
+    }
   }
 
   if (default_color.size() != 3) {
@@ -97,6 +110,16 @@ void SemanticColorConfig::fillImage(const cv::Mat &classes, cv::Mat &output) con
       const auto class_id = resized_classes.at<uint8_t>(r, c);
       fillColor(class_id, pixel);
     }
+  }
+}
+
+void SemanticColorConfig::show(std::ostream &out) const {
+  out << "SemanticColorConfig:" << std::endl;
+  for (const auto id_color_pair : color_map_) {
+    out << "  - " << id_color_pair.first
+        << " -> [r=" << static_cast<int>(id_color_pair.second[0])
+        << ", g=" << static_cast<int>(id_color_pair.second[1])
+        << ", b=" << static_cast<int>(id_color_pair.second[2]) << "]" << std::endl;
   }
 }
 

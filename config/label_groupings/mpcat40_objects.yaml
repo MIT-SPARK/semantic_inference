@@ -42,46 +42,45 @@ groups:
   - {name: clothes, labels: [38]}
   - {name: objects, labels: [39]}
   - {name: misc, labels: [40]}
-specified_colors: []
-palette:
-  - [0, 0, 0]
-  - [31, 119, 180]
-  - [174, 199, 232]
-  - [255, 127, 14]
-  - [255, 187, 120]
-  - [44, 160, 44]
-  - [152, 223, 138]
-  - [214, 39, 40]
-  - [255, 152, 150]
-  - [148, 103, 189]
-  - [197, 176, 213]
-  - [140, 86, 75]
-  - [196, 156, 148]
-  - [227, 119, 194]
-  - [247, 182, 210]
-  - [127, 127, 127]
-  - [199, 199, 199]
-  - [188, 189, 34]
-  - [219, 219, 141]
-  - [23, 190, 207]
-  - [158, 218, 229]
-  - [57, 59, 121]
-  - [82, 84, 163]
-  - [107, 110, 207]
-  - [156, 158, 222]
-  - [99, 121, 57]
-  - [140, 162, 82]
-  - [181, 207, 107]
-  - [206, 219, 156]
-  - [140, 109, 49]
-  - [189, 158, 57]
-  - [231, 186, 82]
-  - [231, 203, 148]
-  - [132, 60, 57]
-  - [173, 73, 74]
-  - [214, 97, 107]
-  - [231, 150, 156]
-  - [123, 65, 115]
-  - [165, 81, 148]
-  - [206, 109, 189]
-  - [222, 158, 214]
+specified_colors:
+  - {name: void, source: raw_int, color: [0, 0, 0]}
+  - {name: wall, source: raw_int, color: [31, 119, 180]}
+  - {name: floor, source: raw_int, color: [174, 199, 232]}
+  - {name: chair, source: raw_int, color: [255, 127, 14]}
+  - {name: door, source: raw_int, color: [255, 187, 120]}
+  - {name: table, source: raw_int, color: [44, 160, 44]}
+  - {name: picture, source: raw_int, color: [152, 223, 138]}
+  - {name: cabinet, source: raw_int, color: [214, 39, 40]}
+  - {name: cushion, source: raw_int, color: [255, 152, 150]}
+  - {name: window, source: raw_int, color: [148, 103, 189]}
+  - {name: sofa, source: raw_int, color: [197, 176, 213]}
+  - {name: bed, source: raw_int, color: [140, 86, 75]}
+  - {name: curtain, source: raw_int, color: [196, 156, 148]}
+  - {name: chest_of_drawers, source: raw_int, color: [227, 119, 194]}
+  - {name: plant, source: raw_int, color: [247, 182, 210]}
+  - {name: sink, source: raw_int, color: [127, 127, 127]}
+  - {name: stairs, source: raw_int, color: [199, 199, 199]}
+  - {name: ceiling, source: raw_int, color: [188, 189, 34]}
+  - {name: toilet, source: raw_int, color: [219, 219, 141]}
+  - {name: stool, source: raw_int, color: [23, 190, 207]}
+  - {name: towel, source: raw_int, color: [158, 218, 229]}
+  - {name: mirror, source: raw_int, color: [57, 59, 121]}
+  - {name: tv_monitor, source: raw_int, color: [82, 84, 163]}
+  - {name: shower, source: raw_int, color: [107, 110, 207]}
+  - {name: column, source: raw_int, color: [156, 158, 222]}
+  - {name: bathtub, source: raw_int, color: [99, 121, 57]}
+  - {name: counter, source: raw_int, color: [140, 162, 82]}
+  - {name: fireplace, source: raw_int, color: [181, 207, 107]}
+  - {name: lighting, source: raw_int, color: [206, 219, 156]}
+  - {name: beam, source: raw_int, color: [140, 109, 49]}
+  - {name: railing, source: raw_int, color: [189, 158, 57]}
+  - {name: shelving, source: raw_int, color: [231, 186, 82]}
+  - {name: blinds, source: raw_int, color: [231, 203, 148]}
+  - {name: gym_equipment, source: raw_int, color: [132, 60, 57]}
+  - {name: seating, source: raw_int, color: [173, 73, 74]}
+  - {name: board_panel, source: raw_int, color: [214, 97, 107]}
+  - {name: furniture, source: raw_int, color: [231, 150, 156]}
+  - {name: appliances, source: raw_int, color: [123, 65, 115]}
+  - {name: clothes, source: raw_int, color: [165, 81, 148]}
+  - {name: objects, source: raw_int, color: [206, 109, 189]}
+  - {name: misc, source: raw_int, color: [222, 158, 214]}

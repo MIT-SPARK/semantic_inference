@@ -22,6 +22,11 @@ void Logger::log(Severity severity, const char *msg) noexcept {
     return;
   }
 
+  if (!use_ros_) {
+    std::cerr << msg << std::endl;
+    return;
+  }
+
   switch (severity) {
     case Severity::kINTERNAL_ERROR:
       ROS_FATAL_STREAM(msg);
@@ -93,7 +98,8 @@ std::unique_ptr<TrtEngine> deserializeEngine(TrtRuntime &runtime,
 std::unique_ptr<TrtEngine> buildEngineFromOnnx(TrtRuntime &runtime,
                                                Logger &logger,
                                                const std::string &model_path,
-                                               const std::string &engine_path) {
+                                               const std::string &engine_path,
+                                               bool set_builder_flags) {
   std::unique_ptr<nvinfer1::IBuilder> builder(nvinfer1::createInferBuilder(logger));
   const auto network_flags =
       1u << static_cast<uint32_t>(NetworkDefinitionCreationFlag::kEXPLICIT_BATCH);
@@ -107,6 +113,11 @@ std::unique_ptr<TrtEngine> buildEngineFromOnnx(TrtRuntime &runtime,
   }
 
   std::unique_ptr<nvinfer1::IBuilderConfig> config(builder->createBuilderConfig());
+  if (set_builder_flags) {
+    config->setFlag(nvinfer1::BuilderFlag::kPREFER_PRECISION_CONSTRAINTS);
+    config->setFlag(nvinfer1::BuilderFlag::kDIRECT_IO);
+    config->setFlag(nvinfer1::BuilderFlag::kREJECT_EMPTY_ALGORITHMS);
+  }
 
   std::unique_ptr<nvinfer1::IHostMemory> memory(
       builder->buildSerializedNetwork(*network, *config));

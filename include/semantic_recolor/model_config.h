@@ -21,6 +21,10 @@ struct ModelConfig {
   bool normalize = true;
   bool use_network_order = true;
   bool network_uses_rgb_order = true;
+  bool use_ros_logging = true;
+  Severity log_severity = Severity::kINFO;
+  bool show_stats = false;
+  bool set_builder_flags = false;
 
   void fillInputAddress(ImageAddress &addr) const;
 
@@ -32,11 +36,14 @@ struct ModelConfig {
 };
 
 struct DepthConfig {
-  std::string input_name;
+  std::string depth_input_name;
 
-  float mean = 0.213;
-  float stddev = 0.285;
+  float depth_mean = 0.213;
+  float depth_stddev = 0.285;
   bool normalize_depth = false;
+  bool mask_predictions = true;
+  float min_depth = 0.1f;
+  float max_depth = 10.0f;
 
   float getValue(float input_val) const;
 };
