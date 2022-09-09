@@ -9,6 +9,7 @@
     <arg name="desired_output" value="log" unless="$(arg verbose)"/>
 
     <arg name="rgb_topic" default="rgb/image_raw"/>
+    <arg name="rgb_image_transport" default="raw"/>
     <arg name="rgb_info_topic" default="rgb/camera_info"/>
     <!-- <arg name="depth_topic" default="depth/image_rect"/> -->
     <arg name="depth_topic" default="depth/image_rect_raw"/>
@@ -41,7 +42,9 @@
           if="$(arg start_manager)"
           launch-prefix="$(arg launch-prefix)"
           output="$(arg desired_output)"
-          required="true"/>
+          required="true">
+        <param name="image_transport" value="$(arg rgb_image_transport)"/>
+    </node>
 
     <node pkg="nodelet" type="nodelet" name="semantic_recolor"
           args="load semantic_recolor/segmentation nodelet_manager --no-bond"
@@ -52,7 +55,9 @@
         <param name="model_file" value="$(arg model_path)"/>
         <param name="engine_file" value="$(arg engine_path)"/>
         <remap from="rgb/image_raw" to="$(arg rgb_topic)" unless="$(arg throttle_semantics)"/>
+        <remap from="rgb/image_raw/compressed" to="$(arg rgb_topic)/compressed" unless="$(arg throttle_semantics)"/>
         <remap from="rgb/image_raw" to="$(arg rgb_topic)_throttle" if="$(arg throttle_semantics)"/>
+        <remap from="rgb/image_raw/compressed" to="$(arg rgb_topic)_throttle/compressed" if="$(arg throttle_semantics)"/>
         <remap from="semantic/image_raw" to="$(arg semantic_topic)"/>
     </node>
 
