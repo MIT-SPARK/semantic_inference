@@ -2,7 +2,6 @@
 """Show label to name mappings."""
 import click
 import pathlib
-import pprint
 import yaml
 import csv
 
@@ -32,6 +31,40 @@ def _load_groups(filename):
     return names
 
 
+def _show_labels(groups, catmap):
+    print("{:<39}||{:<39}".format("orig: label → name", "grouping: label → name"))
+    print("-" * 80)
+    N_max = max(max(groups), max(catmap))
+    for i in range(N_max):
+        orig_str = f"{i} → {catmap[i]}" if i in catmap else "n/a"
+        new_str = f"{i} → {groups[i]}" if i in groups else "n/a"
+        print(f"{orig_str:<39}||{new_str:<39}")
+
+
+def _get_match_str(name, index, matches):
+    if index in matches:
+        match_str = f" - {name}: {index} → {matches[index]}"
+        return f"{match_str:<39}"
+
+    match_str = f" - {name}: {index} → ?"
+    match_str = f"{match_str:<39}"
+    return click.style(match_str, fg="red")
+
+
+def _show_matches(groups, catmap, group_matches, cat_matches):
+    print(
+        "{:<39}||{:<39}".format(
+            "orig name: label → match", "grouping name: label → match"
+        )
+    )
+    print("-" * 80)
+    N_max = max(max(groups), max(catmap))
+    for i in range(N_max):
+        orig_str = _get_match_str(catmap[i], i, cat_matches) if i in catmap else "n/a"
+        new_str = _get_match_str(groups[i], i, group_matches) if i in groups else "n/a"
+        print(f"{orig_str}||{new_str}")
+
+
 @click.command()
 @click.argument("category_mapping_file")
 @click.argument("grouping_config_file")
@@ -51,29 +84,23 @@ def main(category_mapping_file, grouping_config_file, name_index, label_index):
         category_mapping_path, cat_index=label_index, name_index=name_index
     )
 
-    print("{:<39}||{:<39}".format("orig: label → name", "grouping: label → name"))
-    print("-" * 80)
-    N_max = max(max(groups), max(catmap))
-    for i in range(N_max):
-        orig_str = f"{i} → {catmap[i]}" if i in catmap else "n/a"
-        new_str = f"{i} → {groups[i]}" if i in groups else "n/a"
-        print(f"{orig_str:<39}||{new_str:<39}")
-
-    matches = {}
+    group_matches = {}
     for index, group in groups.items():
         for label, name in catmap.items():
             if group == name:
-                matches[index] = label
+                group_matches[index] = label
                 break
 
+    cat_matches = {}
+    for index, group in catmap.items():
+        for label, name in groups.items():
+            if group == name:
+                cat_matches[index] = label
+                break
+
+    _show_labels(groups, catmap)
     print("")
-    print("Matches")
-    print("-" * 80)
-    for index, group in groups.items():
-        if index in matches:
-            click.echo(f" - {group}: {index} → {matches[index]}")
-        else:
-            click.secho(f" - {group}: {index} → ?", fg="red")
+    _show_matches(groups, catmap, group_matches, cat_matches)
 
 
 if __name__ == "__main__":
