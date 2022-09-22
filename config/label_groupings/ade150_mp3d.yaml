@@ -1,6 +1,7 @@
 ---
 name: ade150_mp3d_config
 groups:
+  - {name: void, labels: []}
   - {name: wall, labels: [1]}
   - {name: floor, labels: [4]}
   - {name: chair, labels: [20, 31, 32, 76]}
@@ -44,6 +45,7 @@ groups:
       89, 91, 92, 95, 97, 102, 103, 104, 105, 106, 107, 110, 112, 113, 114, 115, 117,
       121, 123, 124, 127, 129, 131, 132, 133, 134, 137, 141, 148]}
 specified_colors:
+  - {name: void, source: raw, color: [0.0, 0.0, 0.0]}
   - {name: misc, source: raw, color: [0.2, 0.2, 0.2]}
   - {name: floor, source: raw, color: [0.75, 0.75, 0.71]}
   - {name: wall, source: raw, color: [0.0, 0.4, 0.2]}
