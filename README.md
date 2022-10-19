@@ -9,9 +9,9 @@ export CUDA_VERSION=11-7
 sudo apt install cuda-libraries-$CUDA_VERSION \
                  cuda-libraries-dev-$CUDA_VERSION \
                  cuda-nvrtc-dev-$CUDA_VERSION \
-                 cuda-nvcc-$CUDA_VERSION
-                 libnvinfer-dev
-                 libnvinfer-plugin-dev
+                 cuda-nvcc-$CUDA_VERSION \
+                 libnvinfer-dev \
+                 libnvinfer-plugin-dev \
                  libnvonnxparsers-dev
 ```
 
