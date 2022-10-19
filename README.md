@@ -9,10 +9,15 @@ export CUDA_VERSION=11-7
 sudo apt install cuda-libraries-$CUDA_VERSION \
                  cuda-libraries-dev-$CUDA_VERSION \
                  cuda-nvrtc-dev-$CUDA_VERSION \
-                 cuda-nvcc-$CUDA_VERSION \
-                 libnvinfer-dev \
-                 libnvinfer-plugin-dev \
-                 libnvonnxparsers-dev
+                 cuda-nvcc-$CUDA_VERSION
+```
+
+Installing TensorRT requires a second step.
+See [here](https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html#downloading) for instructions for obtaining the TensorRT package.
+Once you've installed the TensorRT repositories, then:
+
+```
+sudo apt install tensorrt
 ```
 
 You may have to add the cuda libraries (double check the version) and cuda binaries to your path, e.g. in `.zshrc`:
