@@ -1,21 +1,21 @@
 # Semantic Recolor Utilities
 
-Installation requires Cuda and TensorRT:
+Installation requires Cuda and TensorRT. You can add the Cuda repositories [here](https://developer.nvidia.com/cuda-downloads).
 
 To install a minimal setup (after adding the Cuda repositories):
 ```
 # or whatever version you want
 export CUDA_VERSION=11-7
-sudo apt install cuda-libraries-$(CUDA_VERSION) \
-                 cuda-libraries-dev-$(CUDA_VERSION) \
-                 cuda-nvrtc-dev-$(CUDA_VERSION) \
-                 cuda-nvcc-$(CUDA_VERSION)
+sudo apt install cuda-libraries-$CUDA_VERSION \
+                 cuda-libraries-dev-$CUDA_VERSION \
+                 cuda-nvrtc-dev-$CUDA_VERSION \
+                 cuda-nvcc-$CUDA_VERSION
                  libnvinfer-dev
                  libnvinfer-plugin-dev
                  libnvonnxparsers-dev
 ```
 
-You may have to add the cuda libraries and cuda binaries to your path, e.g. in `.zshrc`:
+You may have to add the cuda libraries (double check the version) and cuda binaries to your path, e.g. in `.zshrc`:
 ```
 export PATH=$PATH:/usr/local/cuda-11-1/bin
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda-11-1/lib64
