@@ -25,17 +25,11 @@
 
     <arg name="dataset_name" default="ade150_config"/>
     <arg name="color_config" value="$(find semantic_recolor)/config/colors/$(arg dataset_name).yaml"/>
+    <arg name="min_separation_s" default="0.2"/>
 
     <arg name="debug" default="false"/>
     <arg name="launch-prefix" value="gdb -ex run --args" if="$(arg debug)"/>
     <arg name="launch-prefix" value="" unless="$(arg debug)"/>
-
-    <arg name="throttle_semantics" default="true"/>
-    <arg name="throttle_hz" default="5.0"/>
-
-    <node pkg="topic_tools" type="throttle" name="semantic_throttle"
-          args="messages $(arg rgb_topic) $(arg throttle_hz)"
-          if="$(arg throttle_semantics)"/>
 
     <node pkg="nodelet" type="nodelet" name="nodelet_manager"
           args="manager"
@@ -52,12 +46,11 @@
           required="true">
         <rosparam file="$(arg segmenter_config)" command="load"/>
         <rosparam file="$(arg color_config)" command="load" ns="colors"/>
+        <param name="image_separation_s" value="$(arg min_separation_s)"/>
         <param name="model_file" value="$(arg model_path)"/>
         <param name="engine_file" value="$(arg engine_path)"/>
-        <remap from="rgb/image_raw" to="$(arg rgb_topic)" unless="$(arg throttle_semantics)"/>
-        <remap from="rgb/image_raw/compressed" to="$(arg rgb_topic)/compressed" unless="$(arg throttle_semantics)"/>
-        <remap from="rgb/image_raw" to="$(arg rgb_topic)_throttle" if="$(arg throttle_semantics)"/>
-        <remap from="rgb/image_raw/compressed" to="$(arg rgb_topic)_throttle/compressed" if="$(arg throttle_semantics)"/>
+        <remap from="rgb/image_raw" to="$(arg rgb_topic)"/>
+        <remap from="rgb/image_raw/compressed" to="$(arg rgb_topic)/compressed"/>
         <remap from="semantic/image_raw" to="$(arg semantic_topic)"/>
     </node>
 
