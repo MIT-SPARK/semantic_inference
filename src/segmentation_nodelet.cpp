@@ -86,8 +86,8 @@ void SegmentationNodelet::spin() {
       std::unique_lock<std::mutex> lock(queue_mutex_);
       if (last_time) {
         const auto curr_diff = image_queue_.front()->header.stamp - *last_time;
-        ROS_INFO_STREAM("current time diff: " << curr_diff.toSec() << "[s] (min: "
-                                              << min_diff.toSec() << "[s])");
+        ROS_DEBUG_STREAM("current time diff: " << curr_diff.toSec() << "[s] (min: "
+                                               << min_diff.toSec() << "[s])");
         if (curr_diff < min_diff) {
           image_queue_.pop_front();
           continue;
