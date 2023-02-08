@@ -1,15 +1,15 @@
 #pragma once
-#include "semantic_recolor/model_config.h"
-#include "semantic_recolor/nodelet_output_publisher.h"
-#include "semantic_recolor/segmenter.h"
-
 #include <cv_bridge/cv_bridge.h>
 #include <image_transport/image_transport.h>
 #include <nodelet/nodelet.h>
 
-#include <thread>
-#include <mutex>
 #include <atomic>
+#include <mutex>
+#include <thread>
+
+#include "semantic_recolor/model_config.h"
+#include "semantic_recolor/nodelet_output_publisher.h"
+#include "semantic_recolor/segmenter.h"
 
 namespace semantic_recolor {
 

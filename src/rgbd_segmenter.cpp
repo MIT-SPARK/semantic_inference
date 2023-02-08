@@ -1,18 +1,18 @@
 #include "semantic_recolor/rgbd_segmenter.h"
-#include "semantic_recolor/image_utilities.h"
 
 #include <NvOnnxParser.h>
-
 #include <ros/ros.h>
 
 #include <iomanip>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/opencv.hpp>
 
+#include "semantic_recolor/image_utilities.h"
+
 namespace semantic_recolor {
 
-TrtRgbdSegmenter::TrtRgbdSegmenter(const ModelConfig &config,
-                                   const DepthConfig &depth_config)
+TrtRgbdSegmenter::TrtRgbdSegmenter(const ModelConfig& config,
+                                   const DepthConfig& depth_config)
     : TrtSegmenter(config), depth_config_(depth_config) {}
 
 TrtRgbdSegmenter::~TrtRgbdSegmenter() {}
@@ -50,15 +50,15 @@ bool TrtRgbdSegmenter::init() {
   return TrtSegmenter::init();
 }
 
-std::vector<void *> TrtRgbdSegmenter::getBindings() const {
+std::vector<void*> TrtRgbdSegmenter::getBindings() const {
   return {input_buffer_.memory.get(),
           depth_input_buffer_.memory.get(),
           output_buffer_.memory.get()};
 }
 
-void TrtRgbdSegmenter::showStats(const cv::Mat &img,
+void TrtRgbdSegmenter::showStats(const cv::Mat& img,
                                  int channel,
-                                 const std::string &name) const {
+                                 const std::string& name) const {
   float min = std::numeric_limits<float>::max();
   float max = std::numeric_limits<float>::lowest();
   float mean = 0.0f;
@@ -92,7 +92,7 @@ void TrtRgbdSegmenter::showStats(const cv::Mat &img,
             << ", dist=" << mean << " +/- " << stddev << std::endl;
 }
 
-bool TrtRgbdSegmenter::infer(const cv::Mat &img, const cv::Mat &depth_img) {
+bool TrtRgbdSegmenter::infer(const cv::Mat& img, const cv::Mat& depth_img) {
   fillNetworkDepthImage(config_, depth_config_, depth_img, nn_depth_img_);
   auto error = cudaMemcpyAsync(depth_input_buffer_.memory.get(),
                                nn_depth_img_.data,

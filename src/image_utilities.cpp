@@ -4,7 +4,7 @@
 
 namespace semantic_recolor {
 
-void fillNetworkImage(const ModelConfig &cfg, const cv::Mat &input, cv::Mat &output) {
+void fillNetworkImage(const ModelConfig& cfg, const cv::Mat& input, cv::Mat& output) {
   cv::Mat img;
   if (input.cols == cfg.width && input.rows == cfg.height) {
     img = input;
@@ -17,7 +17,7 @@ void fillNetworkImage(const ModelConfig &cfg, const cv::Mat &input, cv::Mat &out
 
   for (int row = 0; row < img.rows; ++row) {
     for (int col = 0; col < img.cols; ++col) {
-      const uint8_t *pixel = img.ptr<uint8_t>(row, col);
+      const uint8_t* pixel = img.ptr<uint8_t>(row, col);
       if (cfg.use_network_order) {
         output.at<float>(0, row, col) = cfg.getValue(pixel[input_addr[0]], 0);
         output.at<float>(1, row, col) = cfg.getValue(pixel[input_addr[1]], 1);
@@ -31,10 +31,10 @@ void fillNetworkImage(const ModelConfig &cfg, const cv::Mat &input, cv::Mat &out
   }
 }
 
-void fillNetworkDepthImage(const ModelConfig &cfg,
-                           const DepthConfig &depth_config,
-                           const cv::Mat &input,
-                           cv::Mat &output) {
+void fillNetworkDepthImage(const ModelConfig& cfg,
+                           const DepthConfig& depth_config,
+                           const cv::Mat& input,
+                           cv::Mat& output) {
   const bool size_ok = input.cols == cfg.width && input.rows == cfg.height;
   if (size_ok && !cfg.use_network_order) {
     output = input;

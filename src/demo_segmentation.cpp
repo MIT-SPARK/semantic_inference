@@ -1,7 +1,7 @@
-#include "semantic_recolor/segmenter.h"
-#include "semantic_recolor/ros_utilities.h"
-
 #include <ros/ros.h>
+
+#include "semantic_recolor/ros_utilities.h"
+#include "semantic_recolor/segmenter.h"
 
 using namespace semantic_recolor;
 

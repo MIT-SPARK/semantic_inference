@@ -1,8 +1,8 @@
 #pragma once
-#include "semantic_recolor/trt_utilities.h"
-
 #include <array>
 #include <vector>
+
+#include "semantic_recolor/trt_utilities.h"
 
 namespace semantic_recolor {
 
@@ -26,7 +26,7 @@ struct ModelConfig {
   bool show_stats = false;
   bool set_builder_flags = false;
 
-  void fillInputAddress(ImageAddress &addr) const;
+  void fillInputAddress(ImageAddress& addr) const;
 
   float getValue(uint8_t input_val, size_t channel) const;
 

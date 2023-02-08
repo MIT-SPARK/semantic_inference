@@ -1,9 +1,8 @@
+#include <gtest/gtest.h>
 #include <semantic_recolor/image_utilities.h>
 
 #include <opencv2/imgproc.hpp>
 #include <opencv2/opencv.hpp>
-
-#include <gtest/gtest.h>
 
 using namespace semantic_recolor;
 

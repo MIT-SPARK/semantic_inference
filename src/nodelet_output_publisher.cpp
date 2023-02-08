@@ -5,13 +5,18 @@ namespace semantic_recolor {
 using image_transport::ImageTransport;
 
 NodeletOutputPublisher::NodeletOutputPublisher(const ros::NodeHandle& nh,
-                                               ImageTransport& transport)
+                                               ImageTransport& transport,
+                                               bool disable_overlay_publisher)
     : create_overlay_(true) {
-  nh.getParam("create_semantic_overlay", create_overlay_);
   color_config_ = SemanticColorConfig(ros::NodeHandle(nh, "colors"));
 
-  semantic_image_pub_ = transport.advertise("semantic/image_raw", 1);
+  if (disable_overlay_publisher) {
+    create_overlay_ = false;
+  } else {
+    nh.getParam("create_semantic_overlay", create_overlay_);
+  }
 
+  semantic_image_pub_ = transport.advertise("semantic/image_raw", 1);
   if (create_overlay_) {
     overlay_image_pub_ = transport.advertise("semantic/overlay/image_raw", 1);
   }

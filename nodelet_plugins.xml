@@ -11,4 +11,10 @@
             nodelet to run rgbd semantic segmentation
         </description>
     </class>
+    <class name="semantic_recolor/recolor" type="semantic_recolor::RecolorNodelet"
+           base_class_type="nodelet::Nodelet">
+        <description>
+            nodelet to recolor label image
+        </description>
+    </class>
 </library>

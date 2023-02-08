@@ -71,3 +71,18 @@ A typical invocation is `python scripts/show_label_groupings.py resources/ade20k
 
 You can also view the groupings for a particular color csv files via [this](scripts/show_csv_groupings.py).
 For most color configs exported by this package, the group names will be one-to-one with the category labels.
+
+## Pre-recorded Semantics
+
+You can produce a rosbag of semantic images and labels using [this](scripts/make_rosbag.py). The script can be invoked like this:
+
+```
+python scripts/make_rosbag.py path/to/input/bag rgb_topic [--is-compressed]
+```
+
+The script reads every image in the input bag for the provided topic (which can optionall  be a compressed image) and then sends the image to a remote "inference" server using zmq and gets back a label image which it writes to the output bag.
+See [this](third_party/one_former.py) for an example using oneformer.
+
+By default, the produced bag has both the original labels and a color image using the provided color config.
+You can use the semantically colored image directly like you would for the normal output of the online nodelet.
+Alternaltively, you can use the recolor nodelet to recolor the labels online (especially if you want to change what labels map to what colors), see [this](launch/recolor_pointcloud.launch) for more details.

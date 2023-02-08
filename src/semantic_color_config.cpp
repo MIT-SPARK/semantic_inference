@@ -1,18 +1,17 @@
-#include <semantic_recolor/semantic_color_config.h>
-
 #include <ros/ros.h>
+#include <semantic_recolor/semantic_color_config.h>
 
 namespace semantic_recolor {
 
 SemanticColorConfig::SemanticColorConfig() : initialized_(false) {}
 
-std::vector<uint8_t> convertToRGB8(const std::vector<double> &color) {
+std::vector<uint8_t> convertToRGB8(const std::vector<double>& color) {
   return {static_cast<uint8_t>(std::floor(color[0] * 255)),
           static_cast<uint8_t>(std::floor(color[1] * 255)),
           static_cast<uint8_t>(std::floor(color[2] * 255))};
 }
 
-SemanticColorConfig::SemanticColorConfig(const ros::NodeHandle &nh) {
+SemanticColorConfig::SemanticColorConfig(const ros::NodeHandle& nh) {
   std::vector<int> class_ids;
   if (!nh.getParam("classes", class_ids)) {
     ROS_FATAL("failed to find classes parameter");
@@ -20,7 +19,7 @@ SemanticColorConfig::SemanticColorConfig(const ros::NodeHandle &nh) {
   }
 
   std::map<int, ColorLabelPair> classes;
-  for (const auto &class_id : class_ids) {
+  for (const auto& class_id : class_ids) {
     const std::string param_name = "class_info/" + std::to_string(class_id);
 
     ColorLabelPair class_info;
@@ -46,10 +45,10 @@ SemanticColorConfig::SemanticColorConfig(const ros::NodeHandle &nh) {
   initialize(classes, default_color);
 }
 
-void SemanticColorConfig::initialize(const std::map<int, ColorLabelPair> &classes,
-                                     const std::vector<double> &default_color) {
-  for (const auto &id_info_pair : classes) {
-    const auto &class_info = id_info_pair.second;
+void SemanticColorConfig::initialize(const std::map<int, ColorLabelPair>& classes,
+                                     const std::vector<double>& default_color) {
+  for (const auto& id_info_pair : classes) {
+    const auto& class_info = id_info_pair.second;
     if (class_info.color.size() != 3) {
       ROS_FATAL_STREAM("invalid color: num elements " << class_info.color.size()
                                                       << " != 3");
@@ -57,7 +56,7 @@ void SemanticColorConfig::initialize(const std::map<int, ColorLabelPair> &classe
     }
 
     std::vector<uint8_t> actual_color = convertToRGB8(class_info.color);
-    for (const auto &label : class_info.labels) {
+    for (const auto& label : class_info.labels) {
       color_map_[label] = actual_color;
     }
   }
@@ -72,7 +71,7 @@ void SemanticColorConfig::initialize(const std::map<int, ColorLabelPair> &classe
 }
 
 void SemanticColorConfig::fillColor(int32_t class_id,
-                                    uint8_t *pixel,
+                                    uint8_t* pixel,
                                     size_t pixel_size) const {
   if (!initialized_) {
     ROS_FATAL("SemanticColorConfig not initialized");
@@ -80,7 +79,7 @@ void SemanticColorConfig::fillColor(int32_t class_id,
   }
 
   if (color_map_.count(class_id)) {
-    const auto &color = color_map_.at(class_id);
+    const auto& color = color_map_.at(class_id);
     std::memcpy(pixel, color.data(), pixel_size);
   } else {
     if (!seen_unknown_labels_.count(class_id)) {
@@ -91,7 +90,7 @@ void SemanticColorConfig::fillColor(int32_t class_id,
   }
 }
 
-void SemanticColorConfig::fillImage(const cv::Mat &classes, cv::Mat &output) const {
+void SemanticColorConfig::fillImage(const cv::Mat& classes, cv::Mat& output) const {
   cv::Mat resized_classes;
   classes.convertTo(resized_classes, CV_8UC1);
   if (classes.rows != output.rows || classes.cols != output.cols) {
@@ -106,14 +105,14 @@ void SemanticColorConfig::fillImage(const cv::Mat &classes, cv::Mat &output) con
 
   for (int r = 0; r < resized_classes.rows; ++r) {
     for (int c = 0; c < resized_classes.cols; ++c) {
-      uint8_t *pixel = output.ptr<uint8_t>(r, c);
+      uint8_t* pixel = output.ptr<uint8_t>(r, c);
       const auto class_id = resized_classes.at<uint8_t>(r, c);
       fillColor(class_id, pixel);
     }
   }
 }
 
-void SemanticColorConfig::show(std::ostream &out) const {
+void SemanticColorConfig::show(std::ostream& out) const {
   out << "SemanticColorConfig:" << std::endl;
   for (const auto id_color_pair : color_map_) {
     out << "  - " << id_color_pair.first

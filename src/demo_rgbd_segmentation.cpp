@@ -1,7 +1,7 @@
+#include <ros/package.h>
+
 #include "semantic_recolor/rgbd_segmenter.h"
 #include "semantic_recolor/yaml_utilities.h"
-
-#include <ros/package.h>
 
 using namespace semantic_recolor;
 

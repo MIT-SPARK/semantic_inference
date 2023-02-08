@@ -1,11 +1,10 @@
 #pragma once
-#include <opencv2/opencv.hpp>
-
+#include <iostream>
 #include <map>
+#include <opencv2/opencv.hpp>
 #include <set>
 #include <string>
 #include <vector>
-#include <iostream>
 
 // forward declare for now
 namespace ros {
@@ -23,16 +22,16 @@ class SemanticColorConfig {
  public:
   SemanticColorConfig();
 
-  explicit SemanticColorConfig(const ros::NodeHandle &nh);
+  explicit SemanticColorConfig(const ros::NodeHandle& nh);
 
-  void initialize(const std::map<int, ColorLabelPair> &classes,
-                  const std::vector<double> &default_color);
+  void initialize(const std::map<int, ColorLabelPair>& classes,
+                  const std::vector<double>& default_color);
 
-  void fillColor(int32_t class_id, uint8_t *pixel, size_t pixel_size = 3) const;
+  void fillColor(int32_t class_id, uint8_t* pixel, size_t pixel_size = 3) const;
 
-  void fillImage(const cv::Mat &classes, cv::Mat &output) const;
+  void fillImage(const cv::Mat& classes, cv::Mat& output) const;
 
-  void show(std::ostream &out) const;
+  void show(std::ostream& out) const;
 
  private:
   bool initialized_;

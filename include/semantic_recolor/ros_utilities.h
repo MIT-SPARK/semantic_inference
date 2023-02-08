@@ -1,7 +1,7 @@
 #pragma once
-#include "semantic_recolor/model_config.h"
-
 #include <ros/ros.h>
+
+#include "semantic_recolor/model_config.h"
 
 namespace semantic_recolor {
 

@@ -2,7 +2,7 @@
 
 namespace semantic_recolor {
 
-void ModelConfig::fillInputAddress(ImageAddress &addr) const {
+void ModelConfig::fillInputAddress(ImageAddress& addr) const {
   if (network_uses_rgb_order) {
     addr = {2, 1, 0};
   } else {

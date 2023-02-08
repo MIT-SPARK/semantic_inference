@@ -10,14 +10,14 @@ namespace semantic_recolor {
 using TrtNetworkDef = nvinfer1::INetworkDefinition;
 using nvinfer1::NetworkDefinitionCreationFlag;
 
-inline size_t getFileSize(std::istream &to_check) {
+inline size_t getFileSize(std::istream& to_check) {
   to_check.seekg(0, to_check.end);
   size_t size = to_check.tellg();
   to_check.seekg(0, to_check.beg);
   return size;
 }
 
-void Logger::log(Severity severity, const char *msg) noexcept {
+void Logger::log(Severity severity, const char* msg) noexcept {
   if (severity < min_severity_) {
     return;
   }
@@ -47,7 +47,7 @@ void Logger::log(Severity severity, const char *msg) noexcept {
   }
 }
 
-std::ostream &operator<<(std::ostream &out, const nvinfer1::Dims &dims) {
+std::ostream& operator<<(std::ostream& out, const nvinfer1::Dims& dims) {
   out << "[";
   for (int32_t i = 0; i < dims.nbDims - 1; ++i) {
     out << dims.d[i] << " x ";
@@ -56,7 +56,7 @@ std::ostream &operator<<(std::ostream &out, const nvinfer1::Dims &dims) {
   return out;
 }
 
-std::ostream &operator<<(std::ostream &out, const nvinfer1::DataType &dtype) {
+std::ostream& operator<<(std::ostream& out, const nvinfer1::DataType& dtype) {
   out << "[";
   if (dtype == nvinfer1::DataType::kFLOAT) {
     out << "kFLOAT";
@@ -73,8 +73,8 @@ std::ostream &operator<<(std::ostream &out, const nvinfer1::DataType &dtype) {
   return out;
 }
 
-std::unique_ptr<TrtEngine> deserializeEngine(TrtRuntime &runtime,
-                                             const std::string &engine_path) {
+std::unique_ptr<TrtEngine> deserializeEngine(TrtRuntime& runtime,
+                                             const std::string& engine_path) {
   std::ifstream engine_file(engine_path, std::ios::binary);
   if (engine_file.fail()) {
     ROS_INFO_STREAM("Engine file: " << engine_path << " not found!");
@@ -95,10 +95,10 @@ std::unique_ptr<TrtEngine> deserializeEngine(TrtRuntime &runtime,
   return engine;
 }
 
-std::unique_ptr<TrtEngine> buildEngineFromOnnx(TrtRuntime &runtime,
-                                               Logger &logger,
-                                               const std::string &model_path,
-                                               const std::string &engine_path,
+std::unique_ptr<TrtEngine> buildEngineFromOnnx(TrtRuntime& runtime,
+                                               Logger& logger,
+                                               const std::string& model_path,
+                                               const std::string& engine_path,
                                                bool set_builder_flags) {
   std::unique_ptr<nvinfer1::IBuilder> builder(nvinfer1::createInferBuilder(logger));
   const auto network_flags =
@@ -127,7 +127,7 @@ std::unique_ptr<TrtEngine> buildEngineFromOnnx(TrtRuntime &runtime,
   }
 
   std::ofstream fout(engine_path, std::ios::binary);
-  fout.write(reinterpret_cast<char *>(memory->data()), memory->size());
+  fout.write(reinterpret_cast<char*>(memory->data()), memory->size());
 
   std::unique_ptr<TrtEngine> engine(
       runtime.deserializeCudaEngine(memory->data(), memory->size()));

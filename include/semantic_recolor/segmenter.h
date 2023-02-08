@@ -1,12 +1,11 @@
 #pragma once
-#include "semantic_recolor/model_config.h"
-#include "semantic_recolor/trt_utilities.h"
-
-#include <opencv2/opencv.hpp>
-
 #include <memory>
 #include <numeric>
+#include <opencv2/opencv.hpp>
 #include <string>
+
+#include "semantic_recolor/model_config.h"
+#include "semantic_recolor/trt_utilities.h"
 
 namespace semantic_recolor {
 
@@ -21,22 +20,22 @@ namespace semantic_recolor {
 
 class TrtSegmenter {
  public:
-  explicit TrtSegmenter(const ModelConfig &config);
+  explicit TrtSegmenter(const ModelConfig& config);
 
   virtual ~TrtSegmenter();
 
   virtual bool init();
 
-  bool infer(const cv::Mat &img);
+  bool infer(const cv::Mat& img);
 
-  const cv::Mat &getClasses() const;
+  const cv::Mat& getClasses() const;
 
  protected:
   bool createInputBuffer();
 
   bool createOutputBuffer();
 
-  virtual std::vector<void *> getBindings() const;
+  virtual std::vector<void*> getBindings() const;
 
   ModelConfig config_;
   Logger logger_;

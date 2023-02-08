@@ -1,8 +1,8 @@
 #pragma once
+#include <yaml-cpp/yaml.h>
+
 #include "semantic_recolor/model_config.h"
 #include "semantic_recolor/semantic_color_config.h"
-
-#include <yaml-cpp/yaml.h>
 
 namespace semantic_recolor {
 

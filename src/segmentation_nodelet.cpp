@@ -1,8 +1,10 @@
 #include "semantic_recolor/segmentation_nodelet.h"
-#include "semantic_recolor/ros_utilities.h"
 
 #include <pluginlib/class_list_macros.h>
+
 #include <optional>
+
+#include "semantic_recolor/ros_utilities.h"
 
 PLUGINLIB_EXPORT_CLASS(semantic_recolor::SegmentationNodelet, nodelet::Nodelet)
 

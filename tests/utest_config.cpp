@@ -1,6 +1,5 @@
-#include <semantic_recolor/model_config.h>
-
 #include <gtest/gtest.h>
+#include <semantic_recolor/model_config.h>
 
 using namespace semantic_recolor;
 

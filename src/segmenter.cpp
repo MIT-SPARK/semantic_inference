@@ -1,15 +1,15 @@
 #include "semantic_recolor/segmenter.h"
-#include "semantic_recolor/image_utilities.h"
-
-#include <opencv2/imgproc.hpp>
-#include <opencv2/opencv.hpp>
 
 #include <memory>
 #include <numeric>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/opencv.hpp>
+
+#include "semantic_recolor/image_utilities.h"
 
 namespace semantic_recolor {
 
-TrtSegmenter::TrtSegmenter(const ModelConfig &config)
+TrtSegmenter::TrtSegmenter(const ModelConfig& config)
     : config_(config),
       logger_(config.log_severity, config.use_ros_logging),
       initialized_(false) {
@@ -116,11 +116,11 @@ bool TrtSegmenter::init() {
   return true;
 }
 
-std::vector<void *> TrtSegmenter::getBindings() const {
+std::vector<void*> TrtSegmenter::getBindings() const {
   return {input_buffer_.memory.get(), output_buffer_.memory.get()};
 }
 
-bool TrtSegmenter::infer(const cv::Mat &img) {
+bool TrtSegmenter::infer(const cv::Mat& img) {
   fillNetworkImage(config_, img, nn_img_);
 
   // TODO(nathan) we probably should double check that sizes line up
@@ -156,6 +156,6 @@ bool TrtSegmenter::infer(const cv::Mat &img) {
   return true;
 }
 
-const cv::Mat &TrtSegmenter::getClasses() const { return classes_; }
+const cv::Mat& TrtSegmenter::getClasses() const { return classes_; }
 
 }  // namespace semantic_recolor
