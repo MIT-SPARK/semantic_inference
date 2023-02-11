@@ -10,6 +10,7 @@ import csv
 # adapted from https://matplotlib.org/stable/gallery/color/named_colors.html
 def plot_colortable(
     color_dict,
+    name_dict,
     sort_colors=True,
     emptycols=0,
     cell_width=212,
@@ -39,7 +40,8 @@ def plot_colortable(
     ax.xaxis.set_visible(False)
     ax.set_axis_off()
 
-    for i, name in enumerate(color_dict):
+    labels = sorted([x for x in color_dict])
+    for i, label in enumerate(labels):
         row = i % nrows
         col = i // nrows
         y = row * cell_height
@@ -50,19 +52,18 @@ def plot_colortable(
         ax.text(
             text_pos_x,
             y,
-            name,
+            f"{label}: {name_dict[label]}",
             fontsize=14,
             horizontalalignment="left",
             verticalalignment="center",
         )
 
-        print(color_dict[name])
         ax.add_patch(
             Rectangle(
                 xy=(swatch_start_x, y - 9),
                 width=swatch_width,
                 height=18,
-                facecolor=color_dict[name],
+                facecolor=color_dict[label],
                 edgecolor="0.7",
             )
         )
@@ -75,6 +76,7 @@ def plot_colortable(
 def main(csv_file):
     """Plot labels and colors."""
     color_dict = {}
+    name_dict = {}
 
     csv_path = pathlib.Path(csv_file)
     with csv_path.open("r") as fin:
@@ -82,12 +84,13 @@ def main(csv_file):
         next(reader)
 
         for line in reader:
-            print(line)
-            color_dict[line[0]] = np.squeeze(
+            label = int(line[-1])
+            name_dict[label] = line[0]
+            color_dict[label] = np.squeeze(
                 np.array([float(x) for x in line[1:4]]) / 255
             )
 
-    fig = plot_colortable(color_dict)
+    plot_colortable(color_dict, name_dict)
     plt.show()
 
 
