@@ -26,7 +26,10 @@
 
     <arg name="dataset_name" default="ade150_config"/>
     <arg name="color_config" value="$(find semantic_recolor)/config/colors/$(arg dataset_name).yaml"/>
+
     <arg name="min_separation_s" default="0.2"/>
+    <arg name="throttle_rate_prerecorded" default="15.0"/>
+    <arg name="throttle_prerecorded" default="true"/>
 
     <arg name="debug" default="false"/>
     <arg name="launch-prefix" value="gdb -ex run --args" if="$(arg debug)"/>
@@ -56,13 +59,18 @@
         <remap from="semantic/image_raw" to="$(arg semantic_topic)"/>
     </node>
 
+    <node pkg="topic_tools" type="throttle" name="rgb_throttle"
+          args="messages $(arg label_topic) $(arg throttle_rate_prerecorded)"
+          if="$(arg throttle_prerecorded)"/>
+
     <node pkg="nodelet" type="nodelet" name="recolor_nodelet"
           args="load semantic_recolor/recolor nodelet_manager --no-bond"
           output="$(arg desired_output)"
           if="$(arg use_prerecorded_semantics)"
           required="true">
         <rosparam file="$(arg color_config)" command="load" ns="colors"/>
-        <remap from="labels/image_raw" to="$(arg label_topic)"/>
+        <remap from="labels/image_raw" to="$(arg label_topic)" unless="$(arg throttle_prerecorded)"/>
+        <remap from="labels/image_raw" to="$(arg label_topic)_throttle" if="$(arg throttle_prerecorded)"/>
         <remap from="labels/image_raw/compressed" to="$(arg label_topic)/compressed"/>
         <remap from="semantic/image_raw" to="$(arg semantic_topic)"/>
     </node>
