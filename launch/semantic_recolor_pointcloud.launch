@@ -31,9 +31,9 @@
     <arg name="throttle_rate_prerecorded" default="15.0"/>
     <arg name="throttle_prerecorded" default="true"/>
 
-    <arg name="debug" default="false"/>
-    <arg name="launch-prefix" value="gdb -ex run --args" if="$(arg debug)"/>
-    <arg name="launch-prefix" value="" unless="$(arg debug)"/>
+    <arg name="sr_debug" default="false"/>
+    <arg name="launch-prefix" value="gdb -ex run --args" if="$(arg sr_debug)"/>
+    <arg name="launch-prefix" value="" unless="$(arg sr_debug)"/>
 
     <node pkg="nodelet" type="nodelet" name="nodelet_manager"
           args="manager"
