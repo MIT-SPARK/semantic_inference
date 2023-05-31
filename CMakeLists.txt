@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.14)
 project(semantic_recolor)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -9,14 +9,16 @@ add_compile_options(-Wall -Wextra)
 
 find_package(catkin REQUIRED roscpp nodelet cv_bridge image_transport)
 find_package(OpenCV REQUIRED)
-find_package(CUDA REQUIRED)
 find_package(yaml-cpp REQUIRED)
+
+set(ONNX_URL "https://github.com/microsoft/onnxruntime/releases/download/v1.15.0/onnxruntime-linux-x64-gpu-1.15.0.tgz")
+FetchContent_Declare(onnxruntime URL ${ONNX_URL})
 
 catkin_package(
   CATKIN_DEPENDS roscpp nodelet cv_bridge image_transport
-  DEPENDS OpenCV CUDA
+  DEPENDS OpenCV
   INCLUDE_DIRS include
-  LIBRARIES ${PROJECT_NAME} nvinfer nvonnxparser nvinfer_plugin
+  LIBRARIES ${PROJECT_NAME}
 )
 
 add_library(
@@ -33,15 +35,11 @@ add_library(
 target_link_libraries(
   ${PROJECT_NAME}
   ${catkin_LIBRARIES}
-  nvinfer
-  nvonnxparser
-  nvinfer_plugin
-  ${CUDA_LIBRARIES}
   ${OpenCV_LIBRARIES}
   yaml-cpp
 )
 target_include_directories(
-  ${PROJECT_NAME} PUBLIC include ${catkin_INCLUDE_DIRS} ${CUDA_INCLUDE_DIRS}
+  ${PROJECT_NAME} PUBLIC include ${catkin_INCLUDE_DIRS}
                          ${OpenCV_INCLUDE_DIRS}
 )
 
