@@ -20,7 +20,7 @@ void SegmentationNodelet::onInit() {
   pnh.getParam("image_separation_s", image_separation_s_);
 
   config_ = readModelConfig(pnh);
-  segmenter_.reset(new TrtSegmenter(config_));
+  segmenter_.reset(new SemanticSegmenter(config_));
   if (!segmenter_->init()) {
     ROS_FATAL("unable to init semantic segmentation model memory");
     throw std::runtime_error("bad segmenter init");

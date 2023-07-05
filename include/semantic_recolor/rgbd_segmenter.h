@@ -3,11 +3,11 @@
 
 namespace semantic_recolor {
 
-class TrtRgbdSegmenter : public TrtSegmenter {
+class RgbdSegmenter : public SemanticSegmenter {
  public:
-  TrtRgbdSegmenter(const ModelConfig& config, const DepthConfig& depth_config);
+  RgbdSegmenter(const ModelConfig& config, const DepthConfig& depth_config);
 
-  virtual ~TrtRgbdSegmenter();
+  virtual ~RgbdSegmenter();
 
   bool init() override;
 
@@ -21,7 +21,6 @@ class TrtRgbdSegmenter : public TrtSegmenter {
   std::vector<void*> getBindings() const override;
 
   DepthConfig depth_config_;
-  CudaMemoryHolder<float> depth_input_buffer_;
   cv::Mat nn_depth_img_;
 };
 

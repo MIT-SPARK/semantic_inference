@@ -11,8 +11,25 @@ find_package(catkin REQUIRED roscpp nodelet cv_bridge image_transport)
 find_package(OpenCV REQUIRED)
 find_package(yaml-cpp REQUIRED)
 
-set(ONNX_URL "https://github.com/microsoft/onnxruntime/releases/download/v1.15.0/onnxruntime-linux-x64-gpu-1.15.0.tgz")
-FetchContent_Declare(onnxruntime URL ${ONNX_URL})
+configure_file(cmake/ort.CMakeLists.txt.in ort-download/CMakeLists.txt)
+execute_process(
+  COMMAND "${CMAKE_COMMAND}" -G "${CMAKE_GENERATOR}" .
+  WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/ort-download" # OUTPUT_QUIET
+)
+execute_process(
+  COMMAND "${CMAKE_COMMAND}" --build .
+  WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/ort-download" # OUTPUT_QUIET
+)
+
+add_library(ort::ort IMPORTED INTERFACE)
+set_property(
+  TARGET ort::ort PROPERTY INTERFACE_INCLUDE_DIRECTORIES
+                           "${CMAKE_CURRENT_BINARY_DIR}/ort-src/include"
+)
+set_property(
+  TARGET ort::ort PROPERTY INTERFACE_LINK_LIBRARIES
+                           "${CMAKE_CURRENT_BINARY_DIR}/ort-src/lib/libonnxruntime.so"
+)
 
 catkin_package(
   CATKIN_DEPENDS roscpp nodelet cv_bridge image_transport
@@ -25,18 +42,22 @@ add_library(
   ${PROJECT_NAME}
   src/image_utilities.cpp
   src/model_config.cpp
-  src/rgbd_segmenter.cpp
+  #src/rgbd_segmenter.cpp
   src/ros_utilities.cpp
   src/segmenter.cpp
   src/semantic_color_config.cpp
-  src/trt_utilities.cpp
   src/yaml_utilities.cpp
+  src/backends/ort/ort_backend.cpp
+  src/backends/ort/ort_utilities.cpp
 )
 target_link_libraries(
   ${PROJECT_NAME}
+  PUBLIC
   ${catkin_LIBRARIES}
   ${OpenCV_LIBRARIES}
   yaml-cpp
+  PRIVATE
+  ort::ort
 )
 target_include_directories(
   ${PROJECT_NAME} PUBLIC include ${catkin_INCLUDE_DIRS}
@@ -46,8 +67,7 @@ target_include_directories(
 add_library(
   ${PROJECT_NAME}_nodelet
   src/mask_nodelet.cpp src/nodelet_output_publisher.cpp
-  src/rgbd_segmentation_nodelet.cpp src/segmentation_nodelet.cpp
-  src/recolor_nodelet.cpp
+  src/segmentation_nodelet.cpp src/recolor_nodelet.cpp
 )
 target_include_directories(
   ${PROJECT_NAME}_nodelet PUBLIC include ${catkin_INCLUDE_DIRS}
@@ -56,9 +76,6 @@ target_link_libraries(${PROJECT_NAME}_nodelet ${PROJECT_NAME} ${catkin_LIBRARIES
 
 add_executable(demo_segmentation src/demo_segmentation.cpp)
 target_link_libraries(demo_segmentation ${PROJECT_NAME})
-
-add_executable(demo_rgbd_segmentation src/demo_rgbd_segmentation.cpp)
-target_link_libraries(demo_rgbd_segmentation ${PROJECT_NAME})
 
 if(CATKIN_ENABLE_TESTING)
   catkin_add_gtest(

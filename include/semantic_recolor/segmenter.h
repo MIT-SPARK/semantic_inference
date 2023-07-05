@@ -5,52 +5,30 @@
 #include <string>
 
 #include "semantic_recolor/model_config.h"
-#include "semantic_recolor/trt_utilities.h"
+#include "semantic_recolor/segmenter_backend.h"
 
 namespace semantic_recolor {
 
-#define LOG_TO_LOGGER(level, message)             \
-  {                                               \
-    std::stringstream ss;                         \
-    ss << message;                                \
-    const std::string to_log = ss.str();          \
-    logger_.log(Severity::level, to_log.c_str()); \
-  }                                               \
-  static_assert(true, "")
-
-class TrtSegmenter {
+class SemanticSegmenter {
  public:
-  explicit TrtSegmenter(const ModelConfig& config);
+  explicit SemanticSegmenter(const ModelConfig& config);
 
-  virtual ~TrtSegmenter();
+  virtual ~SemanticSegmenter();
 
   virtual bool init();
 
-  bool infer(const cv::Mat& img);
+  bool infer(const cv::Mat& img, cv::Mat* classes = nullptr);
 
   const cv::Mat& getClasses() const;
 
  protected:
-  bool createInputBuffer();
-
-  bool createOutputBuffer();
-
-  virtual std::vector<void*> getBindings() const;
-
   ModelConfig config_;
-  Logger logger_;
-  std::unique_ptr<TrtRuntime> runtime_;
-  std::unique_ptr<TrtEngine> engine_;
-  std::unique_ptr<TrtContext> context_;
-  cudaStream_t stream_;
-
-  CudaMemoryHolder<float> input_buffer_;
-  CudaMemoryHolder<int32_t> output_buffer_;
 
   cv::Mat nn_img_;
   cv::Mat classes_;
 
   bool initialized_;
+  std::unique_ptr<SegmenterBackend> backend_;
 };
 
 }  // namespace semantic_recolor

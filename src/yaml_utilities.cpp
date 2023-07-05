@@ -128,9 +128,7 @@ void printModelConfig(const ModelConfig& config) {
   SHOW_PARAM(config, use_network_order);
   SHOW_PARAM(config, network_uses_rgb_order);
   std::cout << "rgb dimensions: " << config.getInputMatDims(3) << std::endl;
-  std::cout << "rgb trt dimensions: " << config.getInputDims(3) << std::endl;
   std::cout << "depth dimensions: " << config.getInputMatDims(1) << std::endl;
-  std::cout << "depth trt dimensions: " << config.getInputDims(1) << std::endl;
 }
 
 void printDepthModelConfig(const DepthConfig& config) {

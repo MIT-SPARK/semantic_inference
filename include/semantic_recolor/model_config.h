@@ -2,8 +2,6 @@
 #include <array>
 #include <vector>
 
-#include "semantic_recolor/trt_utilities.h"
-
 namespace semantic_recolor {
 
 struct ModelConfig {
@@ -22,15 +20,12 @@ struct ModelConfig {
   bool use_network_order = true;
   bool network_uses_rgb_order = true;
   bool use_ros_logging = true;
-  Severity log_severity = Severity::kINFO;
   bool show_stats = false;
   bool set_builder_flags = false;
 
   void fillInputAddress(ImageAddress& addr) const;
 
   float getValue(uint8_t input_val, size_t channel) const;
-
-  nvinfer1::Dims4 getInputDims(int channels) const;
 
   std::vector<int> getInputMatDims(int channels) const;
 };

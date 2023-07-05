@@ -29,7 +29,7 @@ class SegmentationNodelet : public nodelet::Nodelet {
   bool haveWork() const;
 
   ModelConfig config_;
-  std::unique_ptr<TrtSegmenter> segmenter_;
+  std::unique_ptr<SemanticSegmenter> segmenter_;
   std::unique_ptr<image_transport::ImageTransport> transport_;
   image_transport::Subscriber image_sub_;
 

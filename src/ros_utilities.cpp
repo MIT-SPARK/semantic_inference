@@ -87,9 +87,7 @@ void showModelConfig(const ModelConfig& config) {
   SHOW_PARAM(config, use_network_order);
   SHOW_PARAM(config, network_uses_rgb_order);
   ROS_INFO_STREAM("rgb dimensions: " << config.getInputMatDims(3));
-  ROS_INFO_STREAM("rgb trt dimensions: " << config.getInputDims(3));
   ROS_INFO_STREAM("depth dimensions: " << config.getInputMatDims(1));
-  ROS_INFO_STREAM("depth trt dimensions: " << config.getInputDims(1));
 }
 
 void showDepthModelConfig(const DepthConfig& config) {

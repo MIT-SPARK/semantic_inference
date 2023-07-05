@@ -16,14 +16,6 @@ float ModelConfig::getValue(uint8_t input_val, size_t channel) const {
   return to_return;
 }
 
-nvinfer1::Dims4 ModelConfig::getInputDims(int channels) const {
-  if (use_network_order) {
-    return {1, channels, height, width};
-  } else {
-    return {1, height, width, channels};
-  }
-}
-
 std::vector<int> ModelConfig::getInputMatDims(int channels) const {
   if (use_network_order) {
     return {channels, height, width};

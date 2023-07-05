@@ -97,7 +97,7 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  TrtSegmenter segmenter(config);
+  SemanticSegmenter segmenter(config);
   if (!segmenter.init()) {
     ROS_FATAL("Failed to initialize segmenter");
     return 1;
