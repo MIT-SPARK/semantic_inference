@@ -7,9 +7,9 @@ namespace semantic_recolor {
 
 class SegmenterBackend {
  public:
-  virtual void init(const ModelConfig& config, const std::string& model_path) = 0;
+  virtual bool init(const ModelConfig& config, const std::string& model_path) = 0;
 
-  virtual void run(const cv::Mat& input, cv::Mat& output) const = 0;
+  virtual bool run(const cv::Mat& input, cv::Mat& output) const = 0;
 };
 
 }  // namespace semantic_recolor

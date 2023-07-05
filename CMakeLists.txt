@@ -10,6 +10,7 @@ add_compile_options(-Wall -Wextra)
 find_package(catkin REQUIRED roscpp nodelet cv_bridge image_transport)
 find_package(OpenCV REQUIRED)
 find_package(yaml-cpp REQUIRED)
+find_package(glog_catkin REQUIRED)
 
 configure_file(cmake/ort.CMakeLists.txt.in ort-download/CMakeLists.txt)
 execute_process(
@@ -21,7 +22,9 @@ execute_process(
   WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/ort-download" # OUTPUT_QUIET
 )
 
-add_library(ort::ort IMPORTED INTERFACE)
+add_library(
+  ort::ort IMPORTED INTERFACE
+)
 set_property(
   TARGET ort::ort PROPERTY INTERFACE_INCLUDE_DIRECTORIES
                            "${CMAKE_CURRENT_BINARY_DIR}/ort-src/include"
@@ -42,7 +45,7 @@ add_library(
   ${PROJECT_NAME}
   src/image_utilities.cpp
   src/model_config.cpp
-  #src/rgbd_segmenter.cpp
+  # src/rgbd_segmenter.cpp
   src/ros_utilities.cpp
   src/segmenter.cpp
   src/semantic_color_config.cpp
@@ -52,22 +55,19 @@ add_library(
 )
 target_link_libraries(
   ${PROJECT_NAME}
-  PUBLIC
-  ${catkin_LIBRARIES}
-  ${OpenCV_LIBRARIES}
-  yaml-cpp
-  PRIVATE
-  ort::ort
+  PUBLIC ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} yaml-cpp
+  PRIVATE ort::ort ${glog_catkin_LIBRARIES}
 )
 target_include_directories(
-  ${PROJECT_NAME} PUBLIC include ${catkin_INCLUDE_DIRS}
-                         ${OpenCV_INCLUDE_DIRS}
+  ${PROJECT_NAME}
+  PUBLIC include ${catkin_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS}
+  PRIVATE ${glog_catkin_INCLUDE_DIRS}
 )
 
 add_library(
   ${PROJECT_NAME}_nodelet
-  src/mask_nodelet.cpp src/nodelet_output_publisher.cpp
-  src/segmentation_nodelet.cpp src/recolor_nodelet.cpp
+  src/mask_nodelet.cpp src/nodelet_output_publisher.cpp src/segmentation_nodelet.cpp
+  src/recolor_nodelet.cpp
 )
 target_include_directories(
   ${PROJECT_NAME}_nodelet PUBLIC include ${catkin_INCLUDE_DIRS}

@@ -2,52 +2,41 @@
 
 namespace semantic_recolor {
 
-#define READ_REQUIRED(nh, config, name)                      \
-  if (!nh.getParam(#name, config.name)) {                    \
-    ROS_FATAL("Missing " #name " when parsing ModelConfig"); \
-    throw std::runtime_error("missing param " #name "!");    \
-  }                                                          \
+#define READ_PARAM(nh, config, name, required)             \
+  if (!nh.getParam(#name, config.name) && required) {      \
+    ROS_FATAL("Missing " #name " when parsing parameter"); \
+    throw std::runtime_error("missing param " #name "!");  \
+  }                                                        \
   static_assert(true, "")
 
 ModelConfig readModelConfig(const ros::NodeHandle& nh) {
   ModelConfig config;
-
-  READ_REQUIRED(nh, config, model_file);
-  READ_REQUIRED(nh, config, width);
-  READ_REQUIRED(nh, config, height);
-  READ_REQUIRED(nh, config, input_name);
-  READ_REQUIRED(nh, config, output_name);
-
-  nh.getParam("engine_file", config.engine_file);
-  nh.getParam("mean", config.mean);
-  nh.getParam("stddev", config.stddev);
-  nh.getParam("map_to_unit_range", config.map_to_unit_range);
-  nh.getParam("normalize", config.normalize);
-  nh.getParam("use_network_order", config.use_network_order);
-  nh.getParam("network_uses_rgb_order", config.network_uses_rgb_order);
-  nh.getParam("set_builder_flags", config.set_builder_flags);
-
+  READ_PARAM(nh, config, width, true);
+  READ_PARAM(nh, config, height, true);
+  READ_PARAM(nh, config, input_name, true);
+  READ_PARAM(nh, config, output_name, true);
+  READ_PARAM(nh, config, mean, false);
+  READ_PARAM(nh, config, stddev, false);
+  READ_PARAM(nh, config, map_to_unit_range, false);
+  READ_PARAM(nh, config, normalize, false);
+  READ_PARAM(nh, config, use_network_order, false);
+  READ_PARAM(nh, config, network_uses_rgb_order, false);
   return config;
 }
 
 DepthConfig readDepthModelConfig(const ros::NodeHandle& nh) {
   DepthConfig config;
-
-  if (!nh.getParam("depth_input_name", config.depth_input_name)) {
-    ROS_FATAL("Depth input name required!");
-    throw std::runtime_error("depth_input_name required");
-  }
-
-  nh.getParam("depth_mean", config.depth_mean);
-  nh.getParam("depth_stddev", config.depth_stddev);
-  nh.getParam("normalize_depth", config.normalize_depth);
-  nh.getParam("mask_predictions", config.mask_predictions);
-  nh.getParam("min_depth", config.min_depth);
-  nh.getParam("max_depth", config.max_depth);
+  READ_PARAM(nh, config, depth_input_name, true);
+  READ_PARAM(nh, config, depth_mean, false);
+  READ_PARAM(nh, config, depth_stddev, false);
+  READ_PARAM(nh, config, normalize_depth, false);
+  READ_PARAM(nh, config, mask_predictions, false);
+  READ_PARAM(nh, config, min_depth, false);
+  READ_PARAM(nh, config, max_depth, false);
   return config;
 }
 
-#undef READ_REQUIRED
+#undef READ_PARAM
 
 template <typename T>
 std::ostream& operator<<(std::ostream& out, const std::vector<T>& v) {
@@ -74,8 +63,6 @@ std::ostream& operator<<(std::ostream& out, const std::vector<T>& v) {
 
 void showModelConfig(const ModelConfig& config) {
   ROS_INFO_STREAM("ModelConfig:");
-  SHOW_PARAM(config, model_file);
-  SHOW_PARAM(config, engine_file);
   SHOW_PARAM(config, width);
   SHOW_PARAM(config, height);
   SHOW_PARAM(config, input_name);
@@ -86,12 +73,12 @@ void showModelConfig(const ModelConfig& config) {
   SHOW_PARAM(config, normalize);
   SHOW_PARAM(config, use_network_order);
   SHOW_PARAM(config, network_uses_rgb_order);
-  ROS_INFO_STREAM("rgb dimensions: " << config.getInputMatDims(3));
-  ROS_INFO_STREAM("depth dimensions: " << config.getInputMatDims(1));
+  ROS_INFO_STREAM("rgb dimensions: " << config.getInputDims(3));
+  ROS_INFO_STREAM("depth dimensions: " << config.getInputDims(1));
 }
 
 void showDepthModelConfig(const DepthConfig& config) {
-  ROS_INFO_STREAM("ModelConfig:");
+  ROS_INFO_STREAM("DepthConfig:");
   SHOW_PARAM(config, depth_input_name);
   SHOW_PARAM(config, depth_mean);
   SHOW_PARAM(config, depth_stddev);

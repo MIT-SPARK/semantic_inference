@@ -15,7 +15,7 @@ class SemanticSegmenter {
 
   virtual ~SemanticSegmenter();
 
-  virtual bool init();
+  virtual bool init(const std::string& model_path);
 
   bool infer(const cv::Mat& img, cv::Mat* classes = nullptr);
 

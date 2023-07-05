@@ -9,9 +9,15 @@ SemanticSegmenter::SemanticSegmenter(const ModelConfig& config)
 
 SemanticSegmenter::~SemanticSegmenter() {}
 
-bool SemanticSegmenter::init() {
+bool SemanticSegmenter::init(const std::string& model_path) {
+  if (!backend_->init(config_, model_path)) {
+    return false;
+  }
+
+  nn_img_ = cv::Mat(config_.getInputDims(3), CV_32FC1);
+  classes_ = cv::Mat(config_.height, config_.width, CV_32S);
+
   initialized_ = true;
-  // LOG_TO_LOGGER(kINFO, "Segmenter initialized!");
   return true;
 }
 

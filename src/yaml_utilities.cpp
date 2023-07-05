@@ -18,12 +18,10 @@ namespace semantic_recolor {
 
 ModelConfig readModelConfigFromYaml(const YAML::Node& node) {
   ModelConfig config;
-  READ_PARAM(node, config, model_file, false);
   READ_PARAM(node, config, width, true);
   READ_PARAM(node, config, height, true);
   READ_PARAM(node, config, input_name, true);
   READ_PARAM(node, config, output_name, true);
-  READ_PARAM(node, config, engine_file, false);
   READ_PARAM(node, config, mean, false);
   READ_PARAM(node, config, stddev, false);
   READ_PARAM(node, config, map_to_unit_range, false);
@@ -115,8 +113,6 @@ std::ostream& operator<<(std::ostream& out, const std::vector<T>& v) {
 
 void printModelConfig(const ModelConfig& config) {
   std::cout << "ModelConfig:" << std::endl;
-  SHOW_PARAM(config, model_file);
-  SHOW_PARAM(config, engine_file);
   SHOW_PARAM(config, width);
   SHOW_PARAM(config, height);
   SHOW_PARAM(config, input_name);
@@ -127,8 +123,8 @@ void printModelConfig(const ModelConfig& config) {
   SHOW_PARAM(config, normalize);
   SHOW_PARAM(config, use_network_order);
   SHOW_PARAM(config, network_uses_rgb_order);
-  std::cout << "rgb dimensions: " << config.getInputMatDims(3) << std::endl;
-  std::cout << "depth dimensions: " << config.getInputMatDims(1) << std::endl;
+  std::cout << "rgb dimensions: " << config.getInputDims(3) << std::endl;
+  std::cout << "depth dimensions: " << config.getInputDims(1) << std::endl;
 }
 
 void printDepthModelConfig(const DepthConfig& config) {

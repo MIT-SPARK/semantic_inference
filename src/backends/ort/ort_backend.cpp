@@ -1,5 +1,7 @@
 #include "semantic_recolor/backends/ort/ort_backend.h"
 
+#include <glog/logging.h>
+
 #include "semantic_recolor/backends/ort/ort_utilities.h"
 
 namespace semantic_recolor {
@@ -12,30 +14,26 @@ class OrtBackendImpl {
     allocator_.reset(new Ort::AllocatorWithDefaultOptions());
   }
 
-  void init(const ModelConfig& config, const std::string& model_path) {
+  bool init(const ModelConfig& config, const std::string& model_path) {
     env_.reset(new Ort::Env(ORT_LOGGING_LEVEL_WARNING, "ort_backend"));
 
     Ort::SessionOptions options;
     options.SetIntraOpNumThreads(1).SetInterOpNumThreads(1);
-
     session_.reset(new Ort::Session(*env_, model_path.c_str(), options));
-
-    // nn_img_ = cv::Mat(config_.getInputMatDims(3), CV_32FC1);
-    // classes_ = cv::Mat(config_.height, config_.width, CV_32S);
+    return true;
   }
 
-  void run(const cv::Mat& input, cv::Mat& output) const {
-    run({{input_names_.front(), input}}, output);
+  bool run(const cv::Mat& input, cv::Mat& output) const {
+    return run({{input_names_.front(), input}}, output);
   }
 
-  void run(const std::map<std::string, cv::Mat>& inputs, cv::Mat& output) const {
+  bool run(const std::map<std::string, cv::Mat>& inputs, cv::Mat& output) const {
     std::vector<Ort::Value> input_values;
     for (const auto& field : input_fields_) {
       const auto iter = inputs.find(field.name);
       if (iter == inputs.end()) {
-        std::stringstream ss;
-        ss << "missing input " << field.name << " from provided input tensors!";
-        throw std::invalid_argument(ss.str());
+        LOG(ERROR) << "missing input " << field.name << " from provided input tensors!";
+        return false;
       }
 
       input_values.push_back(field.makeOrtValue(mem_info_, iter->second));
@@ -51,6 +49,7 @@ class OrtBackendImpl {
                   &output_name_,
                   output_values.data(),
                   1);
+    return true;
   }
 
  private:
@@ -69,12 +68,12 @@ class OrtBackendImpl {
 
 OrtBackend::OrtBackend() { impl_ = std::make_unique<OrtBackendImpl>(); }
 
-void OrtBackend::init(const ModelConfig& config, const std::string& model_path) {
-  impl_->init(config, model_path);
+bool OrtBackend::init(const ModelConfig& config, const std::string& model_path) {
+  return impl_->init(config, model_path);
 }
 
-void OrtBackend::run(const cv::Mat& input, cv::Mat& output) const {
-  impl_->run(input, output);
+bool OrtBackend::run(const cv::Mat& input, cv::Mat& output) const {
+  return impl_->run(input, output);
 }
 
 }  // namespace semantic_recolor

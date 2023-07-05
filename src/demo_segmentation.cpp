@@ -91,6 +91,12 @@ int main(int argc, char* argv[]) {
   DemoConfig demo_config(nh);
   const auto config = readModelConfig(nh);
 
+  std::string model_path;
+  if (!nh.getParam("model_path", model_path)) {
+    ROS_FATAL("Model path required!");
+    return 1;
+  }
+
   cv::Mat img = cv::imread(demo_config.input_file);
   if (img.empty()) {
     ROS_FATAL_STREAM("Image not found: " << demo_config.input_file);
@@ -98,7 +104,7 @@ int main(int argc, char* argv[]) {
   }
 
   SemanticSegmenter segmenter(config);
-  if (!segmenter.init()) {
+  if (!segmenter.init(model_path)) {
     ROS_FATAL("Failed to initialize segmenter");
     return 1;
   }

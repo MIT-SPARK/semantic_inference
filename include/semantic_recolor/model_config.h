@@ -7,8 +7,6 @@ namespace semantic_recolor {
 struct ModelConfig {
   using ImageAddress = std::array<int, 3>;
 
-  std::string model_file;
-  std::string engine_file;
   int width;
   int height;
   std::string input_name;
@@ -19,15 +17,13 @@ struct ModelConfig {
   bool normalize = true;
   bool use_network_order = true;
   bool network_uses_rgb_order = true;
-  bool use_ros_logging = true;
   bool show_stats = false;
-  bool set_builder_flags = false;
 
   void fillInputAddress(ImageAddress& addr) const;
 
   float getValue(uint8_t input_val, size_t channel) const;
 
-  std::vector<int> getInputMatDims(int channels) const;
+  std::vector<int> getInputDims(int channels) const;
 };
 
 struct DepthConfig {

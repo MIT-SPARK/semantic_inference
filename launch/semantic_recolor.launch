@@ -29,7 +29,6 @@
     <arg name="model_name" default="mobilenetv2_360_640"/>
     <!--<arg name="model_name" default="hrnetv2_360_640_v12"/>-->
     <arg name="model_path" value="$(find semantic_recolor)/models/$(arg model_name).onnx"/>
-    <arg name="engine_path" value="$(find semantic_recolor)/engines/$(arg model_name).trt"/>
     <arg name="segmenter_config" value="$(find semantic_recolor)/config/models/$(arg model_name).yaml"/>
 
     <!-- colormap and label grouping -->
@@ -65,7 +64,6 @@
         <param name="max_queue_size" value="$(arg max_image_queue_size)"/>
         <param name="image_separation_s" value="$(arg min_separation_s)"/>
         <param name="model_file" value="$(arg model_path)"/>
-        <param name="engine_file" value="$(arg engine_path)"/>
         <remap from="rgb/image_raw" to="$(arg rgb_topic)"/>
         <remap from="rgb/image_raw/compressed" to="$(arg rgb_topic)/compressed"/>
         <remap from="semantic/image_raw" to="$(arg semantic_topic)"/>

@@ -13,9 +13,9 @@ class OrtBackend : public SegmenterBackend {
 
   ~OrtBackend();
 
-  void init(const ModelConfig& config, const std::string& model_path) override;
+  bool init(const ModelConfig& config, const std::string& model_path) override;
 
-  void run(const cv::Mat& input, cv::Mat& output) const override;
+  bool run(const cv::Mat& input, cv::Mat& output) const override;
 
  private:
   std::unique_ptr<OrtBackendImpl> impl_;
