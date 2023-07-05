@@ -1,5 +1,6 @@
 #include "semantic_recolor/segmenter.h"
 
+#include "semantic_recolor/backends/ort/ort_backend.h"
 #include "semantic_recolor/image_utilities.h"
 
 namespace semantic_recolor {
@@ -10,6 +11,7 @@ SemanticSegmenter::SemanticSegmenter(const ModelConfig& config)
 SemanticSegmenter::~SemanticSegmenter() {}
 
 bool SemanticSegmenter::init(const std::string& model_path) {
+  backend_.reset(new OrtBackend());
   if (!backend_->init(config_, model_path)) {
     return false;
   }

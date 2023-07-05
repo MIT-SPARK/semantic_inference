@@ -63,7 +63,7 @@
         <rosparam file="$(arg color_config)" command="load" ns="colors"/>
         <param name="max_queue_size" value="$(arg max_image_queue_size)"/>
         <param name="image_separation_s" value="$(arg min_separation_s)"/>
-        <param name="model_file" value="$(arg model_path)"/>
+        <param name="model_path" value="$(arg model_path)"/>
         <remap from="rgb/image_raw" to="$(arg rgb_topic)"/>
         <remap from="rgb/image_raw/compressed" to="$(arg rgb_topic)/compressed"/>
         <remap from="semantic/image_raw" to="$(arg semantic_topic)"/>
