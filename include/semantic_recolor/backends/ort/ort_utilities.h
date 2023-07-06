@@ -15,11 +15,13 @@ struct FieldInfo {
   ONNXTensorElementDataType type;
   std::string type_name;
 
-  Ort::Value makeOrtValue(const OrtMemoryInfo* mem_info,
-                          const cv::Mat& tensor,
-                          bool validate = true) const;
+  Ort::Value makeOrtValue(const OrtMemoryInfo* mem_info, const cv::Mat& tensor) const;
 
   void validateTensor(const cv::Mat& tensor) const;
+
+  bool tensorMatchesType(const cv::Mat& tensor) const;
+
+  std::vector<int64_t> filteredDims() const;
 };
 
 std::vector<FieldInfo> getSessionInputs(const Ort::Session* session,

@@ -13,6 +13,7 @@
   <depend>nodelet</depend>
   <depend>cv_bridge</depend>
   <depend>image_transport</depend>
+  <depend>glog_catkin</depend>
 
   <export>
       <nodelet plugin="${prefix}/nodelet_plugins.xml"/>

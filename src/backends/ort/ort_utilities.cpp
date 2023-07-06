@@ -1,5 +1,7 @@
 #include "semantic_recolor/backends/ort/ort_utilities.h"
 
+#include <glog/logging.h>
+
 #include <functional>
 #include <sstream>
 
@@ -120,81 +122,118 @@ std::ostream& operator<<(std::ostream& out, const FieldInfo& info) {
   return out;
 }
 
-/*bool FieldInfo::tensorMatchesType(const Tensor& tensor) const {*/
-/*switch (type) {*/
-/*case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT:*/
-/*return tensor.type() == Tensor::Type::FLOAT32;*/
-/*case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8:*/
-/*return tensor.type() == Tensor::Type::UINT8;*/
-/*case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT8:*/
-/*return tensor.type() == Tensor::Type::INT8;*/
-/*case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT16:*/
-/*return tensor.type() == Tensor::Type::UINT16;*/
-/*case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT16:*/
-/*return tensor.type() == Tensor::Type::INT16;*/
-/*case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32:*/
-/*return tensor.type() == Tensor::Type::INT32;*/
-/*case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64:*/
-/*return tensor.type() == Tensor::Type::INT64;*/
-/*case ONNX_TENSOR_ELEMENT_DATA_TYPE_DOUBLE:*/
-/*return tensor.type() == Tensor::Type::FLOAT64;*/
-/*case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT32:*/
-/*return tensor.type() == Tensor::Type::UINT32;*/
-/*case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT64:*/
-/*return tensor.type() == Tensor::Type::UINT64;*/
-/*case ONNX_TENSOR_ELEMENT_DATA_TYPE_UNDEFINED:*/
-/*case ONNX_TENSOR_ELEMENT_DATA_TYPE_STRING:*/
-/*case ONNX_TENSOR_ELEMENT_DATA_TYPE_BOOL:*/
-/*case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT16:*/
-/*case ONNX_TENSOR_ELEMENT_DATA_TYPE_COMPLEX64:*/
-/*case ONNX_TENSOR_ELEMENT_DATA_TYPE_COMPLEX128:*/
-/*case ONNX_TENSOR_ELEMENT_DATA_TYPE_BFLOAT16:*/
-/*default:*/
-/*return false;*/
-/*}*/
-/*}*/
+bool FieldInfo::tensorMatchesType(const cv::Mat& tensor) const {
+  switch (type) {
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT:
+      return tensor.type() == CV_32F;
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8:
+      return tensor.type() == CV_8U;
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT8:
+      return tensor.type() == CV_8S;
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT16:
+      return tensor.type() == CV_16U;
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT16:
+      return tensor.type() == CV_16S;
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32:
+      return tensor.type() == CV_32S;
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_DOUBLE:
+      return tensor.type() == CV_64F;
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64:
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT32:
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT64:
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_UNDEFINED:
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_STRING:
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_BOOL:
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT16:
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_COMPLEX64:
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_COMPLEX128:
+    case ONNX_TENSOR_ELEMENT_DATA_TYPE_BFLOAT16:
+    default:
+      return false;
+  }
+}
+
+std::vector<int64_t> getFilteredTensorDims(const cv::Mat& tensor) {
+  std::vector<int64_t> filtered;
+  for (int i = 0; i < tensor.dims; ++i) {
+    if (tensor.size[i] != 1) {
+      filtered.push_back(tensor.size[i]);
+    }
+  }
+  return filtered;
+}
+
+std::vector<int64_t> FieldInfo::filteredDims() const {
+  std::vector<int64_t> filtered;
+  for (const auto dim : dims) {
+    if (dim != 1) {
+      filtered.push_back(dim);
+    }
+  }
+  return filtered;
+}
+
+std::string cvDepthToString(int depth) {
+  if (depth == CV_8U) {
+    return "CV_8U";
+  }
+  if (depth == CV_8S) {
+    return "CV_8S";
+  }
+  if (depth == CV_16U) {
+    return "CV_16U";
+  }
+  if (depth == CV_16S) {
+    return "CV_16S";
+  }
+  if (depth == CV_32S) {
+    return "CV_32S";
+  }
+  if (depth == CV_32F) {
+    return "CV_32F";
+  }
+  if (depth == CV_64F) {
+    return "CV_64F";
+  }
+  return "Unkown";
+}
 
 void FieldInfo::validateTensor(const cv::Mat& tensor) const {
-  if (dims.size() != static_cast<size_t>(tensor.dims)) {
-    std::stringstream ss;
-    ss << "tensor dimension size (" << tensor.dims
-       << ") does not match field dimension size (" << dims.size() << ") for field "
-       << name;
-    throw std::invalid_argument(ss.str());
+  const auto field_dims = filteredDims();
+  const auto tensor_dims = getFilteredTensorDims(tensor);
+
+  if (field_dims.size() != tensor_dims.size()) {
+    LOG(ERROR) << "size mismatch for field: " << *this << " vs. " << tensor.size;
+    throw std::invalid_argument("tensor rank does not match field rank");
   }
 
-  for (size_t i = 0; i < dims.size(); ++i) {
-    if (dims[i] != tensor.size[i]) {
-      std::stringstream ss;
-      ss << "provided tensor dimension " << i << " (size " << tensor.size[i]
-         << ") does not match field (size " << dims[i] << ") for field " << name;
-      throw std::invalid_argument(ss.str());
+  for (size_t i = 0; i < field_dims.size(); ++i) {
+    if (field_dims[i] != tensor_dims[i]) {
+      LOG(ERROR) << "size mismatch for field: " << *this << " vs. " << tensor.size;
+      throw std::invalid_argument("tensor dimensions do not match field dimensions");
     }
   }
 
-  /*  if (!tensorMatchesType(tensor)) {*/
-  /*std::stringstream ss;*/
-  /*ss << "provided tensor " << tensor << "does not have type " << type_name;*/
-  /*}*/
+  if (!tensorMatchesType(tensor)) {
+    LOG(ERROR) << "type mismatch for field: " << *this << " vs. "
+               << cvDepthToString(tensor.depth());
+    throw std::invalid_argument("tensor and field type mismatch");
+  }
 }
 
 template <typename T>
-Ort::Value makeOrtTensor(const OrtMemoryInfo* mem_info, const cv::Mat& tensor) {
-  std::vector<int64_t> dims;
-  for (int i = 0; i < tensor.dims; ++i) {
-    dims.push_back(tensor.size[i]);
-  }
-
+Ort::Value makeOrtTensor(const FieldInfo& field,
+                         const OrtMemoryInfo* mem_info,
+                         const cv::Mat& tensor) {
   return Ort::Value::CreateTensor<T>(mem_info,
                                      const_cast<T*>(tensor.ptr<T>()),
                                      tensor.total(),
-                                     dims.data(),
-                                     dims.size());
+                                     field.dims.data(),
+                                     field.dims.size());
 }
 
 Ort::Value FieldInfo::makeOrtValue(const OrtMemoryInfo* mem_info,
-                                   const cv::Mat& tensor,
-                                   bool validate) const {
+                                   const cv::Mat& tensor) const {
   if (!mem_info) {
     throw std::domain_error("invalid memory info");
   }
@@ -203,25 +242,23 @@ Ort::Value FieldInfo::makeOrtValue(const OrtMemoryInfo* mem_info,
     throw std::domain_error("multi-channel matrix not supported");
   }
 
-  if (validate) {
-    validateTensor(tensor);
-  }
+  validateTensor(tensor);
 
   const auto input_type = tensor.type();
   if (input_type == CV_32F) {
-    return makeOrtTensor<float>(mem_info, tensor);
+    return makeOrtTensor<float>(*this, mem_info, tensor);
   } else if (input_type == CV_64F) {
-    return makeOrtTensor<double>(mem_info, tensor);
+    return makeOrtTensor<double>(*this, mem_info, tensor);
   } else if (input_type == CV_8U) {
-    return makeOrtTensor<uint8_t>(mem_info, tensor);
+    return makeOrtTensor<uint8_t>(*this, mem_info, tensor);
   } else if (input_type == CV_16U) {
-    return makeOrtTensor<uint16_t>(mem_info, tensor);
+    return makeOrtTensor<uint16_t>(*this, mem_info, tensor);
   } else if (input_type == CV_8S) {
-    return makeOrtTensor<int8_t>(mem_info, tensor);
+    return makeOrtTensor<int8_t>(*this, mem_info, tensor);
   } else if (input_type == CV_16S) {
-    return makeOrtTensor<int16_t>(mem_info, tensor);
+    return makeOrtTensor<int16_t>(*this, mem_info, tensor);
   } else if (input_type == CV_32S) {
-    return makeOrtTensor<int32_t>(mem_info, tensor);
+    return makeOrtTensor<int32_t>(*this, mem_info, tensor);
   } else {
     throw std::invalid_argument("tensor type is unhandled!");
   }
