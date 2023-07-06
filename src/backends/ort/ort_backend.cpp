@@ -33,6 +33,49 @@ struct GlogSingleton {
 
 std::unique_ptr<GlogSingleton> GlogSingleton::instance_;
 
+struct CudaOptHolder {
+  CudaOptHolder() {
+    const auto& api = Ort::GetApi();
+    Ort::ThrowOnError(api.CreateCUDAProviderOptions(&options));
+  }
+
+  ~CudaOptHolder() {
+    const auto& api = Ort::GetApi();
+    api.ReleaseCUDAProviderOptions(options);
+  }
+
+  void add(Ort::SessionOptions& session_options) {
+    const auto& api = Ort::GetApi();
+    auto session_ptr = static_cast<OrtSessionOptions*>(session_options);
+    auto ret = api.SessionOptionsAppendExecutionProvider_CUDA_V2(session_ptr, options);
+    Ort::ThrowOnError(ret);
+  }
+
+  OrtCUDAProviderOptionsV2* options;
+};
+
+struct TrtOptHolder {
+  TrtOptHolder() {
+    const auto& api = Ort::GetApi();
+    Ort::ThrowOnError(api.CreateTensorRTProviderOptions(&options));
+  }
+
+  ~TrtOptHolder() {
+    const auto& api = Ort::GetApi();
+    api.ReleaseTensorRTProviderOptions(options);
+  }
+
+  void add(Ort::SessionOptions& session_options) {
+    const auto& api = Ort::GetApi();
+    auto session_ptr = static_cast<OrtSessionOptions*>(session_options);
+    auto ret =
+        api.SessionOptionsAppendExecutionProvider_TensorRT_V2(session_ptr, options);
+    Ort::ThrowOnError(ret);
+  }
+
+  OrtTensorRTProviderOptionsV2* options;
+};
+
 class OrtBackendImpl {
  public:
   explicit OrtBackendImpl()
@@ -47,6 +90,12 @@ class OrtBackendImpl {
 
     Ort::SessionOptions options;
     options.SetIntraOpNumThreads(1).SetInterOpNumThreads(1);
+    options.SetGraphOptimizationLevel(ORT_ENABLE_ALL);
+
+    CudaOptHolder cuda_opts;
+    cuda_opts.add(options);
+
+    // TODO(nathan) alllow provider toggling
     session_.reset(new Ort::Session(*env_, model_path.c_str(), options));
 
     input_fields_ = getSessionInputs(session_.get(), *allocator_);
@@ -120,7 +169,28 @@ class OrtBackendImpl {
 
 OrtBackend::OrtBackend() { impl_ = std::make_unique<OrtBackendImpl>(); }
 
+std::string dumpProviders() {
+  std::stringstream ss;
+  ss << "providers: ";
+  const auto providers = Ort::GetAvailableProviders();
+
+  ss << "[";
+  auto iter = providers.begin();
+  while (iter != providers.end()) {
+    ss << *iter;
+
+    ++iter;
+
+    if (iter != providers.end()) {
+      ss << ", ";
+    }
+  }
+  ss << "]" << std::endl;
+  return ss.str();
+}
+
 bool OrtBackend::init(const ModelConfig& config, const std::string& model_path) {
+  LOG(INFO) << dumpProviders();
   return impl_->init(config, model_path);
 }
 

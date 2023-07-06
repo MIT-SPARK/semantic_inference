@@ -1,0 +1,29 @@
+<launch>
+
+    <arg name="input_file"/>
+    <arg name="output_file"/>
+
+    <!--<arg name="model_name" default="mobilenetv2_360_640"/>-->
+    <arg name="model_name" default="hrnetv2_360_640_v12"/>
+    <arg name="model_path" value="$(find semantic_recolor)/models/$(arg model_name).onnx"/>
+    <arg name="segmenter_config" value="$(find semantic_recolor)/config/$(arg model_name).yaml"/>
+
+    <arg name="dataset_name" default="ade150_config"/>
+    <arg name="color_config" value="$(find semantic_recolor)/config/colors/$(arg dataset_name).yaml"/>
+
+    <arg name="debug" default="false"/>
+    <arg name="launch-prefix" value="gdb -ex run --args" if="$(arg debug)"/>
+    <arg name="launch-prefix" value="" unless="$(arg debug)"/>
+
+    <node pkg="semantic_recolor" type="demo_segmentation" name="demo_segmentation"
+          output="screen"
+          launch-prefix="$(arg launch-prefix)"
+          required="true">
+        <rosparam file="$(arg segmenter_config)" command="load"/>
+        <rosparam file="$(arg color_config)" command="load" ns="colors"/>
+        <param name="model_path" value="$(arg model_path)"/>
+        <param name="input_file" value="$(arg input_file)"/>
+        <param name="output_file" value="$(arg output_file)"/>
+    </node>
+
+</launch>

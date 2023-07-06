@@ -12,7 +12,7 @@ find_package(OpenCV REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(glog_catkin REQUIRED)
 
-configure_file(cmake/ort.CMakeLists.txt.in ort-download/CMakeLists.txt)
+configure_file(cmake/ort.CMakeLists.txt.in ort-download/CMakeLists.txt @ONLY)
 execute_process(
   COMMAND "${CMAKE_COMMAND}" -G "${CMAKE_GENERATOR}" .
   WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/ort-download" # OUTPUT_QUIET
