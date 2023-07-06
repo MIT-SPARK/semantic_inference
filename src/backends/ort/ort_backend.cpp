@@ -91,16 +91,16 @@ class OrtBackendImpl {
       input_values.push_back(field.makeOrtValue(mem_info_, iter->second));
     }
 
-    std::vector<Ort::Value> output_values;
-    output_values.push_back(output_field_.makeOrtValue(mem_info_, output));
-
+    Ort::Value output_value = output_field_.makeOrtValue(*allocator_);
     session_->Run(Ort::RunOptions(nullptr),
                   input_names_.data(),
                   input_values.data(),
                   input_names_.size(),
                   &output_name_,
-                  output_values.data(),
+                  &output_value,
                   1);
+
+    output_field_.copyValueToTensor(output_value, output);
     return true;
   }
 

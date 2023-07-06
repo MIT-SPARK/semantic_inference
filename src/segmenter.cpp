@@ -17,7 +17,7 @@ bool SemanticSegmenter::init(const std::string& model_path) {
   }
 
   nn_img_ = cv::Mat(config_.getInputDims(3), CV_32FC1);
-  classes_ = cv::Mat(config_.height, config_.width, CV_32S);
+  classes_ = cv::Mat::zeros(config_.height, config_.width, CV_32S);
 
   initialized_ = true;
   return true;

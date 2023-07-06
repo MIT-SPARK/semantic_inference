@@ -17,11 +17,15 @@ struct FieldInfo {
 
   Ort::Value makeOrtValue(const OrtMemoryInfo* mem_info, const cv::Mat& tensor) const;
 
+  Ort::Value makeOrtValue(OrtAllocator* allocator) const;
+
   void validateTensor(const cv::Mat& tensor) const;
 
   bool tensorMatchesType(const cv::Mat& tensor) const;
 
   std::vector<int64_t> filteredDims() const;
+
+  void copyValueToTensor(const Ort::Value& value, cv::Mat& tensor) const;
 };
 
 std::vector<FieldInfo> getSessionInputs(const Ort::Session* session,

@@ -213,12 +213,6 @@ void FieldInfo::validateTensor(const cv::Mat& tensor) const {
       throw std::invalid_argument("tensor dimensions do not match field dimensions");
     }
   }
-
-  if (!tensorMatchesType(tensor)) {
-    LOG(ERROR) << "type mismatch for field: " << *this << " vs. "
-               << cvDepthToString(tensor.depth());
-    throw std::invalid_argument("tensor and field type mismatch");
-  }
 }
 
 template <typename T>
@@ -243,6 +237,11 @@ Ort::Value FieldInfo::makeOrtValue(const OrtMemoryInfo* mem_info,
   }
 
   validateTensor(tensor);
+  if (!tensorMatchesType(tensor)) {
+    LOG(ERROR) << "type mismatch for field: " << *this << " vs. "
+               << cvDepthToString(tensor.depth());
+    throw std::invalid_argument("tensor and field type mismatch");
+  }
 
   const auto input_type = tensor.type();
   if (input_type == CV_32F) {
@@ -264,104 +263,49 @@ Ort::Value FieldInfo::makeOrtValue(const OrtMemoryInfo* mem_info,
   }
 }
 
-/*std::optional<Tensor::Type> OrtToTensorType(ONNXTensorElementDataType type) {*/
-/*switch (type) {*/
-/*case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT:*/
-/*return Tensor::Type::FLOAT32;*/
-/*case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8:*/
-/*return Tensor::Type::UINT8;*/
-/*case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT8:*/
-/*return Tensor::Type::INT8;*/
-/*case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT16:*/
-/*return Tensor::Type::UINT16;*/
-/*case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT16:*/
-/*return Tensor::Type::INT16;*/
-/*case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32:*/
-/*return Tensor::Type::INT32;*/
-/*case ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64:*/
-/*return Tensor::Type::INT64;*/
-/*case ONNX_TENSOR_ELEMENT_DATA_TYPE_DOUBLE:*/
-/*return Tensor::Type::FLOAT64;*/
-/*case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT32:*/
-/*return Tensor::Type::UINT32;*/
-/*case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT64:*/
-/*return Tensor::Type::UINT64;*/
-/*case ONNX_TENSOR_ELEMENT_DATA_TYPE_UNDEFINED:*/
-/*case ONNX_TENSOR_ELEMENT_DATA_TYPE_STRING:*/
-/*case ONNX_TENSOR_ELEMENT_DATA_TYPE_BOOL:*/
-/*case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT16:*/
-/*case ONNX_TENSOR_ELEMENT_DATA_TYPE_COMPLEX64:*/
-/*case ONNX_TENSOR_ELEMENT_DATA_TYPE_COMPLEX128:*/
-/*case ONNX_TENSOR_ELEMENT_DATA_TYPE_BFLOAT16:*/
-/*default:*/
-/*return std::nullopt;*/
-/*}*/
-/*}*/
+Ort::Value FieldInfo::makeOrtValue(OrtAllocator* allocator) const {
+  return Ort::Value::CreateTensor(allocator, dims.data(), dims.size(), type);
+}
 
-/*Tensor FieldInfo::getTensor() const {*/
-/*for (const auto dim_size : dims) {*/
-/*if (dim_size == -1) {*/
-/*std::stringstream ss;*/
-/*ss << "cannot make a tensor with dynamic dimensions"*/
-/*<< " for field " << name;*/
-/*throw std::invalid_argument(ss.str());*/
-/*}*/
-/*}*/
+template <typename LHS, typename RHS>
+void convert(const Ort::Value& value, cv::Mat& tensor) {
+  auto t_ptr = tensor.ptr<RHS>();
+  const auto v_ptr = value.GetTensorData<LHS>();
+  for (size_t i = 0; i < tensor.total(); ++i) {
+    *(t_ptr + i) = static_cast<RHS>(*(v_ptr + i));
+  }
+}
 
-/*auto tensor_type = OrtToTensorType(type);*/
-/*if (!tensor_type) {*/
-/*std::stringstream ss;*/
-/*ss << "cannot make tensor of corresponding type to " << type_name << " for field "*/
-/*<< name;*/
-/*throw std::invalid_argument(ss.str());*/
-/*}*/
+void FieldInfo::copyValueToTensor(const Ort::Value& value, cv::Mat& tensor) const {
+  if (tensor.channels() > 1) {
+    throw std::domain_error("multi-channel matrix not supported");
+  }
 
-/*return Tensor(dims, *tensor_type);*/
-/*}*/
+  validateTensor(tensor);
+  if (tensorMatchesType(tensor)) {
+    const auto size = tensor.elemSize() * tensor.total();
+    std::memcpy(tensor.ptr(), value.GetTensorData<uint8_t>(), size);
+    return;
+  }
 
-/*Tensor FieldInfo::getDynamicTensor(const std::vector<size_t>& dims_to_read,*/
-/*const std::vector<int64_t>& output_dims) const {*/
-/*size_t dynamic_index = 0;*/
-/*std::vector<int64_t> new_dims;*/
-/*for (size_t i = 0; i < dims.size(); ++i) {*/
-/*if (dims[i] != -1) {*/
-/*new_dims.push_back(dims[i]);*/
-/*continue;*/
-/*}*/
+  if (type == ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT32 && tensor.depth() == CV_32S) {
+    convert<uint32_t, int32_t>(value, tensor);
+    return;
+  }
 
-/*if (dynamic_index >= dims_to_read.size()) {*/
-/*std::stringstream ss;*/
-/*ss << "dynamic size required for axis " << i << " for field " << name;*/
-/*throw std::invalid_argument(ss.str());*/
-/*}*/
+  if (type == ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64 && tensor.depth() == CV_32S) {
+    convert<int64_t, int32_t>(value, tensor);
+    return;
+  }
 
-/*const auto output_index = dims_to_read[dynamic_index];*/
-/*++dynamic_index;*/
-/*if (output_index >= output_dims.size()) {*/
-/*std::stringstream ss;*/
-/*ss << "output dimensions missing index " << output_index << " for field " << name;*/
-/*throw std::invalid_argument(ss.str());*/
-/*}*/
+  if (type == ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT64 && tensor.depth() == CV_32S) {
+    convert<uint64_t, int32_t>(value, tensor);
+    return;
+  }
 
-/*const auto new_dim = output_dims[output_index];*/
-/*if (new_dim < 0) {*/
-/*std::stringstream ss;*/
-/*ss << "invalid output dimension at index " << output_index << ": " << new_dim;*/
-/*throw std::invalid_argument(ss.str());*/
-/*}*/
-
-/*new_dims.push_back(new_dim);*/
-/*}*/
-
-/*auto tensor_type = OrtToTensorType(type);*/
-/*if (!tensor_type) {*/
-/*std::stringstream ss;*/
-/*ss << "cannot make tensor of corresponding type to " << type_name << " for field "*/
-/*<< name;*/
-/*throw std::invalid_argument(ss.str());*/
-/*}*/
-
-/*return Tensor(new_dims, *tensor_type);*/
-/*}*/
+  LOG(ERROR) << "Cannot convert value for field: " << *this << " to "
+             << cvDepthToString(tensor.depth());
+  throw std::domain_error("cannot convert types");
+}
 
 }  // namespace semantic_recolor
