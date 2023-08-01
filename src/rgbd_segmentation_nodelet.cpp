@@ -28,7 +28,8 @@ void RgbdSegmentationNodelet::onInit() {
 
   ros::NodeHandle nh = getNodeHandle();
   transport_.reset(new image_transport::ImageTransport(nh));
-  output_pub_.reset(new NodeletOutputPublisher(pnh, *transport_));
+  OutputConfig config;
+  output_pub_.reset(new NodeletOutputPublisher(pnh, *transport_, config));
 
   image_sub_.subscribe(*transport_, "rgb/image_raw", 1);
   depth_sub_.subscribe(*transport_, "depth/image_rect", 1);

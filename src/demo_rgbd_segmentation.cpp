@@ -116,7 +116,7 @@ int main(int argc, char* argv[]) {
   showStatistics(classes);
 
   cv::Mat semantic_image(rgb.rows, rgb.cols, CV_8UC3);
-  color_config.fillImage(classes, semantic_image);
+  color_config.recolorImage(classes, semantic_image);
   cv::Mat rgb_mat;
   cv::cvtColor(semantic_image, rgb_mat, cv::COLOR_BGR2RGB);
   cv::imwrite("semantic_labels.png", rgb_mat);

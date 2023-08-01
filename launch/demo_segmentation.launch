@@ -5,7 +5,7 @@
     <arg name="model_name" default="hrnetv2_360_640_v12"/>
     <arg name="model_path" value="$(find semantic_recolor)/models/$(arg model_name).onnx"/>
     <arg name="engine_path" value="$(find semantic_recolor)/engines/$(arg model_name).trt"/>
-    <arg name="segmenter_config" value="$(find semantic_recolor)/config/$(arg model_name).yaml"/>
+    <arg name="segmenter_config" value="$(find semantic_recolor)/config/models/$(arg model_name).yaml"/>
 
     <arg name="debug" default="false"/>
     <arg name="launch-prefix" value="gdb --args" if="$(arg debug)"/>

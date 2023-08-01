@@ -1,5 +1,5 @@
 ---
-name: mpcat40_objects
+name: mpcat40
 groups:
   - {name: void, labels: [0, 41]}
   - {name: wall, labels: [1]}

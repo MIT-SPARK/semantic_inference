@@ -1,5 +1,6 @@
 ---
-name: ade150_expanded_config
+name: ade20k_outdoor
+distinct: true
 groups:
   - {name: Unknown, labels: [50, 79, 110, 114]}
   - {name: Sky, labels: [3]}

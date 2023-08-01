@@ -5,13 +5,19 @@ namespace semantic_recolor {
 
 SemanticColorConfig::SemanticColorConfig() : initialized_(false) {}
 
-std::vector<uint8_t> convertToRGB8(const std::vector<double>& color) {
-  return {static_cast<uint8_t>(std::floor(color[0] * 255)),
-          static_cast<uint8_t>(std::floor(color[1] * 255)),
-          static_cast<uint8_t>(std::floor(color[2] * 255))};
+std::array<uint8_t, 3> convertToRGB8(const std::vector<double>& color) {
+  if (color.size() != 3) {
+    ROS_FATAL_STREAM("invalid color: size " << color.size() << " != 3");
+    throw std::runtime_error("invalid semantic color config param");
+  }
+
+  return {static_cast<uint8_t>(std::floor(color.at(0) * 255)),
+          static_cast<uint8_t>(std::floor(color.at(1) * 255)),
+          static_cast<uint8_t>(std::floor(color.at(2) * 255))};
 }
 
-SemanticColorConfig::SemanticColorConfig(const ros::NodeHandle& nh) {
+SemanticColorConfig::SemanticColorConfig(const ros::NodeHandle& nh)
+    : initialized_(false), default_id_(-1) {
   std::vector<int> class_ids;
   if (!nh.getParam("classes", class_ids)) {
     ROS_FATAL("failed to find classes parameter");
@@ -47,54 +53,106 @@ SemanticColorConfig::SemanticColorConfig(const ros::NodeHandle& nh) {
 
 void SemanticColorConfig::initialize(const std::map<int, ColorLabelPair>& classes,
                                      const std::vector<double>& default_color) {
-  for (const auto& id_info_pair : classes) {
-    const auto& class_info = id_info_pair.second;
-    if (class_info.color.size() != 3) {
-      ROS_FATAL_STREAM("invalid color: num elements " << class_info.color.size()
-                                                      << " != 3");
-      throw std::runtime_error("invalid semantic color config param");
+  for (auto&& [class_id, class_info] : classes) {
+    if (class_id < 0 || class_id > std::numeric_limits<int16_t>::max()) {
+      ROS_FATAL_STREAM("found invalid class id: " << class_id);
+      throw std::runtime_error("invalid class id");
     }
 
-    std::vector<uint8_t> actual_color = convertToRGB8(class_info.color);
+    const auto actual_color = convertToRGB8(class_info.color);
     for (const auto& label : class_info.labels) {
-      color_map_[label] = actual_color;
-    }
-  }
+      if (label < 0 || label > std::numeric_limits<int16_t>::max()) {
+        ROS_FATAL_STREAM("found invalid label: " << label);
+        throw std::runtime_error("invalid label");
+      }
 
-  if (default_color.size() != 3) {
-    ROS_FATAL_STREAM("invalid color: num elements " << default_color.size() << " != 3");
-    throw std::runtime_error("invalid semantic color config param");
+      color_map_[label] = actual_color;
+      label_remapping_[label] = class_id;
+    }
   }
 
   default_color_ = convertToRGB8(default_color);
   initialized_ = true;
 }
 
-void SemanticColorConfig::fillColor(int32_t class_id,
+void SemanticColorConfig::fillColor(int16_t class_id,
                                     uint8_t* pixel,
                                     size_t pixel_size) const {
+  const auto iter = color_map_.find(class_id);
+  if (iter != color_map_.end()) {
+    std::memcpy(pixel, iter->second.data(), pixel_size);
+    return;
+  }
+
+  if (!seen_unknown_labels_.count(class_id)) {
+    ROS_ERROR_STREAM("Encountered unhandled class id: " << class_id);
+    seen_unknown_labels_.insert(class_id);
+  }
+
+  std::memcpy(pixel, default_color_.data(), pixel_size);
+}
+
+int16_t SemanticColorConfig::getRemappedLabel(int16_t class_id) const {
+  const auto iter = label_remapping_.find(class_id);
+  if (iter != label_remapping_.end()) {
+    return iter->second;
+  }
+
+  if (!seen_unknown_labels_.count(class_id)) {
+    ROS_ERROR_STREAM("Encountered unhandled class id: " << class_id);
+    seen_unknown_labels_.insert(class_id);
+  }
+
+  return default_id_;
+}
+
+void SemanticColorConfig::relabelImage(const cv::Mat& classes, cv::Mat& output) const {
   if (!initialized_) {
     ROS_FATAL("SemanticColorConfig not initialized");
     throw std::runtime_error("uninitialized color config");
   }
 
-  if (color_map_.count(class_id)) {
-    const auto& color = color_map_.at(class_id);
-    std::memcpy(pixel, color.data(), pixel_size);
-  } else {
-    if (!seen_unknown_labels_.count(class_id)) {
-      ROS_ERROR_STREAM("Encountered unhandled class id: " << class_id);
-      seen_unknown_labels_.insert(class_id);
+  if (output.type() != CV_16S) {
+    return;
+  }
+
+  // opencv doesn't allow resizing of 32S images...
+  cv::Mat resized_classes;
+  classes.convertTo(resized_classes, CV_16S);
+  if (classes.rows != output.rows || classes.cols != output.cols) {
+    // interpolating class labels doesn't make sense so use NEAREST
+    cv::resize(resized_classes,
+               resized_classes,
+               cv::Size(output.cols, output.rows),
+               0.0f,
+               0.0f,
+               cv::INTER_NEAREST);
+  }
+
+  for (int r = 0; r < resized_classes.rows; ++r) {
+    for (int c = 0; c < resized_classes.cols; ++c) {
+      int16_t* pixel = output.ptr<int16_t>(r, c);
+      const auto class_id = resized_classes.at<int16_t>(r, c);
+      *pixel = getRemappedLabel(class_id);
     }
-    std::memcpy(pixel, default_color_.data(), pixel_size);
   }
 }
 
-void SemanticColorConfig::fillImage(const cv::Mat& classes, cv::Mat& output) const {
+void SemanticColorConfig::recolorImage(const cv::Mat& classes, cv::Mat& output) const {
+  if (!initialized_) {
+    ROS_FATAL("SemanticColorConfig not initialized");
+    throw std::runtime_error("uninitialized color config");
+  }
+
+  if (output.type() != CV_8UC3) {
+    return;
+  }
+
+  // opencv doesn't allow resizing of 32S images...
   cv::Mat resized_classes;
-  classes.convertTo(resized_classes, CV_8UC1);
+  classes.convertTo(resized_classes, CV_16S);
   if (classes.rows != output.rows || classes.cols != output.cols) {
-    // interpolating class labels doesn't make sense
+    // interpolating class labels doesn't make sense so use NEAREST
     cv::resize(resized_classes,
                resized_classes,
                cv::Size(output.cols, output.rows),
@@ -106,7 +164,7 @@ void SemanticColorConfig::fillImage(const cv::Mat& classes, cv::Mat& output) con
   for (int r = 0; r < resized_classes.rows; ++r) {
     for (int c = 0; c < resized_classes.cols; ++c) {
       uint8_t* pixel = output.ptr<uint8_t>(r, c);
-      const auto class_id = resized_classes.at<uint8_t>(r, c);
+      const auto class_id = resized_classes.at<int16_t>(r, c);
       fillColor(class_id, pixel);
     }
   }

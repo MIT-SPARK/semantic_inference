@@ -4,3 +4,5 @@ seaborn
 onnx
 onnxruntime
 pandas
+distinctipy
+matplotlib

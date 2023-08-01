@@ -15,7 +15,12 @@ void RecolorNodelet::onInit() {
 
   ros::NodeHandle nh = getNodeHandle();
   transport_.reset(new image_transport::ImageTransport(nh));
-  output_pub_.reset(new NodeletOutputPublisher(pnh, *transport_, true));
+
+  OutputConfig config;
+  config.publish_labels = true;
+  pnh.getParam("publish_color", config.publish_color);
+  config.publish_overlay = false; // no rgb to publish overlay
+  output_pub_.reset(new NodeletOutputPublisher(pnh, *transport_, config));
 
   image_sub_ =
       transport_->subscribe("labels/image_raw", 1, &RecolorNodelet::callback, this);

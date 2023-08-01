@@ -27,17 +27,26 @@ class SemanticColorConfig {
   void initialize(const std::map<int, ColorLabelPair>& classes,
                   const std::vector<double>& default_color);
 
-  void fillColor(int32_t class_id, uint8_t* pixel, size_t pixel_size = 3) const;
+  void recolorImage(const cv::Mat& classes, cv::Mat& output) const;
 
-  void fillImage(const cv::Mat& classes, cv::Mat& output) const;
+  void relabelImage(const cv::Mat& classes, cv::Mat& output) const;
 
   void show(std::ostream& out) const;
 
+ protected:
+  void fillColor(int16_t class_id, uint8_t* pixel, size_t pixel_size = 3) const;
+
+  int16_t getRemappedLabel(int16_t class_id) const;
+
  private:
   bool initialized_;
-  std::map<int32_t, std::vector<uint8_t>> color_map_;
-  std::vector<uint8_t> default_color_;
-  mutable std::set<int32_t> seen_unknown_labels_;
+  int16_t default_id_;
+
+  std::map<int16_t, int16_t> label_remapping_;
+  std::map<int16_t, std::array<uint8_t, 3>> color_map_;
+  std::array<uint8_t, 3> default_color_;
+
+  mutable std::set<int16_t> seen_unknown_labels_;
 };
 
 }  // namespace semantic_recolor

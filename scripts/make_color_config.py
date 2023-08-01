@@ -2,6 +2,7 @@
 """Script to make color config."""
 import matplotlib.colors as mcolors
 import seaborn as sns
+import distinctipy
 import pathlib
 import random
 import click
@@ -107,8 +108,6 @@ def _get_palette(label_config, palette, seed, force_compatible=False):
     if "palette" in label_config:
         for color in label_config["palette"]:
             base_colors.append([float(x) for x in color])
-    else:
-        base_colors = sns.color_palette(palette, num_to_assign)
 
     if len(base_colors) < num_to_assign:
         if "palette" in label_config:
@@ -116,7 +115,20 @@ def _get_palette(label_config, palette, seed, force_compatible=False):
                 "[WARN]: invalid palette size ({len(base_colors)} < {num_to_assign}",
                 fg="yellow",
             )
-        base_colors = sns.color_palette(palette, num_to_assign)
+
+        distinct = label_config.get("distinct", False)
+        if not distinct:
+            base_colors = sns.color_palette(palette, num_to_assign)
+        else:
+            group_colors = [v for _, v in colors_by_group.items()]
+            chosen_colors = base_colors + group_colors
+            num_to_find = N_groups - len(chosen_colors)
+            # we also don't want white and black as colors
+            new_colors = distinctipy.get_colors(
+                num_to_find,
+                exclude_colors=chosen_colors + [(0.0, 0.0, 0.0), (1.0, 1.0, 1.0)],
+            )
+            base_colors += new_colors
 
     random.seed(seed)
     random.shuffle(base_colors)
@@ -136,7 +148,9 @@ def _get_palette(label_config, palette, seed, force_compatible=False):
     return colors_by_group
 
 
-def _write_configs(label_config, group_colors, output_dir, config_name):
+def _write_configs(
+    label_config, group_colors, output_dir, config_name, labels_shift=-1, csv_shift=0
+):
     output_path = pathlib.Path(output_dir).resolve().absolute()
     yaml_output = output_path / f"{config_name}.yaml"
     csv_output = output_dir / f"{config_name}.csv"
@@ -152,7 +166,7 @@ def _write_configs(label_config, group_colors, output_dir, config_name):
         config["classes"].append(index)
         config_prefix = "class_info/{}".format(index)
         config[f"{config_prefix}/color"] = group_colors[group_name]
-        config[f"{config_prefix}/labels"] = [x - 1 for x in group["labels"]]
+        config[f"{config_prefix}/labels"] = [x + labels_shift for x in group["labels"]]
 
     with yaml_output.open("w") as fout:
         fout.write(yaml.dump(config))
@@ -162,15 +176,18 @@ def _write_configs(label_config, group_colors, output_dir, config_name):
         for index, group in enumerate(label_config["groups"]):
             name = group["name"]
             color = _int_color(group_colors[name])
-            fout.write(f"{name},{color[0]},{color[1]},{color[2]},255,{index + 1}\r\n")
+            idx = index + csv_shift
+            fout.write(f"{name},{color[0]},{color[1]},{color[2]},255,{idx}\r\n")
 
 
 @click.command()
-@click.argument("category_groups_file")
-@click.argument("output_dir")
+@click.argument("category_groups_path", type=click.Path(exists=True))
+@click.argument("output_path", type=click.Path(exists=True))
 @click.option("-p", "--palette", default="husl", help="fallback color palette")
 @click.option("-s", "--seed", default=0, type=int, help="random seed")
 @click.option("-n", "--config-name", default=None, help="output config name")
+@click.option("--labels-shift", type=int, default=-1, help="amount to add to labels")
+@click.option("--csv-shift", type=int, default=0, help="amount to add to color csv")
 @click.option(
     "-f",
     "--force-compatible",
@@ -179,20 +196,18 @@ def _write_configs(label_config, group_colors, output_dir, config_name):
     help="use same palette size as original scripts",
 )
 def main(
-    category_groups_file, output_dir, palette, seed, config_name, force_compatible
+    category_groups_path,
+    output_path,
+    palette,
+    seed,
+    config_name,
+    labels_shift,
+    csv_shift,
+    force_compatible,
 ):
     """Export a config."""
-    category_groups_path = pathlib.Path(category_groups_file).expanduser().absolute()
-    if not category_groups_path.exists():
-        click.secho(
-            f"[FATAL]: invalid category group file {category_groups_path}", fg="red"
-        )
-        sys.exit(1)
-
-    output_path = pathlib.Path(output_dir).expanduser().absolute()
-    if not output_path.exists():
-        click.secho(f"[FATAL]: invalid output path {output_path}", fg="red")
-        sys.exit(1)
+    category_groups_path = pathlib.Path(category_groups_path).expanduser().absolute()
+    output_path = pathlib.Path(output_path).expanduser().absolute()
 
     label_config = _read_label_config(category_groups_path)
     colors = _get_palette(
@@ -209,7 +224,14 @@ def main(
         click.secho(
             "[WARN]: config name not specifying, defaulting to test", fg="yellow"
         )
-    _write_configs(label_config, colors, output_path, name_to_use)
+    _write_configs(
+        label_config,
+        colors,
+        output_path,
+        name_to_use,
+        labels_shift=labels_shift,
+        csv_shift=csv_shift,
+    )
 
 
 if __name__ == "__main__":

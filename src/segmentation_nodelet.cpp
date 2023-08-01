@@ -28,7 +28,11 @@ void SegmentationNodelet::onInit() {
 
   ros::NodeHandle nh = getNodeHandle();
   transport_.reset(new image_transport::ImageTransport(nh));
-  output_pub_.reset(new NodeletOutputPublisher(pnh, *transport_));
+  OutputConfig config;
+  config.publish_labels = true; // always publish labels
+  pnh.getParam("publish_color", config.publish_color);
+  pnh.getParam("publish_overlay", config.publish_overlay);
+  output_pub_.reset(new NodeletOutputPublisher(pnh, *transport_, config));
 
   image_sub_ =
       transport_->subscribe("rgb/image_raw", 1, &SegmentationNodelet::callback, this);
