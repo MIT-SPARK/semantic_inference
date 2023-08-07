@@ -75,7 +75,7 @@ def _run_inference(socket, image):
 @click.argument("topic")
 @click.option("--labels-topic", default="/semantic_color/labels/image_raw")
 @click.option("--semantics-topic", default="/semantic_color/semantics/image_raw")
-@click.option("--colors", default="ade150_config")
+@click.option("--colors", default="ade20k_mp3d")
 @click.option("--compression", default="bz2")
 @click.option("-p", "--port", default=5555, type=int)
 @click.option("-u", "--url", default="127.0.0.1", type=str)
