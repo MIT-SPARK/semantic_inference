@@ -5,6 +5,7 @@
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 
+#include "semantic_inference/cv_utilities.h"
 #include "semantic_inference/logging.h"
 
 namespace semantic_inference {
@@ -31,7 +32,7 @@ void ColorConverter::fillImage(const cv::Mat& input, cv::Mat& output) const {
   if (input.cols == output.cols && input.rows == output.rows) {
     img = input;
   } else {
-    cv::resize(input, img, cv::Size(cols, rows));
+    helpers::resize(input, img, cv::Size(cols, rows), cv::INTER_LINEAR);
   }
 
   std::array<int, 3> input_addr;
@@ -91,7 +92,7 @@ void DepthConverter::fillImage(const cv::Mat& input, cv::Mat& output) const {
   if (size_ok) {
     img = input;
   } else {
-    cv::resize(input, img, cv::Size(output.cols, output.rows), 0, 0, cv::INTER_NEAREST);
+    helpers::resize(input, img, cv::Size(output.cols, output.rows), cv::INTER_NEAREST);
   }
 
   for (int row = 0; row < img.rows; ++row) {
@@ -111,12 +112,8 @@ void declare_config(DepthConverter::Config& config) {
 
 cv::Mat DepthLabelMask::maskLabels(const cv::Mat& labels, const cv::Mat& depth) const {
   cv::Mat resized_depth;
-  cv::resize(depth,
-             resized_depth,
-             cv::Size(labels.cols, labels.rows),
-             0,
-             0,
-             cv::INTER_NEAREST);
+  helpers::resize(
+      depth, resized_depth, cv::Size(labels.cols, labels.rows), cv::INTER_NEAREST);
 
   cv::Mat mask;
   cv::inRange(resized_depth, config.min_depth, config.max_depth, mask);

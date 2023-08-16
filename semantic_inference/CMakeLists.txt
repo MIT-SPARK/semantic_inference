@@ -31,8 +31,8 @@ configure_file(
 
 add_library(
   ${PROJECT_NAME}
-  src/image_recolor.cpp src/image_utilities.cpp src/logging.cpp src/model_config.cpp
-  src/segmenter.cpp
+  src/cv_utilities.cpp src/image_recolor.cpp src/image_utilities.cpp src/logging.cpp
+  src/model_config.cpp src/segmenter.cpp
 )
 target_link_libraries(
   ${PROJECT_NAME} PUBLIC config_utilities::config_utilities ${OpenCV_LIBRARIES}

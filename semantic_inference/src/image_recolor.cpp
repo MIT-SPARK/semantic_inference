@@ -7,6 +7,7 @@
 #include <fstream>
 #include <opencv2/imgproc.hpp>
 
+#include "semantic_inference/cv_utilities.h"
 #include "semantic_inference/logging.h"
 
 namespace semantic_inference {
@@ -136,12 +137,10 @@ void ImageRecolor::relabelImage(const cv::Mat& classes, cv::Mat& output) const {
   classes.convertTo(resized_classes, CV_16S);
   if (classes.rows != output.rows || classes.cols != output.cols) {
     // interpolating class labels doesn't make sense so use NEAREST
-    cv::resize(resized_classes,
-               resized_classes,
-               cv::Size(output.cols, output.rows),
-               0.0f,
-               0.0f,
-               cv::INTER_NEAREST);
+    helpers::resize(resized_classes,
+                    resized_classes,
+                    cv::Size(output.cols, output.rows),
+                    cv::INTER_NEAREST);
   }
 
   for (int r = 0; r < resized_classes.rows; ++r) {
@@ -163,12 +162,10 @@ void ImageRecolor::recolorImage(const cv::Mat& classes, cv::Mat& output) const {
   classes.convertTo(resized_classes, CV_16S);
   if (classes.rows != output.rows || classes.cols != output.cols) {
     // interpolating class labels doesn't make sense so use NEAREST
-    cv::resize(resized_classes,
-               resized_classes,
-               cv::Size(output.cols, output.rows),
-               0.0f,
-               0.0f,
-               cv::INTER_NEAREST);
+    helpers::resize(resized_classes,
+                    resized_classes,
+                    cv::Size(output.cols, output.rows),
+                    cv::INTER_NEAREST);
   }
 
   for (int r = 0; r < resized_classes.rows; ++r) {
