@@ -23,7 +23,7 @@
     <arg name="semantic_topic" default="semantic/image_raw"/>
     <arg name="semantic_color_topic" default="semantic_color/image_raw"/>
     <!-- output topic names -->
-    <arg name="pointcloud_topic" default="/semantic_pointcloud"/>
+    <arg name="pointcloud_topic" default="semantic_pointcloud"/>
 
     <!-- segmentation model configuration -->
     <arg name="model_name" default="mobilenetv2_360_640"/>
