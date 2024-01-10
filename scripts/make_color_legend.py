@@ -1,6 +1,7 @@
 """Show colors from csv."""
 from matplotlib.patches import Rectangle
 import matplotlib.pyplot as plt
+import seaborn as sns
 import numpy as np
 import pathlib
 import click
@@ -12,20 +13,22 @@ def plot_colortable(
     color_dict,
     name_dict,
     sort_colors=True,
+    desiredcols=4,
     emptycols=0,
-    cell_width=212,
+    cell_width=205,
     cell_height=22,
-    swatch_width=48,
+    swatch_width=22,
     margin=12,
+    dpi=300,
+    alpha=0.8,
 ):
     """Plot a color table."""
     N = len(color_dict)
-    ncols = 4 - emptycols
+    ncols = desiredcols - emptycols
     nrows = N // ncols + int(N % ncols > 0)
 
-    width = cell_width * 4 + 2 * margin
+    width = cell_width * ncols + 2 * margin
     height = cell_height * nrows + 2 * margin
-    dpi = 72
 
     fig, ax = plt.subplots(figsize=(width / dpi, height / dpi), dpi=dpi)
     fig.subplots_adjust(
@@ -34,7 +37,7 @@ def plot_colortable(
         (width - margin) / width,
         (height - margin) / height,
     )
-    ax.set_xlim(0, cell_width * 4)
+    ax.set_xlim(0, cell_width * ncols)
     ax.set_ylim(cell_height * (nrows - 0.5), -cell_height / 2.0)
     ax.yaxis.set_visible(False)
     ax.xaxis.set_visible(False)
@@ -52,31 +55,41 @@ def plot_colortable(
         ax.text(
             text_pos_x,
             y,
-            f"{label}: {name_dict[label]}",
+            f"{name_dict[label]}",
             fontsize=14,
             horizontalalignment="left",
             verticalalignment="center",
         )
 
+        color = color_dict[label].tolist() + [alpha]
         ax.add_patch(
             Rectangle(
                 xy=(swatch_start_x, y - 9),
                 width=swatch_width,
                 height=18,
-                facecolor=color_dict[label],
-                edgecolor="0.7",
+                facecolor=color,
+                edgecolor="k",
             )
         )
 
+    plt.tight_layout()
     return fig
 
 
 @click.command()
 @click.argument("csv_file", type=click.Path(exists=True))
-def main(csv_file):
+@click.option("-c", "--num-cols", type=int, default=4)
+@click.option("-d", "--dpi", type=float, default=100.0)
+@click.option("-o", "--output", default=None)
+@click.option("-a", "--alpha", type=float, default=0.8)
+def main(csv_file, num_cols, dpi, output, alpha):
     """Plot labels and colors."""
     color_dict = {}
     name_dict = {}
+
+    sns.set()
+    sns.set_style("white")
+    sns.set_context("paper", font_scale=1.0)
 
     csv_path = pathlib.Path(csv_file)
     with csv_path.open("r") as fin:
@@ -90,8 +103,11 @@ def main(csv_file):
                 np.array([float(x) for x in line[1:4]]) / 255
             )
 
-    plot_colortable(color_dict, name_dict)
-    plt.show()
+    plot_colortable(color_dict, name_dict, desiredcols=num_cols, dpi=dpi, alpha=alpha)
+    if output is None:
+        plt.show()
+    else:
+        plt.savefig(output, bbox_inches="tight", dpi=300)
 
 
 if __name__ == "__main__":

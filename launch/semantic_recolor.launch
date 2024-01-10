@@ -12,6 +12,7 @@
     <arg name="throttle_rate_prerecorded" default="15.0"/>
     <arg name="throttle_prerecorded" default="false"/>
     <arg name="pointcloud_queue_size" default="20"/>
+    <arg name="max_image_queue_size" default="1"/>
 
     <!-- input topic names -->
     <arg name="prerecorded_topic" default="labels/image_raw"/>
@@ -61,6 +62,7 @@
           required="true">
         <rosparam file="$(arg segmenter_config)" command="load"/>
         <rosparam file="$(arg color_config)" command="load" ns="colors"/>
+        <param name="max_queue_size" value="$(arg max_image_queue_size)"/>
         <param name="image_separation_s" value="$(arg min_separation_s)"/>
         <param name="model_file" value="$(arg model_path)"/>
         <param name="engine_file" value="$(arg engine_path)"/>
