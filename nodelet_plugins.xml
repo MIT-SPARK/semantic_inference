@@ -17,4 +17,10 @@
             nodelet to recolor label image
         </description>
     </class>
+    <class name="semantic_recolor/mask" type="semantic_recolor::MaskNodelet"
+        base_class_type="nodelet::Nodelet">
+        <description>
+            nodelet to mask robot (or other static occlusion) from image
+        </description>
+    </class>
 </library>
