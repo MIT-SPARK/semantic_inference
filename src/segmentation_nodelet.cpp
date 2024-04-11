@@ -26,10 +26,10 @@ void SegmentationNodelet::onInit() {
     throw std::runtime_error("bad segmenter init");
   }
 
-  ros::NodeHandle nh = getNodeHandle();
+  ros::NodeHandle nh = getPrivateNodeHandle();
   transport_.reset(new image_transport::ImageTransport(nh));
   OutputConfig config;
-  config.publish_labels = true; // always publish labels
+  config.publish_labels = true;  // always publish labels
   pnh.getParam("publish_color", config.publish_color);
   pnh.getParam("publish_overlay", config.publish_overlay);
   output_pub_.reset(new NodeletOutputPublisher(pnh, *transport_, config));

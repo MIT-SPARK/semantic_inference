@@ -26,7 +26,7 @@ void RgbdSegmentationNodelet::onInit() {
     throw std::runtime_error("bad segmenter init");
   }
 
-  ros::NodeHandle nh = getNodeHandle();
+  ros::NodeHandle nh = getPrivateNodeHandle();
   transport_.reset(new image_transport::ImageTransport(nh));
   OutputConfig config;
   output_pub_.reset(new NodeletOutputPublisher(pnh, *transport_, config));

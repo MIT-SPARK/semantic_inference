@@ -13,7 +13,7 @@ namespace semantic_recolor {
 void RecolorNodelet::onInit() {
   ros::NodeHandle& pnh = getPrivateNodeHandle();
 
-  ros::NodeHandle nh = getNodeHandle();
+  ros::NodeHandle nh = getPrivateNodeHandle();
   transport_.reset(new image_transport::ImageTransport(nh));
 
   OutputConfig config;
