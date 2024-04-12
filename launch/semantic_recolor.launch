@@ -21,7 +21,7 @@
     <arg name="depth_topic" default="depth/image_rect_raw"/>
     <arg name="depth_info_topic" default="depth/camera_info"/>
     <arg name="semantic_topic" default="semantic/image_raw"/>
-    <arg name="semantic_color_topic" default="semantic_color/image_raw"/>
+    <arg name="semantic_color_topic" default="semantic_recolor/semantic_color/image_raw"/>
     <!-- output topic names -->
     <arg name="pointcloud_topic" default="/semantic_pointcloud"/>
 
@@ -66,9 +66,9 @@
         <param name="image_separation_s" value="$(arg min_separation_s)"/>
         <param name="model_file" value="$(arg model_path)"/>
         <param name="engine_file" value="$(arg engine_path)"/>
-        <remap from="rgb/image_raw" to="$(arg rgb_topic)"/>
-        <remap from="rgb/image_raw/compressed" to="$(arg rgb_topic)/compressed"/>
-        <remap from="semantic/image_raw" to="$(arg semantic_topic)"/>
+        <remap from="~rgb/image_raw" to="$(arg rgb_topic)"/>
+        <remap from="~rgb/image_raw/compressed" to="$(arg rgb_topic)/compressed"/>
+        <remap from="~semantic/image_raw" to="$(arg semantic_topic)"/>
     </node>
 
     <node pkg="nodelet" type="nodelet" name="recolor_nodelet"
@@ -80,8 +80,8 @@
         <remap from="labels/image_raw" to="$(arg prerecorded_topic)" unless="$(arg throttle_prerecorded)"/>
         <remap from="labels/image_raw" to="$(arg prerecorded_topic)_throttle" if="$(arg throttle_prerecorded)"/>
         <remap from="labels/image_raw/compressed" to="$(arg prerecorded_topic)/compressed"/>
-        <remap from="semantic/image_raw" to="$(arg semantic_topic)"/>
-        <remap from="semantic_color/image_raw" to="$(arg semantic_color_topic)"/>
+        <remap from="~semantic/image_raw" to="$(arg semantic_topic)"/>
+        <remap from="~semantic_color/image_raw" to="$(arg semantic_color_topic)"/>
     </node>
 
     <!-- utility nodelets -->
@@ -105,6 +105,7 @@
           output="$(arg desired_output)"
           if="$(arg enable_pointcloud)"
           required="true">
+
         <remap from="rgb/camera_info" to="$(arg rgb_info_topic)"/>
         <remap from="rgb/image_rect_color" to="$(arg semantic_color_topic)"/>
         <remap from="depth_registered/image_rect" to="$(arg depth_topic)" unless="$(arg enable_rectification)"/>
