@@ -1,0 +1,73 @@
+---
+name: ade20k_mit
+distinct: true
+groups:
+  - {name: unknown, labels: [50, 57, 79, 110, 114]}
+  - {name: sky, labels: [3]}
+  - {name: tree, labels: [5, 73]}
+  - {name: water, labels: [22, 27, 61, 129]}
+  - {name: ground, labels: [14, 95]}
+  - {name: grass, labels: [10, 30]}
+  - {name: sand, labels: [47]}
+  - {name: sidewalk, labels: [12, 53]}
+  - {name: dock, labels: [141]}
+  - {name: road, labels: [7, 55]}
+  - {name: path, labels: [53, 92]}
+  - {name: vehicle, labels: [21, 81, 84, 91, 103, 117]}
+  - {name: building, labels: [2, 26, 49, 85]}
+  - {name: shelter, labels: [52, 80, 87, 107, 115]}
+  - {name: signal, labels: [137]}
+  - {name: rock, labels: [35]}
+  - {name: fence, labels: [33]}
+  - {name: boat, labels: [77, 104]}
+  - {name: sign, labels: [44, 101, 124, 145]}
+  - {name: hill, labels: [17, 69]}
+  - {name: bridge, labels: [62]}
+  - {name: wall, labels: [1]}
+  - {name: floor, labels: [4, 29, 102, 106]}
+  - {name: ceiling, labels: [6]}
+  - {name: door, labels: [15, 59]}
+  - {name: stairs, labels: [54, 60, 97, 122]}
+  - {name: pole, labels: [94]}
+  - {name: rail, labels: [39, 96]}
+  - {name: structure, labels: [19, 41, 43, 64, 89, 96, 105, 123]}
+  - {name: window, labels: [9]}
+  - {name: surface, labels: [16, 34, 46, 65, 71, 74, 78, 100]}
+  - {name: flora, labels: [18]}
+  - {name: flower, labels: [67]}
+  - {name: bed, labels: [8, 58, 118]}
+  - {name: box, labels: [42]}
+  - {name: storage, labels: [11, 25, 36, 45, 56, 63]}
+  - {name: barrel, labels: [112]}
+  - {name: bag, labels: [116]}
+  - {name: basket, labels: [113]}
+  - {name: seating, labels: [20, 31, 32, 76, 111, 24, 40, 70, 98]}
+  - {name: flag, labels: [150]}
+  - {name: decor, labels: [23, 28, 149, 150]}
+  - {name: light, labels: [37, 83, 86, 88, 135]}
+  - {name: appliance, labels: [38, 48, 51, 66, 72, 108, 119, 125, 130, 134, 146, 147]}
+  - {name: trash, labels: [139]}
+  - {name: bicycle, labels: [128]}
+  - {name: food, labels: [99, 121]}
+  - {name: clothes, labels: [82, 93, 132]}
+  - {name: thing, labels: [68, 75, 90, 109, 120, 131, 133, 138, 142, 144, 126, 136, 140, 143, 148]}
+  - {name: animal, labels: [127]}
+  - {name: human, labels: [13]}
+specified_colors:
+  - {name: sky, source: expanded, color: lightblue}
+  - {name: water, source: expanded, color: blue}
+  - {name: tree, source: expanded, color: darkgreen}
+  - {name: flora, source: expanded, color: lightgreen}
+  - {name: vehicle, source: expanded, color: cyan}
+  - {name: rock, source: expanded, color: black}
+  - {name: ground, source: expanded, color: brown}
+  - {name: hill, source: expanded, color: yellow}
+  - {name: road, source: expanded, color: darkgrey}
+  - {name: sidewalk, source: expanded, color: lightgrey}
+  - {name: floor, source: expanded, color: grey}
+  - {name: wall, source: expanded, color: darkpurple}
+  - {name: building, source: expanded, color: lightpurple}
+  - {name: seating, source: expanded, color: red}
+  - {name: surface, source: expanded, color: magenta}
+  - {name: window, source: expanded, color: lightred}
+default_color: [0.9677975592919913, 0.44127456009157356, 0.5358103155058701]
