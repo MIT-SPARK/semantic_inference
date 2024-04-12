@@ -42,7 +42,7 @@ void RgbdSegmentationNodelet::callback(const sensor_msgs::ImageConstPtr& rgb_msg
                                        const sensor_msgs::ImageConstPtr& depth_msg) {
   cv_bridge::CvImageConstPtr img_ptr;
   try {
-    img_ptr = cv_bridge::toCvShare(rgb_msg);
+    img_ptr = cv_bridge::toCvShare(rgb_msg, "rgb8");
   } catch (const cv_bridge::Exception& e) {
     ROS_ERROR_STREAM("cv_bridge exception: " << e.what());
     return;

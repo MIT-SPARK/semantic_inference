@@ -52,7 +52,7 @@ SegmentationNodelet::~SegmentationNodelet() {
 void SegmentationNodelet::runSegmentation(const sensor_msgs::ImageConstPtr& msg) {
   cv_bridge::CvImageConstPtr img_ptr;
   try {
-    img_ptr = cv_bridge::toCvShare(msg);
+    img_ptr = cv_bridge::toCvShare(msg, "rgb8");
   } catch (const cv_bridge::Exception& e) {
     ROS_ERROR_STREAM("cv_bridge exception: " << e.what());
     return;
