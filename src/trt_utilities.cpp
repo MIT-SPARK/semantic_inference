@@ -58,16 +58,31 @@ std::ostream& operator<<(std::ostream& out, const nvinfer1::Dims& dims) {
 
 std::ostream& operator<<(std::ostream& out, const nvinfer1::DataType& dtype) {
   out << "[";
-  if (dtype == nvinfer1::DataType::kFLOAT) {
-    out << "kFLOAT";
-  } else if (dtype == nvinfer1::DataType::kHALF) {
-    out << "kHALF";
-  } else if (dtype == nvinfer1::DataType::kINT8) {
-    out << "kINT8";
-  } else if (dtype == nvinfer1::DataType::kINT32) {
-    out << "kINT32";
-  } else {
-    out << "UNKNOWN";
+  switch (dtype) {
+    case nvinfer1::DataType::kFLOAT:
+      out << "kFLOAT";
+      break;
+    case nvinfer1::DataType::kHALF:
+      out << "kHALF";
+      break;
+    case nvinfer1::DataType::kINT8:
+      out << "kINT8";
+      break;
+    case nvinfer1::DataType::kINT32:
+      out << "kINT32";
+      break;
+    case nvinfer1::DataType::kBOOL:
+      out << "kBOOL";
+      break;
+    case nvinfer1::DataType::kUINT8:
+      out << "kUINT8";
+      break;
+    case nvinfer1::DataType::kFP8:
+      out << "kFP8";
+      break;
+    default:
+      out << "UNKNOWN: '" << static_cast<int>(dtype) << "'";
+      break;
   }
   out << "]";
   return out;
@@ -101,9 +116,7 @@ std::unique_ptr<TrtEngine> buildEngineFromOnnx(TrtRuntime& runtime,
                                                const std::string& engine_path,
                                                bool set_builder_flags) {
   std::unique_ptr<nvinfer1::IBuilder> builder(nvinfer1::createInferBuilder(logger));
-  const auto network_flags =
-      1u << static_cast<uint32_t>(NetworkDefinitionCreationFlag::kEXPLICIT_BATCH);
-  std::unique_ptr<TrtNetworkDef> network(builder->createNetworkV2(network_flags));
+  std::unique_ptr<TrtNetworkDef> network(builder->createNetworkV2(0));
 
   std::unique_ptr<nvonnxparser::IParser> parser(
       nvonnxparser::createParser(*network, logger));

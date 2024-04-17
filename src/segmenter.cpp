@@ -48,52 +48,45 @@ TrtSegmenter::~TrtSegmenter() {
 }
 
 bool TrtSegmenter::createInputBuffer() {
-  auto input_idx = engine_->getBindingIndex(config_.input_name.c_str());
-  if (input_idx == -1) {
-    LOG_TO_LOGGER(kERROR, "Failed to get index for input: " << config_.input_name);
+  // TODO(nathan) think about querying if name exists
+  const auto tensor_name = config_.input_name.c_str();
+  const auto dtype = engine_->getTensorDataType(tensor_name);
+
+  LOG_TO_LOGGER(kINFO, "Input binding type: " << dtype);
+  if (dtype != nvinfer1::DataType::kFLOAT) {
+    LOG_TO_LOGGER(kERROR,
+                  "Input type doesn't match expected: " << dtype << " != "
+                                                        << nvinfer1::DataType::kFLOAT);
     return false;
   }
 
-  LOG_TO_LOGGER(kINFO,
-                "Input binding index: " << engine_->getBindingDataType(input_idx));
-
-  if (engine_->getBindingDataType(input_idx) != nvinfer1::DataType::kFLOAT) {
-    LOG_TO_LOGGER(
-        kWARNING,
-        "Input type doesn't match expected: " << engine_->getBindingDataType(input_idx)
-                                              << " != " << nvinfer1::DataType::kFLOAT);
-  }
-
-  context_->setBindingDimensions(input_idx, config_.getInputDims(3));
   input_buffer_.reset(config_.getInputDims(3));
-
   nn_img_ = cv::Mat(config_.getInputMatDims(3), CV_32FC1);
+
+  context_->setInputTensorAddress(tensor_name, input_buffer_.memory.get());
   return true;
 }
 
 bool TrtSegmenter::createOutputBuffer() {
-  auto output_idx = engine_->getBindingIndex(config_.output_name.c_str());
-  if (output_idx == -1) {
-    LOG_TO_LOGGER(kERROR, "Failed to get index for output: " << config_.output_name);
-    return false;
-  }
+  // TODO(nathan) think about querying if name exists
+  const auto tensor_name = config_.output_name.c_str();
+  const auto dtype = engine_->getTensorDataType(tensor_name);
 
-  LOG_TO_LOGGER(kINFO,
-                "Output binding index: " << engine_->getBindingDataType(output_idx));
+  LOG_TO_LOGGER(kINFO, "Output binding type: " << dtype);
 
   // The output datatype controls precision,
   // https://github.com/NVIDIA/TensorRT/issues/717
-  if (engine_->getBindingDataType(output_idx) != nvinfer1::DataType::kINT32) {
+  if (dtype != nvinfer1::DataType::kINT32) {
     LOG_TO_LOGGER(kWARNING,
-                  "Output type doesn't match expected: "
-                      << engine_->getBindingDataType(output_idx)
-                      << " != " << nvinfer1::DataType::kINT32);
+                  "Output type doesn't match expected: " << dtype << " != "
+                                                         << nvinfer1::DataType::kINT32);
   }
 
-  auto output_dims = context_->getBindingDimensions(output_idx);
+  auto output_dims = context_->getTensorShape(tensor_name);
   output_buffer_.reset(output_dims);
-
   classes_ = cv::Mat(config_.height, config_.width, CV_32S);
+
+  context_->setTensorAddress(tensor_name, output_buffer_.memory.get());
   return true;
 }
 
@@ -116,10 +109,6 @@ bool TrtSegmenter::init() {
   return true;
 }
 
-std::vector<void*> TrtSegmenter::getBindings() const {
-  return {input_buffer_.memory.get(), output_buffer_.memory.get()};
-}
-
 bool TrtSegmenter::infer(const cv::Mat& img) {
   fillNetworkImage(config_, img, nn_img_);
 
@@ -134,9 +123,8 @@ bool TrtSegmenter::infer(const cv::Mat& img) {
     return false;
   }
 
-  auto bindings = getBindings();
   cudaStreamSynchronize(stream_);
-  bool status = context_->enqueueV2(bindings.data(), stream_, nullptr);
+  bool status = context_->enqueueV3(stream_);
   if (!status) {
     LOG_TO_LOGGER(kERROR, "initializing inference failed!");
     return false;

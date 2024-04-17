@@ -35,8 +35,6 @@ class TrtSegmenter {
 
   bool createOutputBuffer();
 
-  virtual std::vector<void*> getBindings() const;
-
   ModelConfig config_;
   Logger logger_;
   std::unique_ptr<TrtRuntime> runtime_;

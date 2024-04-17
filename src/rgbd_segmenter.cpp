@@ -18,27 +18,22 @@ TrtRgbdSegmenter::TrtRgbdSegmenter(const ModelConfig& config,
 TrtRgbdSegmenter::~TrtRgbdSegmenter() {}
 
 bool TrtRgbdSegmenter::createDepthBuffer() {
-  auto input_idx = engine_->getBindingIndex(depth_config_.depth_input_name.c_str());
-  if (input_idx == -1) {
+  // TODO(nathan) think about querying if name exists
+  const auto tensor_name = depth_config_.depth_input_name.c_str();
+  const auto dtype = engine_->getTensorDataType(tensor_name);
+
+  LOG_TO_LOGGER(kINFO, "Input binding type: " << dtype);
+  if (dtype != nvinfer1::DataType::kFLOAT) {
     LOG_TO_LOGGER(kERROR,
-                  "Failed to get index for input: " << depth_config_.depth_input_name);
+                  "Input type doesn't match expected: " << dtype << " != "
+                                                        << nvinfer1::DataType::kFLOAT);
     return false;
   }
 
-  LOG_TO_LOGGER(kINFO,
-                "Input binding index: " << engine_->getBindingDataType(input_idx));
-
-  if (engine_->getBindingDataType(input_idx) != nvinfer1::DataType::kFLOAT) {
-    LOG_TO_LOGGER(
-        kWARNING,
-        "Input type doesn't match expected: " << engine_->getBindingDataType(input_idx)
-                                              << " != " << nvinfer1::DataType::kFLOAT);
-  }
-
-  context_->setBindingDimensions(input_idx, config_.getInputDims(1));
   depth_input_buffer_.reset(config_.getInputDims(1));
-
   nn_depth_img_ = cv::Mat(config_.getInputMatDims(1), CV_32FC1);
+
+  context_->setInputTensorAddress(tensor_name, depth_input_buffer_.memory.get());
   return true;
 }
 
@@ -48,12 +43,6 @@ bool TrtRgbdSegmenter::init() {
   }
 
   return TrtSegmenter::init();
-}
-
-std::vector<void*> TrtRgbdSegmenter::getBindings() const {
-  return {input_buffer_.memory.get(),
-          depth_input_buffer_.memory.get(),
-          output_buffer_.memory.get()};
 }
 
 void TrtRgbdSegmenter::showStats(const cv::Mat& img,

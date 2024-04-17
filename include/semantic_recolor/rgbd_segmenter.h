@@ -18,8 +18,6 @@ class TrtRgbdSegmenter : public TrtSegmenter {
 
   bool createDepthBuffer();
 
-  std::vector<void*> getBindings() const override;
-
   DepthConfig depth_config_;
   CudaMemoryHolder<float> depth_input_buffer_;
   cv::Mat nn_depth_img_;
