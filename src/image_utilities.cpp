@@ -1,5 +1,6 @@
 #include "semantic_recolor/image_utilities.h"
 
+#include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 
 namespace semantic_recolor {

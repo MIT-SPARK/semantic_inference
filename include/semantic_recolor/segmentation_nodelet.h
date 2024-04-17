@@ -5,6 +5,7 @@
 
 #include <atomic>
 #include <mutex>
+#include <opencv2/core.hpp>
 #include <thread>
 
 #include "semantic_recolor/model_config.h"
@@ -32,6 +33,10 @@ class SegmentationNodelet : public nodelet::Nodelet {
   std::unique_ptr<TrtSegmenter> segmenter_;
   std::unique_ptr<image_transport::ImageTransport> transport_;
   image_transport::Subscriber image_sub_;
+
+  bool do_rotation_;
+  cv::RotateFlags pre_rotation_;
+  cv::RotateFlags post_rotation_;
 
   int max_queue_size_;
   double image_separation_s_;

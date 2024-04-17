@@ -2,6 +2,7 @@
 
 #include <pluginlib/class_list_macros.h>
 
+#include <opencv2/core.hpp>
 #include <optional>
 
 #include "semantic_recolor/ros_utilities.h"
@@ -18,6 +19,24 @@ void SegmentationNodelet::onInit() {
 
   image_separation_s_ = 0.0;
   pnh.getParam("image_separation_s", image_separation_s_);
+
+  std::string rotation_type = "none";
+  pnh.getParam("image_rotation", rotation_type);
+  if (rotation_type == "ROTATE_90_CLOCKWISE") {
+    do_rotation_ = true;
+    pre_rotation_ = cv::ROTATE_90_CLOCKWISE;
+    post_rotation_ = cv::ROTATE_90_COUNTERCLOCKWISE;
+  } else if (rotation_type == "ROTATE_90_COUNTERCLOCKWISE") {
+    do_rotation_ = true;
+    pre_rotation_ = cv::ROTATE_90_COUNTERCLOCKWISE;
+    post_rotation_ = cv::ROTATE_90_CLOCKWISE;
+  } else if (rotation_type == "ROTATE_180") {
+    do_rotation_ = true;
+    pre_rotation_ = cv::ROTATE_180;
+    post_rotation_ = cv::ROTATE_180;
+  } else {
+    do_rotation_ = false;
+  }
 
   config_ = readModelConfig(pnh);
   segmenter_.reset(new TrtSegmenter(config_));
@@ -62,12 +81,25 @@ void SegmentationNodelet::runSegmentation(const sensor_msgs::ImageConstPtr& msg)
                                 << " x " << img_ptr->image.rows << " x "
                                 << img_ptr->image.channels() << " is right type? "
                                 << (img_ptr->image.type() == CV_8UC3 ? "yes" : "no"));
-  if (!segmenter_->infer(img_ptr->image)) {
+
+  cv::Mat rotated;
+  if (do_rotation_) {
+    cv::rotate(img_ptr->image, rotated, pre_rotation_);
+  } else {
+    rotated = img_ptr->image;
+  }
+  if (!segmenter_->infer(rotated)) {
     ROS_ERROR("failed to run inference!");
     return;
   }
 
-  output_pub_->publish(img_ptr->header, img_ptr->image, segmenter_->getClasses());
+  cv::Mat re_rotated;
+  if (do_rotation_) {
+    cv::rotate(segmenter_->getClasses(), re_rotated, post_rotation_);
+  } else {
+    re_rotated = segmenter_->getClasses();
+  }
+  output_pub_->publish(img_ptr->header, img_ptr->image, re_rotated);
 }
 
 bool SegmentationNodelet::haveWork() const {
