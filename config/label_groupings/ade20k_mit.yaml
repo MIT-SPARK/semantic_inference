@@ -1,6 +1,7 @@
 ---
 name: ade20k_mit
 distinct: true
+offset: -1
 groups:
   - {name: unknown, labels: [50, 57, 79, 110, 114]}
   - {name: sky, labels: [3]}

@@ -1,30 +1,24 @@
 # Semantic Recolor Utilities
 
-Installation requires Cuda and TensorRT. You can add the Cuda repositories [here](https://developer.nvidia.com/cuda-downloads).
-
-To install a minimal setup (after adding the Cuda repositories):
+Installation requires Cuda and TensorRT. You can add the Cuda repositories [here](https://developer.nvidia.com/cuda-downloads) by installing the `deb (network)` package or
 ```
-# or whatever version you want
-export CUDA_VERSION=11-7
-sudo apt install cuda-libraries-$CUDA_VERSION \
-                 cuda-libraries-dev-$CUDA_VERSION \
-                 cuda-nvrtc-dev-$CUDA_VERSION \
-                 cuda-nvcc-$CUDA_VERSION
+wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-keyring_1.1-1_all.deb
+sudo dpkg -i cuda-keyring_1.1-1_all.deb
+sudo apt update
 ```
 
-Installing TensorRT requires a second step.
-See [here](https://docs.nvidia.com/deeplearning/tensorrt/install-guide/index.html#downloading) for instructions for obtaining the TensorRT package.
-Once you've installed the TensorRT repositories, then:
-
+Install the latest nvinfer and minimal cuda dependencies (you should check what version of cuda gets installed with TensorRT):
 ```
-sudo apt install tensorrt
+sudo apt install libnvinfer-dev libnvonnxparsers-dev libnvinfer-plugin-dev cuda-nvcc-12-4
 ```
 
-You may have to add the cuda libraries (double check the version) and cuda binaries to your path, e.g. in `.zshrc`:
+Intalling a previous version:
 ```
-export PATH=$PATH:/usr/local/cuda-11-1/bin
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda-11-1/lib64
+export TRT_VERSION=8.6.1.6-1+cuda12.0
+sudo apt install libnvinfer-dev=$TRT_VERSION libnvonnxparsers-dev=$TRT_VERSION libnvinfer-plugins-dev=$TRT_VERSION libnvinfer-headers-dev=$TRT_VERSION libnvinfer-headers-plugin-dev=$TRT_VERSION cuda-nvcc-12-4
 ```
+
+## Python scripts
 
 For *most* of the scripts:
 

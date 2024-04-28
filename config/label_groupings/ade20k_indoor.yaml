@@ -1,6 +1,7 @@
 ---
 name: ade20k_indoor
 distinct: true
+offset: -1
 groups:
   - {name: Unknown, labels: [3, 7, 10, 12, 14, 17, 21, 22, 26, 27, 30, 33, 35, 38,
       47, 49, 50, 52, 53, 55, 61, 62, 69, 77, 79, 80, 81, 84, 85, 91, 92, 95, 103,
@@ -29,5 +30,7 @@ groups:
 specified_colors:
   - {name: Floor, source: raw, color: [0.75, 0.75, 0.71]}
   - {name: Wall, source: raw, color: [0.0, 0.4, 0.2]}
+  - {name: Ceiling, source: raw, color: [0.7, 0.0, 0.7]}
+  - {name: Door, source: raw, color: [1.0, 0.7, 0.0]}
   - {name: Couch, source: raw, color: [0.8, 0.0, 0.0]}
   - {name: Table, source: raw, color: [0.8, 0.0, 0.4]}

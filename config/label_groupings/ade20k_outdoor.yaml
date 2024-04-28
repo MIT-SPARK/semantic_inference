@@ -1,6 +1,7 @@
 ---
 name: ade20k_outdoor
 distinct: true
+offset: -1
 groups:
   - {name: Unknown, labels: [50, 79, 110, 114]}
   - {name: Sky, labels: [3]}
@@ -57,4 +58,7 @@ specified_colors:
   - {name: Couch, source: expanded, color: red}
   - {name: Table, source: expanded, color: magenta}
   - {name: Window, source: expanded, color: lightred}
-default_color: [0.9677975592919913, 0.44127456009157356, 0.5358103155058701]
+default_color:
+  - 0.9677975592919913
+  - 0.44127456009157356
+  - 0.5358103155058701

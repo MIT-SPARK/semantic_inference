@@ -1,48 +1,24 @@
 #include "semantic_recolor/model_config.h"
 
+#include <config_utilities/config.h>
+#include <config_utilities/types/path.h>
+
 namespace semantic_recolor {
 
-void ModelConfig::fillInputAddress(ImageAddress& addr) const {
-  if (network_uses_rgb_order) {
-    addr = {2, 1, 0};
-  } else {
-    addr = {0, 1, 2};
-  }
-}
-
-float ModelConfig::getValue(uint8_t input_val, size_t channel) const {
-  float to_return = map_to_unit_range ? (input_val / 255.0f) : input_val;
-  to_return = normalize ? (to_return - mean[channel]) / stddev[channel] : to_return;
-  return to_return;
-}
-
-nvinfer1::Dims4 ModelConfig::getInputDims(int channels) const {
-  if (use_network_order) {
-    return {1, channels, height, width};
-  } else {
-    return {1, height, width, channels};
-  }
-}
-
-std::vector<int> ModelConfig::getInputMatDims(int channels) const {
-  if (use_network_order) {
-    return {channels, height, width};
-  } else {
-    return {height, width, channels};
-  }
-}
-
-float DepthConfig::getValue(float input_val) const {
-  if (!normalize_depth) {
-    return input_val;
-  }
-
-  const float new_value = (input_val - depth_mean) / depth_stddev;
-  if (new_value < 0.0f) {
-    return 0.0f;
-  }
-
-  return new_value;
+void declare_config(ModelConfig& config) {
+  using namespace config;
+  name("ModelConfig");
+  // params
+  field<Path>(config.model_file, "model_file");
+  field<Path>(config.engine_file, "engine_file");
+  field(config.log_severity, "log_severity");
+  field(config.color, "color");
+  field(config.depth, "depth");
+  // checks
+  check<Path::Exists>(config.model_file, "model_file");
+  checkIsOneOf(config.log_severity,
+               {"INTERNAL_ERROR", "ERROR", "WARNING", "INFO", "VERBOSE"},
+               "log_severity");
 }
 
 }  // namespace semantic_recolor

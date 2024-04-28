@@ -9,6 +9,7 @@
   <license>TODO</license>
 
   <buildtool_depend>catkin</buildtool_depend>
+  <depend>config_utilities</depend>
   <depend>roscpp</depend>
   <depend>nodelet</depend>
   <depend>cv_bridge</depend>

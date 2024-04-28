@@ -26,15 +26,18 @@
     <arg name="pointcloud_topic" default="/semantic_pointcloud"/>
 
     <!-- segmentation model configuration -->
-    <arg name="model_name" default="mobilenetv2_360_640"/>
+    <!--<arg name="model_name" default="mobilenetv2_360_640"/>-->
     <!--<arg name="model_name" default="hrnetv2_360_640_v12"/>-->
+    <arg name="model_name" default="efficientvit_seg_l2"/>
     <arg name="model_path" value="$(find semantic_recolor)/models/$(arg model_name).onnx"/>
     <arg name="engine_path" value="$(find semantic_recolor)/engines/$(arg model_name).trt"/>
     <arg name="segmenter_config" value="$(find semantic_recolor)/config/models/$(arg model_name).yaml"/>
+    <arg name="rotation_type" default="none"/>
 
     <!-- colormap and label grouping -->
     <arg name="labelspace_name" default="ade20k_indoor"/>
-    <arg name="color_config" value="$(find semantic_recolor)/config/colors/$(arg labelspace_name).yaml"/>
+    <arg name="label_grouping" value="$(find semantic_recolor)/config/label_groupings/$(arg labelspace_name).yaml"/>
+    <arg name="colormap_path" value="$(find semantic_recolor)/config/colors/$(arg labelspace_name).csv"/>
 
     <!-- debugging and output -->
     <arg name="debug" default="false"/>
@@ -61,13 +64,15 @@
           unless="$(arg use_prerecorded_semantics)"
           required="true">
         <rosparam file="$(arg segmenter_config)" command="load"/>
-        <rosparam file="$(arg color_config)" command="load" ns="colors"/>
+        <rosparam file="$(arg label_grouping)" command="load" ns="output/recolor"/>
+        <param name="output/recolor/colormap_path" value="$(arg colormap_path)"/>
         <param name="max_queue_size" value="$(arg max_image_queue_size)"/>
         <param name="image_separation_s" value="$(arg min_separation_s)"/>
-        <param name="model_file" value="$(arg model_path)"/>
-        <param name="engine_file" value="$(arg engine_path)"/>
-        <remap from="~rgb/image_raw" to="$(arg rgb_topic)"/>
-        <remap from="~rgb/image_raw/compressed" to="$(arg rgb_topic)/compressed"/>
+        <param name="rotation_type" value="$(arg rotation_type)"/>
+        <param name="segmenter/model/model_file" value="$(arg model_path)"/>
+        <param name="segmenter/model/engine_file" value="$(arg engine_path)"/>
+        <remap from="~image_raw" to="$(arg rgb_topic)"/>
+        <remap from="~image_raw/compressed" to="$(arg rgb_topic)/compressed"/>
         <remap from="~semantic/image_raw" to="$(arg semantic_topic)"/>
     </node>
 
@@ -76,7 +81,7 @@
           output="$(arg desired_output)"
           if="$(arg use_prerecorded_semantics)"
           required="true">
-        <rosparam file="$(arg color_config)" command="load" ns="colors"/>
+        <rosparam file="$(arg color_config)" command="load" ns="output/recolor"/>
         <remap from="labels/image_raw" to="$(arg prerecorded_topic)" unless="$(arg throttle_prerecorded)"/>
         <remap from="labels/image_raw" to="$(arg prerecorded_topic)_throttle" if="$(arg throttle_prerecorded)"/>
         <remap from="labels/image_raw/compressed" to="$(arg prerecorded_topic)/compressed"/>

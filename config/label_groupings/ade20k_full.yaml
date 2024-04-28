@@ -1,6 +1,7 @@
 ---
 name: ade20k_full
 distinct: true
+offset: -1
 groups:
   - {name: wall, labels: [1]}
   - {name: building, labels: [2]}

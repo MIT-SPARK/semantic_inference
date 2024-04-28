@@ -148,29 +148,8 @@ def _get_palette(label_config, palette, seed, force_compatible=False):
     return colors_by_group
 
 
-def _write_configs(
-    label_config, group_colors, output_dir, config_name, labels_shift=-1, csv_shift=0
-):
-    output_path = pathlib.Path(output_dir).resolve().absolute()
-    yaml_output = output_path / f"{config_name}.yaml"
+def _write_config(label_config, group_colors, output_dir, config_name, csv_shift=0):
     csv_output = output_dir / f"{config_name}.csv"
-
-    default_color = [0.0, 0.0, 0.0]
-    if "default_color" in label_config:
-        default_color = [float(x) for x in label_config["default_color"]]
-
-    config = {"classes": [], "default_color": default_color}
-
-    for index, group in enumerate(label_config["groups"]):
-        group_name = group["name"]
-        config["classes"].append(index)
-        config_prefix = "class_info/{}".format(index)
-        config[f"{config_prefix}/color"] = group_colors[group_name]
-        config[f"{config_prefix}/labels"] = [x + labels_shift for x in group["labels"]]
-
-    with yaml_output.open("w") as fout:
-        fout.write(yaml.dump(config))
-
     with csv_output.open("w") as fout:
         fout.write("name,red,green,blue,alpha,id\r\n")
         for index, group in enumerate(label_config["groups"]):
@@ -186,7 +165,6 @@ def _write_configs(
 @click.option("-p", "--palette", default="husl", help="fallback color palette")
 @click.option("-s", "--seed", default=0, type=int, help="random seed")
 @click.option("-n", "--config-name", default=None, help="output config name")
-@click.option("--labels-shift", type=int, default=-1, help="amount to add to labels")
 @click.option("--csv-shift", type=int, default=0, help="amount to add to color csv")
 @click.option(
     "-f",
@@ -201,7 +179,6 @@ def main(
     palette,
     seed,
     config_name,
-    labels_shift,
     csv_shift,
     force_compatible,
 ):
@@ -224,12 +201,11 @@ def main(
         click.secho(
             "[WARN]: config name not specifying, defaulting to test", fg="yellow"
         )
-    _write_configs(
+    _write_config(
         label_config,
         colors,
         output_path,
         name_to_use,
-        labels_shift=labels_shift,
         csv_shift=csv_shift,
     )
 

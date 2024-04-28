@@ -1,8 +1,9 @@
 <launch>
     <arg name="input_file"/>
-    <arg name="output_file"/>
+    <arg name="output_file" default=""/>
 
-    <arg name="model_name" default="hrnetv2_360_640_v12"/>
+    <arg name="model_name" default="efficientvit_seg_l2"/>
+    <!--<arg name="model_name" default="hrnetv2_360_640_v12"/>-->
     <arg name="model_path" value="$(find semantic_recolor)/models/$(arg model_name).onnx"/>
     <arg name="engine_path" value="$(find semantic_recolor)/engines/$(arg model_name).trt"/>
     <arg name="segmenter_config" value="$(find semantic_recolor)/config/models/$(arg model_name).yaml"/>
@@ -16,8 +17,9 @@
           launch-prefix="$(arg launch-prefix)"
           required="true">
         <rosparam file="$(arg segmenter_config)" command="load"/>
-        <param name="model_file" value="$(arg model_path)"/>
-        <param name="engine_file" value="$(arg engine_path)"/>
+        <param name="segmenter/model/model_file" value="$(arg model_path)"/>
+        <param name="segmenter/model/engine_file" value="$(arg engine_path)"/>
+        <param name="segmenter/model/log_severity" value="INFO"/>
         <param name="input_file" value="$(arg input_file)"/>
         <param name="output_file" value="$(arg output_file)"/>
     </node>
