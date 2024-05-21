@@ -35,14 +35,9 @@ pip install -r scripts/requirements.txt
 
 Several pre-exported models live [here](https://drive.google.com/drive/folders/1GrmgFDFCssDxKe_Nyx8PPTK1pRMA0gEO?usp=sharing).
 To use a specific model, pass in the appropriate argument (`model_name`) to the launch file being used.
-
-You can export all models (that are compatible) from the MIT scene parsing challenge via [this script](scripts/download_models.py).
-At the moment, only `hrnetv2-c1` and `mobilenetv2dilated-c1_deepsup` are compatible.
-This may change as the newer onnx export method in torch becomes stable (or not, it is unclear whether or not the custom batch norm operator will ever work with the export).
-To run the script, you will want to create a separate virtual environment and install dependencies lists in the [pyproject file](pyproject.toml).
 To check if the model is valid and show input/output names, run [this](scripts/check_onnx_model.py) script.
 
-When exporting a new model, you will also need to write a config similar to [this](config/ade20k-efficientvit_seg_l2.yaml).
+See [here](exporting/NOTES.md) for details on exporting a new model.
 
 ## New Datasets
 
