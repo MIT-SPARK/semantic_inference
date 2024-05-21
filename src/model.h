@@ -16,6 +16,7 @@ struct TensorInfo {
   bool isCHWOrder() const;
   bool isDynamic() const;
   Shape shape() const;
+  nvinfer1::Dims replaceDynamic(const cv::Mat& mat) const;
 };
 
 std::ostream& operator<<(std::ostream& out, const TensorInfo& info);
@@ -47,7 +48,7 @@ class Model {
 
   ~Model();
 
-  void initOutput();
+  void initOutput(const cv::Mat& color);
 
   bool setInputs(const cv::Mat& color, const cv::Mat& depth = cv::Mat());
 

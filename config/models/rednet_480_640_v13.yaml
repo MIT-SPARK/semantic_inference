@@ -1,12 +1,7 @@
-width: 640
-height: 480
-input_name: "input.1"
-depth_input_name: "input.7"
-output_name: "1444"
+---
 normalize: true
 normalize_depth: false
 map_to_unit_range: true
-use_network_order: true
 mean: [0.493, 0.468, 0.438]
 stddev: [0.544, 0.521, 0.499]
 depth_mean: 0.213

@@ -1,15 +1,14 @@
-import os
-import argparse
+"""Export models via onnx."""
+
+import pathlib
+import click
+import sys
 
 import torch
 import torch.nn as nn
 import torch.onnx as onnx
 
-import onnxruntime as ort
-
-
 from mit_semseg.models import ModelBuilder, SegmentationModule
-from mit_semseg.lib.nn import async_copy_to
 from mit_semseg.config import cfg
 
 
@@ -34,36 +33,58 @@ class ExportableSegmentationModule(SegmentationModule):
         return pred.squeeze(0)
 
 
-def export(segmentation_module, gpu, image_dim, output, opset_version=12):
-    segmentation_module.eval()
+def export(model, gpu, image_dim, output, opset_version=None):
+    """Export a model."""
+    model.eval()
     image_height, image_width = image_dim
 
-    segmentation_module.set_size(image_dim)
+    model.set_size(image_dim)
 
     with torch.no_grad():
-        fake_img = torch.randn(1, 3, image_height, image_width)
-        fake_img_gpu = async_copy_to(fake_img, gpu)
+        fake_img = torch.randn(1, 3, image_height, image_width).to(gpu)
 
         print("Exporting")
-        onnx.export(
-            segmentation_module,
-            fake_img_gpu,
-            output,
-            opset_version=opset_version,
-        )
+        onnx.export(model, fake_img, output, opset_version=opset_version)
         print("Exported")
 
-    options = ort.SessionOptions()
-    options.log_severity_level = 0
-    options.inter_op_num_threads = 4
-    options.intra_op_num_threads = 4
-    options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_BASIC
-    options.optimized_model_filepath = output
 
-    ort.InferenceSession(output, sess_options=options)
+def _check_checkpoint_path(filepath):
+    filepath = pathlib.Path(filepath).expanduser().absolute()
+    if not filepath.exists():
+        click.secho("Invalid filepath: '{filepath}'", fg="red")
+        sys.exit(1)
 
 
-def main(cfg, gpu, image_dim, output):
+@click.command()
+@click.argument("config_path", type=click.Path(exists=True))
+@click.argument("weights_dir", type=click.Path(exists=True))
+@click.option("--checkpoint", "-c", default="epoch_30.pth")
+@click.option("--output", "-o", default="model.onnx")
+@click.option("--height", default=360, help="image input height", type=int)
+@click.option("--width", default=640, help="image input width", type=int)
+@click.option("--opset_version", "-v", default=None, type=int)
+@click.option("--gpu", "-g", default=0, type=int)
+def main(
+    config_path,
+    weights_dir,
+    checkpoint,
+    output,
+    height,
+    width,
+    opset_version,
+    gpu,
+):
+    """Load and export model."""
+    cfg.merge_from_file(config_path)
+    cfg.MODEL.arch_encoder = cfg.MODEL.arch_encoder.lower()
+    cfg.MODEL.arch_decoder = cfg.MODEL.arch_decoder.lower()
+
+    weights_dir = pathlib.Path(weights_dir).expanduser().absolute()
+    cfg.MODEL.weights_encoder = str(weights_dir / f"encoder_{checkpoint}")
+    _check_checkpoint_path(cfg.MODEL.weights_encoder)
+    cfg.MODEL.weights_decoder = str(weights_dir, f"decoder_{checkpoint}")
+    _check_checkpoint_path(cfg.MODEL.weights_decoder)
+
     torch.cuda.set_device(gpu)
 
     # Network Builders
@@ -81,44 +102,11 @@ def main(cfg, gpu, image_dim, output):
     )
 
     crit = nn.NLLLoss(ignore_index=-1)
-
     segmentation_module = ExportableSegmentationModule(net_encoder, net_decoder, crit)
     segmentation_module.cuda()
 
-    export(segmentation_module, gpu, image_dim, output)
+    export(segmentation_module, gpu, (height, width), output)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="onnx exporter for mit semseg models")
-    parser.add_argument("config", metavar="FILE", help="path to config file", type=str)
-    parser.add_argument(
-        "weights_dir", metavar="WEIGHTS_DIR", help="path to weights", type=str
-    )
-    parser.add_argument("--weights_checkpoint", "-w", default="epoch_30.pth")
-    parser.add_argument(
-        "--output", "-o", default="model.onnx", help="onnx model output path"
-    )
-    parser.add_argument("--height", default=360, help="image input height", type=int)
-    parser.add_argument("--width", default=640, help="image input width", type=int)
-    parser.add_argument(
-        "--opset_version", "-v", default=12, help="onnx opset version to use", type=int
-    )
-
-    args = parser.parse_args()
-
-    cfg.merge_from_file(args.config)
-    cfg.MODEL.arch_encoder = cfg.MODEL.arch_encoder.lower()
-    cfg.MODEL.arch_decoder = cfg.MODEL.arch_decoder.lower()
-
-    cfg.MODEL.weights_encoder = os.path.join(
-        args.weights_dir, "encoder_{}".format(args.weights_checkpoint)
-    )
-    cfg.MODEL.weights_decoder = os.path.join(
-        args.weights_dir, "decoder_{}".format(args.weights_checkpoint)
-    )
-
-    assert os.path.exists(cfg.MODEL.weights_encoder) and os.path.exists(
-        cfg.MODEL.weights_decoder
-    ), "checkpoint does not exitst!"
-
-    main(cfg, 0, (args.height, args.width), args.output)
+    main()

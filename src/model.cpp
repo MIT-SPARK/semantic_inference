@@ -24,7 +24,7 @@ DimInfo getDimInfo(const nvinfer1::Dims& dims) {
   return {true, is_color, start};
 }
 
-bool TensorInfo::isCHWOrder() const {
+bool areDimsCHWOrder(const nvinfer1::Dims& dims) {
   const auto info = getDimInfo(dims);
   if (!info.is_image) {
     throw std::runtime_error("invalid tensor for image method");
@@ -34,19 +34,11 @@ bool TensorInfo::isCHWOrder() const {
   return dims.d[info.start] == expected_channels;
 }
 
-bool TensorInfo::isDynamic() const {
-  for (int i = 0; i < dims.nbDims; ++i) {
-    if (dims.d[i] == -1) {
-      return true;
-    }
-  }
-  return false;
-}
-
-Shape TensorInfo::shape() const {
+Shape getShapeFromDims(const nvinfer1::Dims& dims) {
   const auto info = getDimInfo(dims);
   if (dims.nbDims < 2) {
-    SLOG(ERROR) << "invalid tensor: " << *this;
+    // TODO(nathan) fix
+    //SLOG(ERROR) << "invalid tensor: " << *this;
     throw std::runtime_error("unsupported layout!");
   }
 
@@ -57,7 +49,7 @@ Shape TensorInfo::shape() const {
     return shape;
   }
 
-  shape.chw_order = isCHWOrder();
+  shape.chw_order = areDimsCHWOrder(dims);
   if (shape.chw_order) {
     shape.height = dims.d[info.start + 1];
     shape.width = dims.d[info.start + 2];
@@ -69,6 +61,34 @@ Shape TensorInfo::shape() const {
   }
 
   return shape;
+}
+
+bool TensorInfo::isCHWOrder() const {
+  return areDimsCHWOrder(dims);
+}
+
+bool TensorInfo::isDynamic() const {
+  for (int i = 0; i < dims.nbDims; ++i) {
+    if (dims.d[i] == -1) {
+      return true;
+    }
+  }
+  return false;
+}
+
+nvinfer1::Dims TensorInfo::replaceDynamic(const cv::Mat& mat) const {
+  nvinfer1::Dims new_dims = dims;
+  const auto info = getDimInfo(dims);
+  const auto chw_order = isCHWOrder();
+  size_t h_index = chw_order ? info.start + 1 : info.start;
+  size_t w_index = chw_order ? info.start + 2 : info.start + 1;
+  new_dims.d[h_index] = new_dims.d[h_index] < 0 ? mat.rows : new_dims.d[h_index];
+  new_dims.d[w_index] = new_dims.d[w_index] < 0 ? mat.cols : new_dims.d[w_index];
+  return new_dims;
+}
+
+Shape TensorInfo::shape() const {
+  return getShapeFromDims(dims);
 }
 
 std::ostream& operator<<(std::ostream& out, const TensorInfo& info) {
@@ -160,7 +180,7 @@ Model::Model(const ModelConfig& config)
       engine_(deserializeEngine(*runtime_, model.engine_file)),
       color_conversion_(config.color),
       depth_conversion_(config.depth) {
-  if (!engine_) {
+  if (!engine_ || config.force_rebuild) {
     SLOG(WARNING) << "Engine file not found! rebuilding...";
     engine_ = buildEngineFromOnnx(
         *runtime_, model.model_file, model.engine_file, model.log_severity);
@@ -208,8 +228,6 @@ Model::Model(const ModelConfig& config)
     SLOG(ERROR) << "Depth type mismatch: " << *depth << ", must be FLOAT";
     throw std::runtime_error("invalid model");
   }
-
-  initOutput();
 }
 
 Model::~Model() {
@@ -218,7 +236,12 @@ Model::~Model() {
   }
 }
 
-void Model::initOutput() {
+void Model::initOutput(const cv::Mat& color) {
+  if (context_->inferShapes(0, nullptr)) {
+    SLOG(FATAL) << "Invalid shapes!";
+    throw std::runtime_error("could not infer output shape");
+  }
+
   const auto info = info_.labels();
   const auto tensor_name = info.name.c_str();
   if (info.dtype != nvinfer1::DataType::kINT32) {
@@ -226,7 +249,7 @@ void Model::initOutput() {
     throw std::runtime_error("output datatype is forced to be int32_t");
   }
 
-  const auto shape = info.shape();
+  const auto shape = info.shape().updateFrom(color);
   auto size = sizeof(int32_t) * shape.width * shape.height * shape.channels.value_or(1);
   label_memory_.reset(reinterpret_cast<int32_t*>(CudaMemoryManager::alloc(size)));
   context_->setTensorAddress(tensor_name, label_memory_.get());
@@ -240,6 +263,10 @@ bool Model::setInputs(const cv::Mat& color, const cv::Mat& depth) {
     return false;
   }
 
+  if (color_info.isDynamic()) {
+    context_->setInputShape(color_info.name.c_str(), color_info.replaceDynamic(color));
+  }
+
   color_conversion_.fillImage(color, color_.host_image);
   context_->setInputTensorAddress(color_info.name.c_str(), color_.device_image.get());
   auto error = cudaMemcpyAsync(color_.device_image.get(),
@@ -251,6 +278,8 @@ bool Model::setInputs(const cv::Mat& color, const cv::Mat& depth) {
     SLOG(ERROR) << "Copying color input failed: " << cudaGetErrorString(error);
     return false;
   }
+
+  initOutput(color);
 
   const auto depth_info = info_.depth();
   if (!depth_info) {
@@ -295,7 +324,9 @@ SegmentationResult Model::infer() const {
     return {};
   }
 
-  const auto output_shape = info_.labels().shape();
+  const auto curr_dims = context_->getTensorShape(info_.labels().name.c_str());
+  const auto output_shape = getShapeFromDims(curr_dims);
+
   cv::Mat labels(output_shape.height, output_shape.width, CV_32S);
   auto error = cudaMemcpyAsync(labels.data,
                                label_memory_.get(),

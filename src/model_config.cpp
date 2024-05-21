@@ -12,6 +12,7 @@ void declare_config(ModelConfig& config) {
   field<Path>(config.model_file, "model_file");
   field<Path>(config.engine_file, "engine_file");
   field(config.log_severity, "log_severity");
+  field(config.force_rebuild, "force_rebuild");
   field(config.color, "color");
   field(config.depth, "depth");
   // checks

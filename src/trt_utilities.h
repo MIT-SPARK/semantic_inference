@@ -29,6 +29,8 @@ struct Shape {
 
   Shape updateFrom(const cv::Mat& input);
 
+  nvinfer1::Dims dims() const;
+
   size_t numel() const;
 
   bool operator==(const Shape& other) const;

@@ -1,6 +1,6 @@
 """Quick script to read an onnx file and print information."""
-import onnx  # onnx required downgrading numpy from 1.19.5 to 1.19.4
-import sys
+import click
+import onnx
 
 TYPES = [
     "unknown",
@@ -39,24 +39,15 @@ def _get_repr_str(node):
     return repr_str + " x ".join(values)
 
 
-def main():
-    """Load model and show information."""
-    # load model
-    if len(sys.argv) != 2:
-        print("Error! Must provide path to .onnx file as argument.")
-        sys.exit(1)
+def _show_model(model_path):
+    click.secho(f"Loading model: {model_path}", fg="green")
+    model = onnx.load(model_path)
 
-    print(f"Loading model: {sys.argv[1]}")
-    model = onnx.load(sys.argv[1])
-
-    # check if model valid
     try:
         onnx.checker.check_model(model)
     except onnx.checker.ValidationError as e:
-        print(f"The model is invalid: {e}")
-        sys.exit(1)
-
-    print("The model is valid!")
+        click.secho(f"The model is invalid: {e}", fg="red")
+        return
 
     # show input names
     input_initializer = set([node.name for node in model.graph.initializer])
@@ -74,6 +65,14 @@ def main():
     print("=======")
     for node in model.graph.output:
         print(f"  - {_get_repr_str(node)}")
+
+
+@click.command()
+@click.argument("model_paths", nargs=-1, type=click.Path(exists=True))
+def main(model_paths):
+    """Load model and show information."""
+    for model_path in model_paths:
+        _show_model(model_path)
 
 
 if __name__ == "__main__":

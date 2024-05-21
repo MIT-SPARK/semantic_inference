@@ -33,24 +33,16 @@ pip install -r scripts/requirements.txt
 
 ## Models
 
-Several pre-exported models live [here](https://drive.google.com/drive/folders/1GrmgFDFCssDxKe_Nyx8PPTK1pRMA0gEO?usp=sharing)
+Several pre-exported models live [here](https://drive.google.com/drive/folders/1GrmgFDFCssDxKe_Nyx8PPTK1pRMA0gEO?usp=sharing).
+To use a specific model, pass in the appropriate argument (`model_name`) to the launch file being used.
 
-You can export a model from the MIT scene parsing challenge via [this script](scripts/export_onnx_model.py).
-
-You will need to install a couple more dependencies:
-```
-source semantic_recolor/bin/activate
-pip install torch torchvision
-pip install git+https://github.com/CSAILVision/semantic-segmentation-python.git@master
-```
-
-A good naming scheme for exported models is `{model_name}_{image_height}_{image_width}_{onnx_instruction_version}.yaml`.
-
+You can export all models (that are compatible) from the MIT scene parsing challenge via [this script](scripts/download_models.py).
+At the moment, only `hrnetv2-c1` and `mobilenetv2dilated-c1_deepsup` are compatible.
+This may change as the newer onnx export method in torch becomes stable (or not, it is unclear whether or not the custom batch norm operator will ever work with the export).
+To run the script, you will want to create a separate virtual environment and install dependencies lists in the [pyproject file](pyproject.toml).
 To check if the model is valid and show input/output names, run [this](scripts/check_onnx_model.py) script.
 
-When exporting a new model, you will also need to write a config similar to [this](config/hrnetv2_360_640_v12.yaml).
-
-To use the new model, pass in the appropriate argument (`model_name`) to the launch file being used.
+When exporting a new model, you will also need to write a config similar to [this](config/ade20k-efficientvit_seg_l2.yaml).
 
 ## New Datasets
 

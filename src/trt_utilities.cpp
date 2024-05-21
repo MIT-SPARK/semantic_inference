@@ -100,6 +100,11 @@ Shape Shape::updateFrom(const cv::Mat& input) {
   return {new_width, new_height, channels, chw_order};
 }
 
+nvinfer1::Dims Shape::dims() const {
+  return chw_order ? nvinfer1::Dims3(channels.value_or(1), height, width)
+                   : nvinfer1::Dims3(height, width, channels.value_or(1));
+}
+
 size_t Shape::numel() const {
   if (width == -1 || height == -1) {
     return 0;
@@ -215,10 +220,34 @@ EnginePtr deserializeEngine(IRuntime& runtime,
   return engine;
 }
 
+inline bool isDynamic(const nvinfer1::Dims& dims) {
+  for (int i = 0; i < dims.nbDims; ++i) {
+    if (dims.d[i] < 0) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+inline nvinfer1::Dims replaceDynamic(const nvinfer1::Dims& dims, int64_t new_value) {
+  auto new_dims = dims;
+  for (int i = 0; i < dims.nbDims; ++i) {
+    if (dims.d[i] < 0) {
+      new_dims.d[i] = new_value;
+    }
+  }
+
+  return new_dims;
+}
+
 EnginePtr buildEngineFromOnnx(IRuntime& runtime,
                               const std::filesystem::path& model_path,
                               const std::filesystem::path& engine_path,
                               const std::string& verbosity) {
+  using nvinfer1::Dims3;
+  using nvinfer1::OptProfileSelector;
+
   auto& logger = LoggingShim::instance(verbosity);
   std::unique_ptr<nvinfer1::IBuilder> builder(nvinfer1::createInferBuilder(logger));
   int flags = 0;
@@ -251,6 +280,21 @@ EnginePtr buildEngineFromOnnx(IRuntime& runtime,
   }
 
   std::unique_ptr<nvinfer1::IBuilderConfig> config(builder->createBuilderConfig());
+  auto* profile = builder->createOptimizationProfile();
+  for (int i = 0; i < net->getNbInputs(); ++i) {
+    const auto input_tensor = net->getInput(i);
+    const auto name = input_tensor->getName();
+    const auto dims = input_tensor->getDimensions();
+    if (!isDynamic(dims)) {
+      continue;
+    }
+
+    profile->setDimensions(name, OptProfileSelector::kMIN, replaceDynamic(dims, 100));
+    profile->setDimensions(name, OptProfileSelector::kOPT, replaceDynamic(dims, 500));
+    profile->setDimensions(name, OptProfileSelector::kMAX, replaceDynamic(dims, 800));
+    config->addOptimizationProfile(profile);
+  }
+
   std::unique_ptr<IHostMemory> memory(builder->buildSerializedNetwork(*net, *config));
   if (!memory) {
     SLOG(FATAL) << "Failed to build network for " << model_path;
