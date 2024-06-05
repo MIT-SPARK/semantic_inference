@@ -1,4 +1,4 @@
-# Semantic Recolor Utilities
+# Semantic Inference Utilities
 
 Installation requires Cuda and TensorRT. You can add the Cuda repositories [here](https://developer.nvidia.com/cuda-downloads) by installing the `deb (network)` package or
 ```
@@ -12,11 +12,24 @@ Install the latest nvinfer and minimal cuda dependencies (you should check what 
 sudo apt install libnvinfer-dev libnvonnxparsers-dev libnvinfer-plugin-dev cuda-nvcc-12-4
 ```
 
-Intalling a previous version:
+Installing a previous version:
 ```
 export TRT_VERSION=8.6.1.6-1+cuda12.0
 sudo apt install libnvinfer-dev=$TRT_VERSION libnvonnxparsers-dev=$TRT_VERSION libnvinfer-plugins-dev=$TRT_VERSION libnvinfer-headers-dev=$TRT_VERSION libnvinfer-headers-plugin-dev=$TRT_VERSION cuda-nvcc-12-4
 ```
+
+## Models
+
+Several pre-exported models live [here](https://drive.google.com/drive/folders/1GrmgFDFCssDxKe_Nyx8PPTK1pRMA0gEO?usp=sharing).
+We recommend using models within the dense2d folder (the top level models are deprecated).
+To use a specific model, pass in the appropriate argument (`model_name`) to the launch file being used.
+To check if the model is valid and show input/output names, run [this](python/scripts/check_onnx_model.py) script.
+
+See [here](exporting/NOTES.md) for details on exporting a new model.
+
+---
+
+# Outdated Instructions
 
 ## Python scripts
 
@@ -30,14 +43,6 @@ pip install --upgrade pip
 pip install wheel
 pip install -r scripts/requirements.txt
 ```
-
-## Models
-
-Several pre-exported models live [here](https://drive.google.com/drive/folders/1GrmgFDFCssDxKe_Nyx8PPTK1pRMA0gEO?usp=sharing).
-To use a specific model, pass in the appropriate argument (`model_name`) to the launch file being used.
-To check if the model is valid and show input/output names, run [this](scripts/check_onnx_model.py) script.
-
-See [here](exporting/NOTES.md) for details on exporting a new model.
 
 ## New Datasets
 
@@ -61,9 +66,9 @@ You can produce a rosbag of semantic images and labels using [this](scripts/make
 python scripts/make_rosbag.py path/to/input/bag rgb_topic [--is-compressed]
 ```
 
-The script reads every image in the input bag for the provided topic (which can optionall  be a compressed image) and then sends the image to a remote "inference" server using zmq and gets back a label image which it writes to the output bag.
+The script reads every image in the input bag for the provided topic (which can optionally be a compressed image) and then sends the image to a remote "inference" server using zmq and gets back a label image which it writes to the output bag.
 See [this](third_party/one_former.py) for an example using oneformer.
 
-By default, the produced bag has both the original labels and a color image using the provided color config.
+By default, the produced bag has both the original labels and a color image using the provided color configuration.
 You can use the semantically colored image directly like you would for the normal output of the online nodelet.
-Alternaltively, you can use the recolor nodelet to recolor the labels online (especially if you want to change what labels map to what colors), see [this](launch/recolor_pointcloud.launch) for more details.
+Alternatively, you can use the recolor nodelet to recolor the labels online (especially if you want to change what labels map to what colors), see [this](launch/recolor_pointcloud.launch) for more details.

@@ -1,0 +1,2 @@
+#pragma once
+#define ENABLE_TENSORRT @ENABLE_TENSORRT_CXX_VALUE@

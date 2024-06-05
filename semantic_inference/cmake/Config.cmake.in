@@ -1,0 +1,16 @@
+@PACKAGE_INIT@
+include(CMakeFindDependencyMacro)
+
+get_filename_component(semantic_inference_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+
+find_dependency(config_utilities REQUIRED)
+find_dependency(OpenCV REQUIRED)
+
+if(NOT TARGET semantic_inference::semantic_inference)
+  include("${semantic_inference_CMAKE_DIR}/semantic_inferenceTargets.cmake")
+endif()
+
+set(semantic_inference_LIBRARIES semantic_inference::semantic_inference)
+set(semantic_inference_FOUND_CATKIN_PROJECT TRUE)
+
+check_required_components(semantic_inference)

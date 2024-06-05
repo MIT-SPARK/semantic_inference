@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>semantic_inference</name>
+  <version>0.0.1</version>
+  <description>Package wrapping tensort for semantic segmentation</description>
+
+  <maintainer email="na26933@mit.edu">Nathan Hughes</maintainer>
+  <author email="na26933@mit.edu">Nathan Hughes</author>
+  <license>TODO</license>
+
+  <buildtool_depend>cmake</buildtool_depend>
+  <depend>config_utilities</depend>
+  <depend>libopencv-dev</depend>
+
+  <export>
+      <build_type>cmake</build_type>
+  </export>
+</package>

@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>semantic_inference_ros</name>
+  <version>0.0.1</version>
+  <description>ROS interface to tensorrt segmentation</description>
+
+  <maintainer email="na26933@mit.edu">Nathan Hughes</maintainer>
+  <author email="na26933@mit.edu">Nathan Hughes</author>
+  <license>TODO</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <depend>cv_bridge</depend>
+  <depend>image_transport</depend>
+  <depend>nodelet</depend>
+  <depend>roscpp</depend>
+  <depend>semantic_inference</depend>
+
+  <export>
+      <nodelet plugin="${prefix}/nodelet_plugins.xml"/>
+  </export>
+</package>

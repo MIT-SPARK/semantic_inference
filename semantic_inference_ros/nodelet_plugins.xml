@@ -1,0 +1,26 @@
+<library path="lib/libsemantic_inference_ros">
+    <class name="semantic_inference/segmentation" type="semantic_inference::SegmentationNodelet"
+           base_class_type="nodelet::Nodelet">
+        <description>
+            nodelet to run semantic segmentation
+        </description>
+    </class>
+    <class name="semantic_inference/rgbd_segmentation" type="semantic_inference::RgbdSegmentationNodelet"
+           base_class_type="nodelet::Nodelet">
+        <description>
+            nodelet to run rgbd semantic segmentation
+        </description>
+    </class>
+    <class name="semantic_inference/recolor" type="semantic_inference::RecolorNodelet"
+           base_class_type="nodelet::Nodelet">
+        <description>
+            nodelet to recolor label image
+        </description>
+    </class>
+    <class name="semantic_inference/mask" type="semantic_inference::MaskNodelet"
+        base_class_type="nodelet::Nodelet">
+        <description>
+            nodelet to mask robot (or other static occlusion) from image
+        </description>
+    </class>
+</library>
