@@ -81,6 +81,11 @@ float DepthConverter::convert(float input_val) const {
 }
 
 void DepthConverter::fillImage(const cv::Mat& input, cv::Mat& output) const {
+  if (output.size.dims() != 2) {
+    SLOG(ERROR) << "Invalid output matrix!";
+    return;
+  }
+
   const bool size_ok = input.cols == output.cols && input.rows == output.rows;
   cv::Mat img;
   if (size_ok) {
@@ -91,7 +96,7 @@ void DepthConverter::fillImage(const cv::Mat& input, cv::Mat& output) const {
 
   for (int row = 0; row < img.rows; ++row) {
     for (int col = 0; col < img.cols; ++col) {
-      output.at<float>(0, row, col) = convert(img.at<float>(row, col));
+      output.at<float>(row, col) = convert(img.at<float>(row, col));
     }
   }
 }

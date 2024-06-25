@@ -4,21 +4,45 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/opencv.hpp>
 
-using namespace semantic_inference;
+namespace semantic_inference {
 
-TEST(ImageConversion, fillNetworkImageNetworkOrderRgb) {
-  const float TEST_TOLERANCE = 1.0e-6;
+struct ColorImageTestCase {
+  bool rgb_order = true;
+  bool chw_order = true;
+  static constexpr float tolerance = 1.0e-6;
+  static constexpr int height = 5;
+  static constexpr int width = 4;
 
-  ModelConfig config;
-  config.map_to_unit_range = false;
-  config.normalize = false;
-  config.network_uses_rgb_order = true;
-  config.use_network_order = true;
+  cv::Mat getInput() const;
+  cv::Mat getOutput() const;
+  float getExpected(int row, int col, int channel) const;
+};
 
-  cv::Mat input(5, 4, CV_8UC3);
-  config.height = input.rows;
-  config.width = input.cols;
+struct ColorConversionFixture : public testing::TestWithParam<ColorImageTestCase> {
+  ColorConversionFixture() {}
+  virtual ~ColorConversionFixture() = default;
+};
 
+ColorImageTestCase color_conversion_test_cases[]{
+    {true, true},    // rgb, chw
+    {false, true},   // bgr, chw
+    {true, false},   // rgb, hwc
+    {false, false},  // bgr, hwc
+};
+
+INSTANTIATE_TEST_SUITE_P(
+    ImageUtilities,
+    ColorConversionFixture,
+    testing::ValuesIn(color_conversion_test_cases),
+    [](const testing::TestParamInfo<ColorConversionFixture::ParamType>& info) {
+      const auto& param = info.param;
+      std::string color_order = param.rgb_order ? "RGB" : "BGR";
+      std::string layout = param.chw_order ? "ChannelsFirst" : "ChannelsLast";
+      return color_order + layout;
+    });
+
+cv::Mat ColorImageTestCase::getInput() const {
+  cv::Mat input(height, width, CV_8UC3);
   for (int r = 0; r < input.rows; ++r) {
     for (int c = 0; c < input.cols; ++c) {
       uint8_t value = r * input.cols * 3 + c * 3;
@@ -28,188 +52,107 @@ TEST(ImageConversion, fillNetworkImageNetworkOrderRgb) {
     }
   }
 
-  cv::Mat output = cv::Mat(config.getInputMatDims(3), CV_32FC1);
-  fillNetworkImage(config, input, output);
-
-  for (int r = 0; r < input.rows; ++r) {
-    for (int c = 0; c < input.cols; ++c) {
-      float value = r * input.cols * 3 + c * 3;
-      EXPECT_NEAR(output.at<float>(0, r, c), value + 2.0f, TEST_TOLERANCE)
-          << "r=" << r << ", c=" << c;
-      EXPECT_NEAR(output.at<float>(1, r, c), value + 1.0f, TEST_TOLERANCE)
-          << "r=" << r << ", c=" << c;
-      EXPECT_NEAR(output.at<float>(2, r, c), value + 0.0f, TEST_TOLERANCE)
-          << "r=" << r << ", c=" << c;
-    }
-  }
+  return input;
 }
 
-TEST(ImageConversion, fillNetworkImageNetworkOrderBgr) {
-  const float TEST_TOLERANCE = 1.0e-6;
+cv::Mat ColorImageTestCase::getOutput() const {
+  const std::vector<int> dims = chw_order ? std::vector<int>{3, height, width}
+                                          : std::vector<int>{height, width, 3};
+  return cv::Mat(dims, CV_32FC1);
+}
 
-  ModelConfig config;
+float ColorImageTestCase::getExpected(int row, int col, int channel) const {
+  float value = row * 3 * width + col * 3;
+  return rgb_order ? value + (2 - channel) : value + channel;
+}
+
+TEST_P(ColorConversionFixture, FillColorImageCorrect) {
+  const auto test_config = GetParam();
+  const auto input = test_config.getInput();
+  auto output = test_config.getOutput();
+
+  ColorConverter::Config config;
   config.map_to_unit_range = false;
   config.normalize = false;
-  config.network_uses_rgb_order = false;
-  config.use_network_order = true;
+  config.rgb_order = test_config.rgb_order;
 
-  cv::Mat input(5, 4, CV_8UC3);
-  config.height = input.rows;
-  config.width = input.cols;
+  const ColorConverter converter(config);
+  converter.fillImage(input, output);
 
   for (int r = 0; r < input.rows; ++r) {
     for (int c = 0; c < input.cols; ++c) {
-      uint8_t value = r * input.cols * 3 + c * 3;
-      input.at<cv::Vec3b>(r, c)[0] = value;
-      input.at<cv::Vec3b>(r, c)[1] = value + 1;
-      input.at<cv::Vec3b>(r, c)[2] = value + 2;
-    }
-  }
-
-  cv::Mat output = cv::Mat(config.getInputMatDims(3), CV_32FC1);
-  fillNetworkImage(config, input, output);
-
-  for (int r = 0; r < input.rows; ++r) {
-    for (int c = 0; c < input.cols; ++c) {
-      float value = r * input.cols * 3 + c * 3;
-      EXPECT_NEAR(output.at<float>(0, r, c), value + 0.0f, TEST_TOLERANCE)
-          << "r=" << r << ", c=" << c;
-      EXPECT_NEAR(output.at<float>(1, r, c), value + 1.0f, TEST_TOLERANCE)
-          << "r=" << r << ", c=" << c;
-      EXPECT_NEAR(output.at<float>(2, r, c), value + 2.0f, TEST_TOLERANCE)
-          << "r=" << r << ", c=" << c;
+      for (int channel = 0; channel < 3; ++channel) {
+        const auto expected = test_config.getExpected(r, c, channel);
+        const auto result = test_config.chw_order ? output.at<float>(channel, r, c)
+                                                  : output.at<float>(r, c, channel);
+        EXPECT_NEAR(result, expected, test_config.tolerance)
+            << "r=" << r << ", c=" << c << ", channel=" << channel;
+      }
     }
   }
 }
 
-TEST(ImageConversion, fillNetworkImageRowMajorOrder) {
-  const float TEST_TOLERANCE = 1.0e-6;
+TEST(ImageUtilities, FillDepthImage) {
+  constexpr float tolerance = 1.0e-6;
 
-  ModelConfig config;
-  config.map_to_unit_range = false;
-  config.normalize = false;
-  config.network_uses_rgb_order = true;
-  config.use_network_order = false;
-
-  cv::Mat input(5, 4, CV_8UC3);
-  config.height = input.rows;
-  config.width = input.cols;
-
-  for (int r = 0; r < input.rows; ++r) {
-    for (int c = 0; c < input.cols; ++c) {
-      uint8_t value = r * input.cols * 3 + c * 3;
-      input.at<cv::Vec3b>(r, c)[0] = value;
-      input.at<cv::Vec3b>(r, c)[1] = value + 1;
-      input.at<cv::Vec3b>(r, c)[2] = value + 2;
-    }
-  }
-
-  cv::Mat output = cv::Mat(config.getInputMatDims(3), CV_32FC1);
-  fillNetworkImage(config, input, output);
-
-  for (int r = 0; r < input.rows; ++r) {
-    for (int c = 0; c < input.cols; ++c) {
-      float value = r * input.cols * 3 + c * 3;
-      EXPECT_NEAR(output.at<float>(r, c, 0), value + 2.0f, TEST_TOLERANCE)
-          << "r=" << r << ", c=" << c;
-      EXPECT_NEAR(output.at<float>(r, c, 1), value + 1.0f, TEST_TOLERANCE)
-          << "r=" << r << ", c=" << c;
-      EXPECT_NEAR(output.at<float>(r, c, 2), value + 0.0f, TEST_TOLERANCE)
-          << "r=" << r << ", c=" << c;
-    }
-  }
-}
-
-TEST(ImageConversion, fillNetworkImageRowMajorOrderBgr) {
-  const float TEST_TOLERANCE = 1.0e-6;
-
-  ModelConfig config;
-  config.map_to_unit_range = false;
-  config.normalize = false;
-  config.network_uses_rgb_order = false;
-  config.use_network_order = false;
-
-  cv::Mat input(5, 4, CV_8UC3);
-  config.height = input.rows;
-  config.width = input.cols;
-
-  for (int r = 0; r < input.rows; ++r) {
-    for (int c = 0; c < input.cols; ++c) {
-      uint8_t value = r * input.cols * 3 + c * 3;
-      input.at<cv::Vec3b>(r, c)[0] = value;
-      input.at<cv::Vec3b>(r, c)[1] = value + 1;
-      input.at<cv::Vec3b>(r, c)[2] = value + 2;
-    }
-  }
-
-  cv::Mat output = cv::Mat(config.getInputMatDims(3), CV_32FC1);
-  fillNetworkImage(config, input, output);
-
-  for (int r = 0; r < input.rows; ++r) {
-    for (int c = 0; c < input.cols; ++c) {
-      float value = r * input.cols * 3 + c * 3;
-      EXPECT_NEAR(output.at<float>(r, c, 0), value + 0.0f, TEST_TOLERANCE)
-          << "r=" << r << ", c=" << c;
-      EXPECT_NEAR(output.at<float>(r, c, 1), value + 1.0f, TEST_TOLERANCE)
-          << "r=" << r << ", c=" << c;
-      EXPECT_NEAR(output.at<float>(r, c, 2), value + 2.0f, TEST_TOLERANCE)
-          << "r=" << r << ", c=" << c;
-    }
-  }
-}
-
-TEST(ImageConversion, fillDepthImageNetworkOrder) {
-  const float TEST_TOLERANCE = 1.0e-6;
-
-  ModelConfig config;
-  config.use_network_order = true;
+  DepthConverter::Config config;
+  config.mean = -1.0;
+  config.stddev = 0.5;
+  config.normalize = true;
+  const DepthConverter converter(config);
 
   cv::Mat input(5, 4, CV_32FC1);
-  config.height = input.rows;
-  config.width = input.cols;
-
   for (int r = 0; r < input.rows; ++r) {
     for (int c = 0; c < input.cols; ++c) {
       input.at<float>(r, c) = r * input.cols + c;
     }
   }
 
-  cv::Mat output = cv::Mat(config.getInputMatDims(3), CV_32FC1);
-  fillNetworkDepthImage(config, {}, input, output);
+  std::vector<int> dims{5, 4};
+  cv::Mat output(dims, CV_32FC1);
+  converter.fillImage(input, output);
 
   for (int r = 0; r < input.rows; ++r) {
     for (int c = 0; c < input.cols; ++c) {
-      float value = r * input.cols + c;
-      EXPECT_NEAR(output.at<float>(0, r, c), value, TEST_TOLERANCE)
-          << "r=" << r << ", c=" << c;
+      float value = ((r * input.cols + c) + 1.0f) * 2.0f;
+      EXPECT_NEAR(output.at<float>(r, c), value, tolerance) << "r=" << r << ", c=" << c;
     }
   }
 }
 
-TEST(ImageConversion, fillDepthImageRowMajorOrder) {
-  const float TEST_TOLERANCE = 1.0e-6;
-
-  ModelConfig config;
-  config.use_network_order = false;
-
-  cv::Mat input(5, 4, CV_32FC1);
-  config.height = input.rows;
-  config.width = input.cols;
-
-  for (int r = 0; r < input.rows; ++r) {
-    for (int c = 0; c < input.cols; ++c) {
-      input.at<float>(r, c) = r * input.cols + c;
-    }
+TEST(ImageUtilities, ConvertColorCorrect) {
+  constexpr float tolerance = 1.0e-5;
+  {  // passthrough conversion is correct
+    ColorConverter::Config config;
+    config.normalize = false;
+    config.map_to_unit_range = false;
+    const ColorConverter converter(config);
+    EXPECT_NEAR(converter.convert(255, 0), 255.0f, tolerance);
+    EXPECT_NEAR(converter.convert(127, 0), 127.0f, tolerance);
+    EXPECT_NEAR(converter.convert(0, 0), 0.0f, tolerance);
   }
 
-  cv::Mat output = cv::Mat(config.getInputMatDims(3), CV_32FC1);
-  fillNetworkDepthImage(config, {}, input, output);
+  {  // unit range is correct
+    ColorConverter::Config config;
+    config.normalize = false;
+    config.map_to_unit_range = true;
+    const ColorConverter converter(config);
+    EXPECT_NEAR(converter.convert(255, 0), 1.0f, tolerance);
+    EXPECT_NEAR(converter.convert(127, 0), 127.0f / 255.0f, tolerance);
+    EXPECT_NEAR(converter.convert(0, 0), 0.0f, tolerance);
+  }
 
-  for (int r = 0; r < input.rows; ++r) {
-    for (int c = 0; c < input.cols; ++c) {
-      float value = r * input.cols + c;
-      EXPECT_NEAR(output.at<float>(r, c, 0), value, TEST_TOLERANCE)
-          << "r=" << r << ", c=" << c;
-    }
+  {  // custom normalization parameters are correct
+    ColorConverter::Config config;
+    config.mean = {0.0f, 0.5f, 1.0f};
+    config.stddev = {1.0f, 2.0f, 3.0f};
+    config.map_to_unit_range = true;
+    config.normalize = true;
+    const ColorConverter converter(config);
+    EXPECT_NEAR(converter.convert(255, 0), 1.0f, tolerance);
+    EXPECT_NEAR(converter.convert(255, 1), 0.25f, tolerance);
+    EXPECT_NEAR(converter.convert(255, 2), 0.0f, tolerance);
   }
 }
+
+}  // namespace semantic_inference
