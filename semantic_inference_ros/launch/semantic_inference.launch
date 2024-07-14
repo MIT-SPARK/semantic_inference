@@ -2,6 +2,7 @@
 
     <!-- start_manager required if used stand-alone -->
     <arg name="start_manager" default="true"/>
+    <arg name="nodelet_manager" default="nodelet_manager"/>
     <!-- launch file features -->
     <arg name="enable_rectification" default="false"/>
     <arg name="enable_pointcloud" default="false"/>
@@ -53,7 +54,7 @@
     <arg name="desired_output" value="log" unless="$(arg verbose)"/>
 
     <!-- manager -->
-    <node pkg="nodelet" type="nodelet" name="nodelet_manager"
+    <node pkg="nodelet" type="nodelet" name="$(arg nodelet_manager)"
           args="manager"
           if="$(arg start_manager)"
           launch-prefix="$(arg launch-prefix)"
@@ -64,7 +65,7 @@
 
     <!-- main nodes to segment and recolor images -->
     <node pkg="nodelet" type="nodelet" name="semantic_inference"
-          args="load semantic_inference/segmentation nodelet_manager --no-bond"
+          args="load semantic_inference/segmentation $(arg nodelet_manager) --no-bond"
           output="$(arg desired_output)"
           unless="$(arg use_prerecorded_semantics)"
           required="true">
@@ -83,7 +84,7 @@
     </node>
 
     <node pkg="nodelet" type="nodelet" name="recolor_nodelet"
-          args="load semantic_inference/recolor nodelet_manager --no-bond"
+          args="load semantic_inference/recolor $(arg nodelet_manager) --no-bond"
           output="$(arg desired_output)"
           if="$(arg use_prerecorded_semantics)"
           required="true">
@@ -101,7 +102,7 @@
           if="$(arg throttle_prerecorded)"/>
 
     <node pkg="nodelet" type="nodelet" name="depth_rectifier"
-          args="load depth_image_proc/register nodelet_manager --no-bond"
+          args="load depth_image_proc/register $(arg nodelet_manager) --no-bond"
           output="$(arg desired_output)"
           if="$(arg enable_rectification)"
           required="true">
@@ -112,7 +113,7 @@
 
     <!-- pointcloud -->
     <node pkg="nodelet" type="nodelet" name="cloudify"
-          args="load depth_image_proc/point_cloud_xyzrgb nodelet_manager --no-bond"
+          args="load depth_image_proc/point_cloud_xyzrgb $(arg nodelet_manager) --no-bond"
           output="$(arg desired_output)"
           if="$(arg enable_pointcloud)"
           required="true">

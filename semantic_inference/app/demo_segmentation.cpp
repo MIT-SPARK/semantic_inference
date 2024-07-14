@@ -54,7 +54,7 @@ void outputDemoImage(const DemoConfig& config,
   }
 
   SLOG(INFO) << "Writing output to " << output_path;
-  cv::imwrite(output_path, new_image);
+  cv::imwrite(output_path.string(), new_image);
 }
 
 int main(int argc, char* argv[]) {
@@ -75,7 +75,7 @@ int main(int argc, char* argv[]) {
   const auto config = config::fromYamlFile<DemoConfig>(config_path);
   SLOG(INFO) << "\n" << config::toString(config);
 
-  cv::Mat img = cv::imread(config.input_file);
+  cv::Mat img = cv::imread(config.input_file.string());
   if (img.empty()) {
     SLOG(FATAL) << "Image not found: " << config.input_file;
     return 1;
