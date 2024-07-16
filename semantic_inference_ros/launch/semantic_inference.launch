@@ -54,75 +54,66 @@
     <arg name="desired_output" value="log" unless="$(arg verbose)"/>
 
     <!-- manager -->
-    <node pkg="nodelet" type="nodelet" name="$(arg nodelet_manager)"
-          args="manager"
-          if="$(arg start_manager)"
-          launch-prefix="$(arg launch-prefix)"
-          output="$(arg desired_output)"
-          required="true">
-      <param name="image_transport" value="$(arg rgb_image_transport)"/>
-    </node>
+    <group if="$(arg start_manager)">
+        <node pkg="nodelet" type="nodelet" name="$(arg nodelet_manager)"
+              args="manager"
+              launch-prefix="$(arg launch-prefix)"
+              output="$(arg desired_output)"
+              required="true">
+          <param name="image_transport" value="$(arg rgb_image_transport)"/>
+        </node>
+    </group>
 
     <!-- main nodes to segment and recolor images -->
-    <node pkg="nodelet" type="nodelet" name="semantic_inference"
-          args="load semantic_inference/segmentation $(arg nodelet_manager) --no-bond"
-          output="$(arg desired_output)"
-          unless="$(arg use_prerecorded_semantics)"
-          required="true">
-        <rosparam file="$(arg segmenter_config)" command="load"/>
-        <rosparam file="$(arg label_grouping)" command="load" ns="output/recolor"/>
-        <param name="output/recolor/colormap_path" value="$(arg colormap_path)"/>
-        <param name="max_queue_size" value="$(arg max_image_queue_size)"/>
-        <param name="image_separation_s" value="$(arg min_separation_s)"/>
-        <param name="rotation_type" value="$(arg rotation_type)"/>
-        <param name="segmenter/model/model_file" value="$(arg model_path)"/>
-        <param name="segmenter/model/engine_file" value="$(arg engine_path)"/>
-        <param name="segmenter/model/force_rebuild" value="$(arg force_rebuild)"/>
-        <remap from="~image_raw" to="$(arg rgb_topic)"/>
-        <remap from="~image_raw/compressed" to="$(arg rgb_topic)/compressed"/>
-        <remap from="~semantic/image_raw" to="$(arg semantic_topic)"/>
-    </node>
+    <group unless="$(arg use_prerecorded_semantics)">
+        <node pkg="nodelet" type="nodelet" name="semantic_inference"
+              args="load semantic_inference/segmentation $(arg nodelet_manager) --no-bond"
+              output="$(arg desired_output)"
+              required="true">
+            <rosparam file="$(arg segmenter_config)" command="load"/>
+            <rosparam file="$(arg label_grouping)" command="load" ns="output/recolor"/>
+            <param name="output/recolor/colormap_path" value="$(arg colormap_path)"/>
+            <param name="max_queue_size" value="$(arg max_image_queue_size)"/>
+            <param name="image_separation_s" value="$(arg min_separation_s)"/>
+            <param name="rotation_type" value="$(arg rotation_type)"/>
+            <param name="segmenter/model/model_file" value="$(arg model_path)"/>
+            <param name="segmenter/model/engine_file" value="$(arg engine_path)"/>
+            <param name="segmenter/model/force_rebuild" value="$(arg force_rebuild)"/>
+        </node>
+    </group>
 
-    <node pkg="nodelet" type="nodelet" name="recolor_nodelet"
-          args="load semantic_inference/recolor $(arg nodelet_manager) --no-bond"
-          output="$(arg desired_output)"
-          if="$(arg use_prerecorded_semantics)"
-          required="true">
-        <rosparam file="$(arg color_config)" command="load" ns="output/recolor"/>
-        <remap from="labels/image_raw" to="$(arg prerecorded_topic)" unless="$(arg throttle_prerecorded)"/>
-        <remap from="labels/image_raw" to="$(arg prerecorded_topic)_throttle" if="$(arg throttle_prerecorded)"/>
-        <remap from="labels/image_raw/compressed" to="$(arg prerecorded_topic)/compressed"/>
-        <remap from="~semantic/image_raw" to="$(arg semantic_topic)"/>
-        <remap from="~semantic_color/image_raw" to="$(arg semantic_color_topic)"/>
-    </node>
+    <group if="$(arg use_prerecorded_semantics)">
+        <node pkg="nodelet" type="nodelet" name="recolor_nodelet"
+              args="load semantic_inference/recolor $(arg nodelet_manager) --no-bond"
+              output="$(arg desired_output)"
+              required="true">
+            <!-- TODO(nathan): Replace color config and validate which remappings need to happen -->
+            <remap from="labels/image_raw" to="labels/image_raw_throttle" if="$(arg throttle_prerecorded)"/>
+        </node>
+    </group>
 
     <!-- utility nodelets -->
-    <node pkg="topic_tools" type="throttle" name="rgb_throttle"
-          args="messages $(arg prerecorded_topic) $(arg throttle_rate_prerecorded)"
-          if="$(arg throttle_prerecorded)"/>
+    <group if="$(arg throttle_prerecorded)">
+        <node pkg="topic_tools" type="throttle" name="rgb_throttle"
+              args="messages $(arg prerecorded_topic) $(arg throttle_rate_prerecorded)"/>
+    </group>
 
-    <node pkg="nodelet" type="nodelet" name="depth_rectifier"
-          args="load depth_image_proc/register $(arg nodelet_manager) --no-bond"
-          output="$(arg desired_output)"
-          if="$(arg enable_rectification)"
-          required="true">
-        <remap from="rgb/camera_info" to="$(arg rgb_info_topic)"/>
-        <remap from="depth/image_rect" to="$(arg depth_topic)"/>
-        <remap from="depth/camera_info" to="$(arg depth_info_topic)"/>
-    </node>
+    <group if="$(arg enable_rectification)">
+        <node pkg="nodelet" type="nodelet" name="depth_rectifier"
+              args="load depth_image_proc/register $(arg nodelet_manager) --no-bond"
+              output="$(arg desired_output)"
+              required="true">
+        </node>
+    </group>
 
     <!-- pointcloud -->
-    <node pkg="nodelet" type="nodelet" name="cloudify"
-          args="load depth_image_proc/point_cloud_xyzrgb $(arg nodelet_manager) --no-bond"
-          output="$(arg desired_output)"
-          if="$(arg enable_pointcloud)"
-          required="true">
-
-        <remap from="rgb/camera_info" to="$(arg rgb_info_topic)"/>
-        <remap from="rgb/image_rect_color" to="$(arg semantic_color_topic)"/>
-        <remap from="depth_registered/image_rect" to="$(arg depth_topic)" unless="$(arg enable_rectification)"/>
-        <remap from="depth_registered/points" to="$(arg pointcloud_topic)"/>
-        <param name="queue_size" value="$(arg pointcloud_queue_size)"/>
-    </node>
+    <group if="$(arg enable_pointcloud)">
+        <node pkg="nodelet" type="nodelet" name="cloudify"
+              args="load depth_image_proc/point_cloud_xyzrgb nodelet_manager --no-bond"
+              output="$(arg desired_output)"
+              required="true">
+            <param name="queue_size" value="$(arg pointcloud_queue_size)"/>
+        </node>
+    </group>
 
 </launch>
