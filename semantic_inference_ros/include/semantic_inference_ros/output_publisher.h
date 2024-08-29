@@ -19,7 +19,7 @@ class OutputPublisher {
 
   void publish(const std_msgs::Header& header,
                const cv::Mat& labels,
-               const cv::Mat& color = cv::Mat());
+               const cv::Mat& color);
 
  private:
   ImageRecolor image_recolor_;

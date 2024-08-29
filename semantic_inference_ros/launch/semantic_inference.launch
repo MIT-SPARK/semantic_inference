@@ -1,118 +1,70 @@
 <launch>
 
-    <!-- start_manager required if used stand-alone -->
-    <arg name="start_manager" default="true"/>
-    <arg name="nodelet_manager" default="nodelet_manager"/>
-    <!-- launch file features -->
-    <arg name="enable_rectification" default="false"/>
-    <arg name="enable_pointcloud" default="false"/>
-    <arg name="use_prerecorded_semantics" default="false"/>
-    <!-- input configuration -->
-    <arg name="rgb_image_transport" default="raw"/>
-    <arg name="min_separation_s" default="0.0"/>
-    <arg name="throttle_rate_prerecorded" default="15.0"/>
-    <arg name="throttle_prerecorded" default="false"/>
-    <arg name="pointcloud_queue_size" default="20"/>
-    <arg name="max_image_queue_size" default="1"/>
-
-    <!-- input topic names -->
-    <arg name="prerecorded_topic" default="labels/image_raw"/>
-    <arg name="rgb_topic" default="rgb/image_raw"/>
-    <arg name="rgb_info_topic" default="rgb/camera_info"/>
-    <arg name="depth_topic" default="depth/image_rect_raw"/>
-    <arg name="depth_info_topic" default="depth/camera_info"/>
-    <arg name="semantic_topic" default="semantic/image_raw"/>
-    <arg name="semantic_color_topic" default="semantic_inference/semantic_color/image_raw"/>
-    <!-- output topic names -->
-    <arg name="pointcloud_topic" default="/semantic_pointcloud"/>
+    <!-- Start_manager required if used stand-alone -->
+    <arg name="start_manager" default="true" doc="Start a separate nodelet manager"/>
+    <arg name="nodelet_manager" default="nodelet_manager" doc="Name of nodelet manager"/>
+    <!-- Launch file features -->
+    <arg name="debug" default="false" doc="Run segmentation with gdb"/>
+    <arg name="launch-prefix" default="$(eval 'gdb -ex run --args' if debug else '')" doc="Launch prefix for nodelet manager"/>
+    <arg name="verbose" default="true" doc="Set segmentation log output to stdout"/>
+    <arg name="use_prerecorded_semantics" default="false" doc="Remap prerecorded labels instead of running inference"/>
+    <arg name="force_rebuild" default="false" doc="Force TensorRT to rebuild engine file"/>
+    <!-- Input configuration -->
+    <arg name="rgb_image_transport" default="raw" doc="Input image transport type"/>
+    <arg name="max_image_queue_size" default="1" doc="Max number of images to store"/>
+    <arg name="min_separation_s" default="0.0" doc="Enforced separation between input images"/>
+    <arg name="rotation_type" default="none" doc="Input camera rotation"/>
 
     <!-- segmentation model options. Make sure you have one downloaded -->
     <!--<arg name="model_name" default="mobilenetv2_360_640"/>-->
     <!--<arg name="model_name" default="hrnetv2_360_640_v12"/>-->
-    <arg name="model_name" default="efficientvit_seg_l2"/>
+    <!--<arg name="model_name" default="efficientvit_seg_l2"/>-->
     <!--<arg name="model_name" default="ade20k-hrnetv2-c1"/>-->
     <!--<arg name="model_name" default="ade20k-mobilnetv2dilated-c1_deepsup"/>-->
-    <!--<arg name="model_name" default="ade20k-efficientvit_seg_l2"/>-->
-    <!-- segmentation model configuration -->
-    <arg name="model_path" value="$(find semantic_inference)/models/$(arg model_name).onnx"/>
-    <arg name="engine_path" value="$(find semantic_inference)/engines/$(arg model_name).trt"/>
-    <arg name="segmenter_config" value="$(find semantic_inference)/config/models/$(arg model_name).yaml"/>
-    <arg name="rotation_type" default="none"/>
-    <arg name="force_rebuild" default="false" doc="force TensorRT to rebuild engine file"/>
+    <arg name="model_name" default="ade20k-efficientvit_seg_l2" doc="Model name to use"/>
 
-    <!-- colormap and label grouping -->
-    <arg name="labelspace_name" default="ade20k_indoor"/>
-    <arg name="label_grouping" value="$(find semantic_inference)/config/label_groupings/$(arg labelspace_name).yaml"/>
-    <arg name="colormap_path" value="$(find semantic_inference)/config/colors/$(arg labelspace_name).csv"/>
+    <!-- Colormap and label grouping -->
+    <arg name="labelspace_name" default="ade20k_indoor" doc="Label remapping configuration"/>
+    <arg name="colormap_path" default="$(find semantic_inference)/config/distinct_150_colors.csv" doc="Visualization colormap"/>
 
-    <!-- debugging and output -->
-    <arg name="debug" default="false"/>
-    <arg name="launch-prefix" value="gdb -ex run --args" if="$(arg debug)"/>
-    <arg name="launch-prefix" value="" unless="$(arg debug)"/>
-    <arg name="verbose" default="true"/>
-    <arg name="desired_output" value="screen" if="$(arg verbose)"/>
-    <arg name="desired_output" value="log" unless="$(arg verbose)"/>
-
-    <!-- manager -->
+    <!-- Nodelet manager -->
     <group if="$(arg start_manager)">
         <node pkg="nodelet" type="nodelet" name="$(arg nodelet_manager)"
               args="manager"
               launch-prefix="$(arg launch-prefix)"
-              output="$(arg desired_output)"
+              output="$(eval 'screen' if verbose else 'log')"
               required="true">
           <param name="image_transport" value="$(arg rgb_image_transport)"/>
         </node>
     </group>
 
-    <!-- main nodes to segment and recolor images -->
+    <!-- 2D semantic segmentation -->
     <group unless="$(arg use_prerecorded_semantics)">
         <node pkg="nodelet" type="nodelet" name="semantic_inference"
               args="load semantic_inference/segmentation $(arg nodelet_manager) --no-bond"
-              output="$(arg desired_output)"
+              output="$(eval 'screen' if verbose else 'log')"
               required="true">
-            <rosparam file="$(arg segmenter_config)" command="load"/>
-            <rosparam file="$(arg label_grouping)" command="load" ns="output/recolor"/>
-            <param name="output/recolor/colormap_path" value="$(arg colormap_path)"/>
-            <param name="max_queue_size" value="$(arg max_image_queue_size)"/>
-            <param name="image_separation_s" value="$(arg min_separation_s)"/>
-            <param name="rotation_type" value="$(arg rotation_type)"/>
-            <param name="segmenter/model/model_file" value="$(arg model_path)"/>
-            <param name="segmenter/model/engine_file" value="$(arg engine_path)"/>
+            <rosparam command="load" file="$(find semantic_inference)/config/models/$(arg model_name).yaml"/>
+            <rosparam command="load" file="$(find semantic_inference)/config/label_groupings/$(arg labelspace_name).yaml" ns="output/recolor"/>
+            <param name="segmenter/model/model_file" value="$(find semantic_inference)/models/$(arg model_name).onnx"/>
+            <param name="segmenter/model/engine_file" value="$(find semantic_inference)/engines/$(arg model_name).trt"/>
             <param name="segmenter/model/force_rebuild" value="$(arg force_rebuild)"/>
+            <param name="output/recolor/colormap_path" value="$(arg colormap_path)"/>
+            <param name="worker/max_queue_size" value="$(arg max_image_queue_size)"/>
+            <param name="worker/image_separation_s" value="$(arg min_separation_s)"/>
+            <param name="image_rotator/rotation" value="$(arg rotation_type)"/>
         </node>
     </group>
 
+    <!-- Reampping for pre-recorded labels -->
     <group if="$(arg use_prerecorded_semantics)">
-        <node pkg="nodelet" type="nodelet" name="recolor_nodelet"
+        <node pkg="nodelet" type="nodelet" name="semantic_inference"
               args="load semantic_inference/recolor $(arg nodelet_manager) --no-bond"
-              output="$(arg desired_output)"
+              output="$(eval 'screen' if verbose else 'log')"
               required="true">
-            <!-- TODO(nathan): Replace color config and validate which remappings need to happen -->
-            <remap from="labels/image_raw" to="labels/image_raw_throttle" if="$(arg throttle_prerecorded)"/>
-        </node>
-    </group>
-
-    <!-- utility nodelets -->
-    <group if="$(arg throttle_prerecorded)">
-        <node pkg="topic_tools" type="throttle" name="rgb_throttle"
-              args="messages $(arg prerecorded_topic) $(arg throttle_rate_prerecorded)"/>
-    </group>
-
-    <group if="$(arg enable_rectification)">
-        <node pkg="nodelet" type="nodelet" name="depth_rectifier"
-              args="load depth_image_proc/register $(arg nodelet_manager) --no-bond"
-              output="$(arg desired_output)"
-              required="true">
-        </node>
-    </group>
-
-    <!-- pointcloud -->
-    <group if="$(arg enable_pointcloud)">
-        <node pkg="nodelet" type="nodelet" name="cloudify"
-              args="load depth_image_proc/point_cloud_xyzrgb nodelet_manager --no-bond"
-              output="$(arg desired_output)"
-              required="true">
-            <param name="queue_size" value="$(arg pointcloud_queue_size)"/>
+            <rosparam command="load" file="$(find semantic_inference)/config/label_groupings/$(arg labelspace_name).yaml" ns="output/recolor"/>
+            <param name="worker/max_queue_size" value="$(arg max_image_queue_size)"/>
+            <param name="worker/image_separation_s" value="$(arg min_separation_s)"/>
         </node>
     </group>
 

@@ -1,8 +1,7 @@
 #pragma once
 
 #include <ros/ros.h>
-
-#include "semantic_inference/logging.h"
+#include <semantic_inference/logging.h>
 
 namespace semantic_inference {
 

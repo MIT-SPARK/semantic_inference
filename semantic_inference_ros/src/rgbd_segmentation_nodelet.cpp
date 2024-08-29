@@ -64,7 +64,7 @@ void RgbdSegmentationNodelet::onInit() {
   transport_ = std::make_unique<image_transport::ImageTransport>(nh);
   output_pub_ = std::make_unique<OutputPublisher>(config_.output, *transport_);
 
-  image_sub_.subscribe(*transport_, "rgb/image_raw", 1);
+  image_sub_.subscribe(*transport_, "color/image_raw", 1);
   depth_sub_.subscribe(*transport_, "depth/image_rect", 1);
   sync.reset(new Synchronizer<SyncPolicy>(SyncPolicy(10), image_sub_, depth_sub_));
   sync->registerCallback(boost::bind(&RgbdSegmentationNodelet::callback, this, _1, _2));

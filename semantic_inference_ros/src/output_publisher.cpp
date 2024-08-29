@@ -28,6 +28,12 @@ OutputPublisher::OutputPublisher(const Config& config, ImageTransport& transport
 void OutputPublisher::publish(const std_msgs::Header& header,
                               const cv::Mat& labels,
                               const cv::Mat& color) {
+  if (labels.empty() || color.empty()) {
+    SLOG(ERROR) << "Invalid inputs: color=" << std::boolalpha << !color.empty()
+                << ", labels=" << !labels.empty();
+    return;
+  }
+
   if (!label_image_) {
     label_image_.reset(new cv_bridge::CvImage());
     // we can't support 32 signed labels, so we do 16-bit signed to distinguish from
@@ -58,7 +64,7 @@ void OutputPublisher::publish(const std_msgs::Header& header,
     color_pub_.publish(color_image_->toImageMsg());
   }
 
-  if (!config.publish_overlay || color.empty()) {
+  if (!config.publish_overlay) {
     return;
   }
 
