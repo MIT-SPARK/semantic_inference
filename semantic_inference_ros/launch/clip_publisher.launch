@@ -1,0 +1,13 @@
+<launch>
+
+    <arg name="verbose" default="true"/>
+    <arg name="model_name" default="ViT-L/14"/>
+    <arg name="min_separation_s" default="0.0" doc="Minimum time between input images"/>
+
+    <node pkg="semantic_inference_ros" type="clip_publisher_node" name="clip_publisher_node"
+          output="$(eval 'screen' if verbose else 'log')">
+        <param name="model/model_name" value="$(arg model_name)"/>
+        <param name="worker/min_separation_s" value="$(arg min_separation_s)"/>
+    </node>
+
+</launch>

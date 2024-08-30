@@ -10,6 +10,8 @@ add_compile_options(-Wall -Wextra)
 find_package(catkin REQUIRED roscpp nodelet cv_bridge image_transport)
 find_package(semantic_inference REQUIRED)
 
+catkin_python_setup()
+
 catkin_package(
   CATKIN_DEPENDS cv_bridge image_transport nodelet roscpp
   DEPENDS semantic_inference

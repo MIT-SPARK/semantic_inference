@@ -1,4 +1,5 @@
 """Show colors from csv."""
+
 from matplotlib.patches import Rectangle
 import matplotlib.pyplot as plt
 import seaborn as sns

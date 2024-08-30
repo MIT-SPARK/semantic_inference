@@ -1,0 +1,68 @@
+#!/usr/bin/env python3
+"""Script to parse a rosbag and produce a timestamped list of clip vectors."""
+import semantic_inference_ros
+import semantic_inference.models as models
+from semantic_inference import Config
+from semantic_inference_ros import Conversions, ImageWorkerConfig
+
+import rospy
+import torch
+from dataclasses import dataclass, field
+
+from semantic_inference_msgs.msg import FeatureVectorStamped
+
+
+@dataclass
+class ClipPublisherConfig(Config):
+    """Configuration for ClipPublisherNode."""
+
+    worker: ImageWorkerConfig = field(default_factory=ImageWorkerConfig)
+    model: models.ClipConfig = field(default_factory=models.ClipConfig)
+
+
+class ClipPublisherNode:
+    """Node that publishes image feature embeddings."""
+
+    def __init__(self):
+        """Start subscriber and publisher."""
+        config = semantic_inference_ros.load_from_ros(ClipPublisherConfig, "~")
+
+        rospy.loginfo(f"'{rospy.get_name()}': Initializing with {config}")
+        self._device = models.default_device()
+        self._model = models.ClipVisionWrapper(config.model).to(self._device)
+        self._model.eval()
+        self._transform = models.get_image_preprocessor(self._model.input_size)
+        self._transform = self._transform.to(self._device)
+        rospy.loginfo(f"'{rospy.get_name()}': Finished initializing!")
+
+        self._pub = rospy.Publisher("~feature", FeatureVectorStamped, queue_size=1)
+        self._worker = semantic_inference_ros.ImageWorker(
+            config.worker, "~image", self._spin_once
+        )
+
+    def _spin_once(self, header, img):
+        # TODO(nathan) check bgr vs rgb
+        with torch.no_grad():
+            img = torch.from_numpy(img).to(self._device).permute((2, 0, 1))
+            img = models.center_crop(self._transform(img), self._model.input_size)
+            feature = torch.squeeze(self._model(img.unsqueeze(0)).cpu())
+
+        msg = Conversions.to_stamped_feature(header, feature)
+        self._pub.publish(msg)
+
+    def spin(self):
+        """Wait until ros shuts down."""
+        self._worker.spin()
+
+
+def main():
+    """Start a node."""
+    rospy.init_node("clip_publisher_node")
+    semantic_inference_ros.setup_ros_log_forwarding()
+
+    node = ClipPublisherNode()
+    node.spin()
+
+
+if __name__ == "__main__":
+    main()

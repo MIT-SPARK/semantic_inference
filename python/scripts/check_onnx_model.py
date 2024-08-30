@@ -1,4 +1,5 @@
 """Quick script to read an onnx file and print information."""
+
 import click
 import onnx
 

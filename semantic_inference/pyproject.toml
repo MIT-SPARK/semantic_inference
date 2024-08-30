@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools<=70.0.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,19 +7,21 @@ name = "semantic_recolor"
 version = "0.0.1"
 dependencies = [
   "click",
-  "onnx",
-  "onnxscript",
-  "packaging",
+  "einops",
+  "imageio",
   "pyyaml",
   "torch",
-  "yacs",
+  "torchvision",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest"]
+openset = ["clip@git+https://github.com/openai/CLIP.git", "ultralytics"]
+f3rm = ["f3rm@git+https://github.com/f3rm/f3rm"]
+sam = ["segment-anything@git+https://github.com/facebookresearch/segment-anything.git"]
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["python"]
 namespaces = false
 
 [tool.pytest.ini_options]

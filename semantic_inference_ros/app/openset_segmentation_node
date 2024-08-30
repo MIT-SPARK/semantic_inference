@@ -1,0 +1,72 @@
+#!/usr/bin/env python3
+"""Node that runs openset segmentation."""
+import semantic_inference_ros
+import semantic_inference.models as models
+from semantic_inference import Config
+from semantic_inference_ros import Conversions, ImageWorkerConfig
+
+import rospy
+import torch
+from dataclasses import dataclass, field
+
+
+from semantic_inference_msgs.msg import FeatureImage, FeatureVectorStamped
+
+
+@dataclass
+class OpensetSegmentationNodeConfig(Config):
+    """Configuration for ClipPublisherNode."""
+
+    worker: ImageWorkerConfig = field(default_factory=ImageWorkerConfig)
+    model: models.OpensetSegmenterConfig = field(
+        default_factory=models.OpensetSegmenterConfig
+    )
+
+
+class OpensetSegmentationNode:
+    """Node to run openset segmentation."""
+
+    def __init__(self):
+        """Start subscriber and publisher."""
+        self.config = semantic_inference_ros.load_from_ros(
+            OpensetSegmentationNodeConfig, ns="~"
+        )
+
+        rospy.loginfo(f"'{rospy.get_name()}': Initializing with {self.config.show()}")
+        device = models.default_device()
+        self._model = models.OpensetSegmenter(self.config.model).to(device)
+        self._model.eval()
+        rospy.loginfo(f"'{rospy.get_name()}': finished initializing!")
+
+        self._pub = rospy.Publisher("~openset_segmentation", FeatureImage, queue_size=1)
+        self._clip_pub = rospy.Publisher("~feature", FeatureVectorStamped, queue_size=1)
+        self._worker = semantic_inference_ros.ImageWorker(
+            self.config.worker, "~image", self._spin_once
+        )
+
+    def _spin_once(self, header, img):
+        with torch.no_grad():
+            ret = self._model.segment(img, is_rgb_order=True).cpu()
+
+        msg = Conversions.to_feature_image(header, ret)
+        self._pub.publish(msg)
+        self._clip_pub.publish(
+            Conversions.to_stamped_feature(header, ret.image_embedding)
+        )
+
+    def spin(self):
+        """Wait until ros shuts down."""
+        self._worker.spin()
+
+
+def main():
+    """Start a node."""
+    rospy.init_node("openset_segmentation_node")
+    semantic_inference_ros.setup_ros_log_forwarding()
+
+    node = OpensetSegmentationNode()
+    node.spin()
+
+
+if __name__ == "__main__":
+    main()
