@@ -28,3 +28,26 @@ target_include_directories(${PROJECT_NAME} PUBLIC include ${catkin_INCLUDE_DIRS}
 target_link_libraries(
   ${PROJECT_NAME} ${catkin_LIBRARIES} semantic_inference::semantic_inference
 )
+
+install(
+  TARGETS ${PROJECT_NAME}
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}
+)
+
+install(DIRECTORY include/${PROJECT_NAME}/
+        DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+)
+
+install(DIRECTORY launch/ DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch)
+
+catkin_install_python(
+  PROGRAMS
+  app/clip_publisher_node
+  app/make_rosbag
+  app/merge_bag
+  app/openset_segmentation_node
+  DESTINATION
+  ${CATKIN_PACKAGE_BIN_DESTINATION}
+)

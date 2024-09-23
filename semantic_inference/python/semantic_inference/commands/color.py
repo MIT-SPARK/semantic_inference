@@ -1,15 +1,21 @@
-#!/usr/bin/env python3
-"""Script to make color config."""
-import matplotlib.colors as mcolors
-import seaborn as sns
-import distinctipy
-import pathlib
-import random
-import click
+"""Subcommands for handling colormaps."""
+
+import csv
 import math
-import yaml
+import pathlib
+import pprint
+import random
 import sys
 
+import click
+import distinctipy
+import matplotlib.colors as mcolors
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import yaml
+from matplotlib.patches import Rectangle
 
 EXPANDED_COLORS = {
     "black": [0, 0, 0],
@@ -159,9 +165,83 @@ def _write_config(label_config, group_colors, output_dir, config_name, csv_shift
             fout.write(f"{name},{color[0]},{color[1]},{color[2]},255,{idx}\r\n")
 
 
-@click.command()
-@click.argument("category_groups_path", type=click.Path(exists=True))
-@click.argument("output_path", type=click.Path(exists=True))
+# TODO(nathan) use better implementation
+# adapted from https://matplotlib.org/stable/gallery/color/named_colors.html
+def _plot_colortable(
+    color_dict,
+    name_dict,
+    sort_colors=True,
+    desiredcols=4,
+    emptycols=0,
+    cell_width=205,
+    cell_height=22,
+    swatch_width=22,
+    margin=12,
+    dpi=300,
+    alpha=0.8,
+):
+    N = len(color_dict)
+    ncols = desiredcols - emptycols
+    nrows = N // ncols + int(N % ncols > 0)
+
+    width = cell_width * ncols + 2 * margin
+    height = cell_height * nrows + 2 * margin
+
+    fig, ax = plt.subplots(figsize=(width / dpi, height / dpi), dpi=dpi)
+    fig.subplots_adjust(
+        margin / width,
+        margin / height,
+        (width - margin) / width,
+        (height - margin) / height,
+    )
+    ax.set_xlim(0, cell_width * ncols)
+    ax.set_ylim(cell_height * (nrows - 0.5), -cell_height / 2.0)
+    ax.yaxis.set_visible(False)
+    ax.xaxis.set_visible(False)
+    ax.set_axis_off()
+
+    labels = sorted([x for x in color_dict])
+    for i, label in enumerate(labels):
+        row = i % nrows
+        col = i // nrows
+        y = row * cell_height
+
+        swatch_start_x = cell_width * col
+        text_pos_x = cell_width * col + swatch_width + 7
+
+        ax.text(
+            text_pos_x,
+            y,
+            f"{name_dict[label]}",
+            fontsize=14,
+            horizontalalignment="left",
+            verticalalignment="center",
+        )
+
+        color = color_dict[label].tolist() + [alpha]
+        ax.add_patch(
+            Rectangle(
+                xy=(swatch_start_x, y - 9),
+                width=swatch_width,
+                height=18,
+                facecolor=color,
+                edgecolor="k",
+            )
+        )
+
+    plt.tight_layout()
+    return fig
+
+
+@click.group(name="color")
+def cli():
+    """Subcommands for color-related operations."""
+    pass
+
+
+@cli.command()
+@click.argument("categories", type=click.Path(exists=True))
+@click.argument("output", type=click.Path(exists=True))
 @click.option("-p", "--palette", default="husl", help="fallback color palette")
 @click.option("-s", "--seed", default=0, type=int, help="random seed")
 @click.option("-n", "--config-name", default=None, help="output config name")
@@ -173,18 +253,18 @@ def _write_config(label_config, group_colors, output_dir, config_name, csv_shift
     is_flag=True,
     help="use same palette size as original scripts",
 )
-def main(
-    category_groups_path,
-    output_path,
+def create(
+    categories,
+    output,
     palette,
     seed,
     config_name,
     csv_shift,
     force_compatible,
 ):
-    """Export a config."""
-    category_groups_path = pathlib.Path(category_groups_path).expanduser().absolute()
-    output_path = pathlib.Path(output_path).expanduser().absolute()
+    """Create a color map from CATEGORIES and output it to OUTPUT."""
+    category_groups_path = pathlib.Path(categories).expanduser().absolute()
+    output_path = pathlib.Path(output).expanduser().absolute()
 
     label_config = _read_label_config(category_groups_path)
     colors = _get_palette(
@@ -210,5 +290,50 @@ def main(
     )
 
 
-if __name__ == "__main__":
-    main()
+@cli.command()
+@click.argument("colormap", type=click.Path(exists=True))
+def show(colormap):
+    """Show a COLORMAP csv file by label."""
+    color_path = pathlib.Path(colormap).expanduser().absolute()
+    label_df = pd.read_csv(color_path)
+    unique_labels = sorted(label_df["id"].unique().tolist())
+    print(f"Labels: {unique_labels}\n")
+
+    for label in unique_labels:
+        names = label_df.loc[label_df["id"] == label, "name"].tolist()
+        print(f"label {label}:")
+        pprint.pprint(names)
+
+
+@cli.command()
+@click.argument("colormap", type=click.Path(exists=True))
+@click.option("-c", "--num-cols", type=int, default=4)
+@click.option("-d", "--dpi", type=float, default=100.0)
+@click.option("-o", "--output", default=None)
+@click.option("-a", "--alpha", type=float, default=0.8)
+def plot(colormap, num_cols, dpi, output, alpha):
+    """Plot COLORMAP showing correspondences between names and colors."""
+    color_dict = {}
+    name_dict = {}
+
+    sns.set()
+    sns.set_style("white")
+    sns.set_context("paper", font_scale=1.0)
+
+    csv_path = pathlib.Path(colormap)
+    with csv_path.open("r") as fin:
+        reader = csv.reader(fin)
+        next(reader)
+
+        for line in reader:
+            label = int(line[-1])
+            name_dict[label] = line[0]
+            color_dict[label] = np.squeeze(
+                np.array([float(x) for x in line[1:4]]) / 255
+            )
+
+    _plot_colortable(color_dict, name_dict, desiredcols=num_cols, dpi=dpi, alpha=alpha)
+    if output is None:
+        plt.show()
+    else:
+        plt.savefig(output, bbox_inches="tight", dpi=300)

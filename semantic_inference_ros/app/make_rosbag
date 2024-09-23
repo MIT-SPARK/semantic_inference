@@ -1,0 +1,192 @@
+#!/usr/bin/env python3
+"""Add openset image segmentation for all color images."""
+
+from semantic_inference import Config
+from semantic_inference.models import (
+    OpensetSegmenter,
+    OpensetSegmenterConfig,
+    default_device,
+)
+from semantic_inference_ros.ros_conversions import Conversions
+
+import rosbag
+import time
+import torch
+import click
+import pathlib
+import tqdm
+import tempfile
+import shutil
+
+
+def _split_topics(topic_str):
+    if ":" not in topic_str:
+        return topic_str, topic_str
+
+    parts = topic_str.split(":")
+    return parts[0], parts[1]
+
+
+def _get_type_map(bag):
+    info = bag.get_type_and_topic_info()[1]
+    topics = list(info.keys())
+    types = [x[0] for x in info.values()]
+    return {k: v for k, v in zip(topics, types)}
+
+
+def _get_clip_topic(topic):
+    new_topic = pathlib.Path(topic)
+    return str(new_topic.parent / "clip_vector")
+
+
+def _show_topic_map(topic_map, include_clip_vector):
+    if len(topic_map) == 0:
+        return "{}"
+
+    contents = ""
+    for t_in, t_out in topic_map.items():
+        msg = f"  - {t_in} (in) →  "
+        offset = len(msg)
+        msg += f"{t_out} (out)"
+        if include_clip_vector:
+            msg += "\n" + " " * offset + f"{_get_clip_topic(t_out)} (clip)"
+
+        contents += msg + "\n"
+
+    return contents[:-1]
+
+
+def _write_bag(model, path_in, topic_map, samples, add_clip_vector):
+    with tempfile.NamedTemporaryFile(suffix=".bag", delete=False) as fout:
+        path_out = fout.name
+        click.secho(f"Writing to {path_out}", fg="green")
+        with rosbag.Bag(str(path_in), "r") as bag, rosbag.Bag(path_out, "w") as bag_out:
+            topic_type_map = _get_type_map(bag)
+
+            topics = [x for x in topic_map]
+            N = bag.get_message_count(topic_filters=topics)
+
+            for topic, msg, t in tqdm.tqdm(bag.read_messages(topics=topics), total=N):
+                img = Conversions.to_image(msg, msg_type=topic_type_map.get(topic))
+
+                tic = time.perf_counter_ns()
+                with torch.no_grad():
+                    ret = model.segment(img, is_rgb_order=False).cpu()
+
+                toc = time.perf_counter_ns()
+                sample_ns = toc - tic
+                samples.append(sample_ns)
+
+                msg_out = Conversions.to_feature_image(msg.header, ret)
+                bag_out.write(topic_map[topic], msg_out, t)
+                if not add_clip_vector:
+                    continue
+
+                clip_topic = _get_clip_topic(topic_map[topic])
+                clip_msg = Conversions.to_stamped_feature(
+                    msg.header, ret.image_embedding
+                )
+                bag_out.write(clip_topic, clip_msg, t)
+
+    return path_out
+
+
+def _copy_bag_contents(path_in, path_out):
+    click.secho(f"Writing messages to '{path_out}' from '{path_in}'", fg="green")
+    path_in = str(path_in)
+    path_out = str(path_out)
+    with rosbag.Bag(path_in, "r") as bag, rosbag.Bag(path_out, "a") as bag_out:
+        N = bag.get_message_count()
+        for topic, msg, t in tqdm.tqdm(bag.read_messages(), total=N):
+            bag_out.write(topic, msg, t)
+
+
+def _load_model(config_path):
+    if config_path is not None:
+        config_path = pathlib.Path(config_path).expanduser().absolute()
+
+    if config_path is None or not config_path.exists():
+        click.secho("No config provided, using default!", fg="yellow")
+        config = OpensetSegmenterConfig()
+    else:
+        config = Config.load(OpensetSegmenterConfig, config_path)
+        click.secho(f"Using segmenter config from '{config_path}'", fg="green")
+
+    click.secho("Initializing segmenter...", fg="green")
+    model = OpensetSegmenter(config).to(default_device())
+    model.eval()
+    click.secho("Finished initializing segmenter!", fg="green")
+    return model
+
+
+@click.command()
+@click.argument("input_path", type=click.Path(exists=True))
+@click.argument("topics", type=str, nargs=-1)
+@click.option("--output", "-o", default=None, type=click.Path())
+@click.option("--copy/--no-copy", default=False, help="copy bag to output")
+@click.option("--clip-vec/--no-clip-vec", default=True, help="add image clip vector")
+@click.option(
+    "--config-path", "-c", default=None, type=click.Path(), help="segmentation config"
+)
+@click.option("--yes", "-y", is_flag=True, help="skip prompts")
+@click.option(
+    "--timing-log-path",
+    "-t",
+    default=None,
+    type=click.Path(),
+    help="timing log path save",
+)
+def main(input_path, topics, output, copy, clip_vec, config_path, yes, timing_log_path):
+    """
+    Parse a rosbag and compute openset segmentation for each image.
+
+    Args:
+        input_path: Input rosbag to read RGB images from
+        topics: RGB Image topics to read
+
+    Usage:
+        make_rosbag /path/to/bag [INPUT_TOPIC[:TOPIC_REMAP]...]
+    """
+    input_path = pathlib.Path(input_path).expanduser().absolute()
+    if output is not None:
+        output = pathlib.Path(output).expanduser().absolute()
+        if output.exists() and output != input_path:
+            click.secho(f"Output bag '{output}' already exists!", fg="red")
+            if not yes:
+                click.confirm("Overwrite?", abort=True, default=False)
+
+    overwriting = output is None or output == input_path
+    if overwriting:
+        click.secho(f"Writing to input bag '{input_path}'!", fg="yellow")
+        if not yes:
+            click.confirm("Proceed?", abort=True, default=False)
+
+    click.secho(f"Reading from '{input_path}'", fg="green")
+    click.secho("Topics:", fg="green")
+    topics = [_split_topics(x) for x in topics]
+    topic_map = {t_in: t_out for t_in, t_out in topics}
+    click.secho(_show_topic_map(topic_map, clip_vec), fg="green")
+
+    model = _load_model(config_path)
+
+    timing_samples = []
+    temp_path = _write_bag(model, input_path, topic_map, timing_samples, clip_vec)
+
+    if overwriting:
+        _copy_bag_contents(temp_path, input_path)
+    else:
+        if copy:
+            click.secho(f"Copying input '{input_path}' →  '{output}'", fg="green")
+            shutil.copy2(input_path, output)
+            _copy_bag_contents(temp_path, output)
+        else:
+            shutil.move(temp_path, output)
+
+    if timing_log_path is not None:
+        with open(timing_log_path, "w") as f:
+            for sample in timing_samples:
+                f.write(f"{sample}\n")
+
+
+if __name__ == "__main__":
+    main()

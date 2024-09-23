@@ -1,74 +1,71 @@
-# Semantic Inference Utilities
+# Semantic Inference
 
-Installation requires Cuda and TensorRT. You can add the Cuda repositories [here](https://developer.nvidia.com/cuda-downloads) by installing the `deb (network)` package or
+This repository provides code for running inference on images to provide both closed and open-set semantics.
+The repository is currently split into two pieces:
+  - Inference using dense 2D closed-set semantic segmentation models is implemented in c++ using TensorRT
+  - Inference using open-set segmentation models and language features is implemented in python
+
+Both pieces of the repository have a ROS interface associated with them, split between c++ and python as appropriate.
+
+## Getting started
+
+The recommended use-case for the repository is with ROS.
+We assume you have cloned this repository into your catkin workspace and run rosdep to get any missing dependencies.  This usually looks like the following:
+```bash
+cd /path/to/catkin_ws/src
+git clone git@github.com:MIT-SPARK/semantic_inference.git
+rosdep install --from-paths . --ignore-src -r -y
 ```
-wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-keyring_1.1-1_all.deb
-sudo dpkg -i cuda-keyring_1.1-1_all.deb
-sudo apt update
+We also assume some familiarity with working in ROS. A quick primer for setting up a minimal workspace is [below](#making-a-workspace).
+
+Follow one (or both) of the following setup-guides as necessary:
+- [Closed-Set](docs/closed_set.md#setting-up)
+- [Open-Set](docs/open_set.md#setting-up)
+
+## Running online
+
+The primary use-case for semantic inference is to be run as part of larger system that requires dense semantic information.
+
+## Running closed-set segmentation
+
+TBD
+
+## Running open-set segmentation
+
+TBD
+
+### Running offline
+
+It is also possible to make rosbags containing segmentation results.
+
+## Creating closed-set segmentation rosbags
+
+TBD
+
+## Creating open-set segmentation rosbags
+
+To create a rosbag containing the original bag contents *plus* the resulting open-set segmentation (the normal desired output), run the following
 ```
-
-Install the latest nvinfer and minimal cuda dependencies (you should check what version of cuda gets installed with TensorRT):
+rosrun semantic_inference_ros make_rosbag --copy /path/to/input_bag /color_topic:/output_topic -o /path/to/desired/output_bag
 ```
-sudo apt install libnvinfer-dev libnvonnxparsers-dev libnvinfer-plugin-dev cuda-nvcc-12-4
+replacing `/color_topic` and `/output_topic` with appropriate topic names (usually `/camera_name/color/image_raw` and `/camera_name/semantic/image_raw`).
+
+Additional options exist.
+Running without `--copy` will output just the open-set segmentation at the path specified by `-o`.
+If no output path is specified, the semantics will be added in-place to the bag after a confirmation prompt (you can disable the prompt with `-y`).
+Additional information and documentation is available via `--help`.
+
+## Making a workspace
+
+```bash
+# Initialize necessary tools for working with ROS and catkin
+sudo apt install python3-catkin-tools python3-rosdep
+sudo rosdep init
+rosdep update
+
+# Setup the workspace
+mkdir -p catkin_ws/src
+cd catkin_ws
+catkin init
+catkin config -DCMAKE_BUILD_TYPE=Release
 ```
-
-Installing a previous version:
-```
-export TRT_VERSION=8.6.1.6-1+cuda12.0
-sudo apt install libnvinfer-dev=$TRT_VERSION libnvonnxparsers-dev=$TRT_VERSION libnvinfer-plugins-dev=$TRT_VERSION libnvinfer-headers-dev=$TRT_VERSION libnvinfer-headers-plugin-dev=$TRT_VERSION cuda-nvcc-12-4
-```
-
-## Models
-
-Several pre-exported models live [here](https://drive.google.com/drive/folders/1GrmgFDFCssDxKe_Nyx8PPTK1pRMA0gEO?usp=sharing).
-We recommend using models within the dense2d folder (the top level models are deprecated).
-To use a specific model, pass in the appropriate argument (`model_name`) to the launch file being used.
-To check if the model is valid and show input/output names, run [this](python/scripts/check_onnx_model.py) script.
-
-See [here](exporting/NOTES.md) for details on exporting a new model.
-
----
-
-# Outdated Instructions
-
-## Python scripts
-
-For *most* of the scripts:
-
-```
-python3 -m venv semantic_recolor  # or whatever you want
-source semantic_recolor/bin/activate
-cd /path/to/semantic_recolor
-pip install --upgrade pip
-pip install wheel
-pip install -r scripts/requirements.txt
-```
-
-## New Datasets
-
-To adapt to a new dataset (or new set of labels), you will have to:
-
-  - Make a new grouping config (see [this](config/label_groupings/ade150_outdoor.yaml) or [this](config/label_groupings/ade150_indoor.yaml) for examples)
-  - Run [this](scripts/make_color_config.py) to export the color configuration. A typical invocation is `python scripts/make_color_config.py config/label_groupings/new_config.yaml config/colors/` from the root repo directory with your environment sourced.
-  - Pass in the appropriate arguments to the launch file (`dataset_name`)
-
-You can view the groupings for a particular category label space by running [this](scripts/show_label_groupings.py).
-A typical invocation is `python scripts/show_label_groupings.py resources/ade20k_categories.csv config/label_groupings/ade150_indoor.yaml` or `python scripts/show_label_groupings.py resources/mpcat40.tsv config/label_groupings/mpcat40_objects.yaml -n 1`.
-
-You can also view the groupings for a particular color csv files via [this](scripts/show_csv_groupings.py).
-For most color configs exported by this package, the group names will be one-to-one with the category labels.
-
-## Pre-recorded Semantics
-
-You can produce a rosbag of semantic images and labels using [this](scripts/make_rosbag.py). The script can be invoked like this:
-
-```
-python scripts/make_rosbag.py path/to/input/bag rgb_topic [--is-compressed]
-```
-
-The script reads every image in the input bag for the provided topic (which can optionally be a compressed image) and then sends the image to a remote "inference" server using zmq and gets back a label image which it writes to the output bag.
-See [this](third_party/one_former.py) for an example using oneformer.
-
-By default, the produced bag has both the original labels and a color image using the provided color configuration.
-You can use the semantically colored image directly like you would for the normal output of the online nodelet.
-Alternatively, you can use the recolor nodelet to recolor the labels online (especially if you want to change what labels map to what colors), see [this](launch/recolor_pointcloud.launch) for more details.

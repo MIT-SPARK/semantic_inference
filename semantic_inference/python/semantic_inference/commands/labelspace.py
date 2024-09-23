@@ -1,9 +1,10 @@
-#!/usr/bin/env python3
 """Show label to name mappings."""
-import click
-import pathlib
-import yaml
+
 import csv
+import pathlib
+
+import click
+import yaml
 
 
 def _load_catmap(filepath, cat_index=0, name_index=-1):
@@ -65,24 +66,24 @@ def _show_matches(groups, catmap, group_matches, cat_matches):
         print(f"{orig_str}||{new_str}")
 
 
+@click.group(name="labelspace")
+def cli():
+    """Subcommands dealing with labelspace configuration."""
+    pass
+
+
 @click.command()
-@click.argument("category_mapping_file")
-@click.argument("grouping_config_file")
+@click.argument("labelspace", type=click.Path(exists=True))
+@click.argument("grouping", type=click.Path(exists=True))
 @click.option("-n", "--name-index", default=-1, type=int, help="index for name column")
 @click.option("-l", "--label-index", default=0, type=int, help="index for label column")
-def main(category_mapping_file, grouping_config_file, name_index, label_index):
-    category_mapping_path = pathlib.Path(category_mapping_file).resolve()
-    if not category_mapping_path.exists():
-        click.secho(f"[FATAL]: {category_mapping_path} does not exist!", fg="red")
-
-    grouping_config_path = pathlib.Path(grouping_config_file).resolve()
-    if not grouping_config_path.exists():
-        click.secho(f"[FATAL]: {grouping_config_path} does not exist!", fg="red")
+def compare(labelspace, grouping, name_index, label_index):
+    """Compare original LABELSPACE to label grouping in GROUPING."""
+    labelspace_path = pathlib.Path(labelspace).resolve()
+    grouping_config_path = pathlib.Path(grouping).resolve()
 
     groups = _load_groups(grouping_config_path)
-    catmap = _load_catmap(
-        category_mapping_path, cat_index=label_index, name_index=name_index
-    )
+    catmap = _load_catmap(labelspace_path, cat_index=label_index, name_index=name_index)
 
     group_matches = {}
     for index, group in groups.items():
@@ -101,7 +102,3 @@ def main(category_mapping_file, grouping_config_file, name_index, label_index):
     _show_labels(groups, catmap)
     print("")
     _show_matches(groups, catmap, group_matches, cat_matches)
-
-
-if __name__ == "__main__":
-    main()

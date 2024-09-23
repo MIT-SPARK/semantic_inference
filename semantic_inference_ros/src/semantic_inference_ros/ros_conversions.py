@@ -11,9 +11,14 @@ class Conversions:
     bridge = cv_bridge.CvBridge()
 
     @classmethod
-    def to_image(cls, msg, encoding="passthrough"):
+    def to_image(cls, msg, encoding="passthrough", msg_type=None):
         """Convert sensor_msgs.Image to numpy array."""
-        return cls.bridge.imgmsg_to_cv2(msg, desired_encoding=encoding)
+        if msg_type is None or msg_type == "sensor_msgs/Image":
+            return cls.bridge.imgmsg_to_cv2(msg, desired_encoding=encoding)
+        elif msg_type == "sensor_msgs/CompressedImage":
+            return cls.bridge.compressed_imgmsg_to_cv2(msg, desired_encoding=encoding)
+        else:
+            raise ValueError(f"Message type '{msg_type} ({type(msg)})' not supported!")
 
     @staticmethod
     def to_feature(feature):
