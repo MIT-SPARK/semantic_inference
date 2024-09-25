@@ -41,13 +41,3 @@ install(DIRECTORY include/${PROJECT_NAME}/
 )
 
 install(DIRECTORY launch/ DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch)
-
-catkin_install_python(
-  PROGRAMS
-  app/clip_publisher_node
-  app/make_rosbag
-  app/merge_bag
-  app/openset_segmentation_node
-  DESTINATION
-  ${CATKIN_PACKAGE_BIN_DESTINATION}
-)
