@@ -1,0 +1,51 @@
+#!/usr/bin/env python3
+"""Node to encode language prompts as embeddings."""
+from dataclasses import dataclass
+from typing import Any
+
+import rospy
+import semantic_inference_ros
+from semantic_inference import Config, config_field
+from semantic_inference.models import default_device
+
+
+@dataclass
+class LanguageEmbeddingNodeConfig(Config):
+    """Configuration for LanguageEmbeddingNode."""
+
+    model: Any = config_field("clip", default="clip")
+    use_cuda: bool = True
+
+
+class LanguageEmbeddingNode:
+    """Node implementation."""
+
+    def __init__(self):
+        """Construct a feature encoder node."""
+        self.config = semantic_inference_ros.load_from_ros(
+            LanguageEmbeddingNodeConfig, ns="~"
+        )
+
+        rospy.loginfo(f"'{rospy.get_name()}': Initializing with {self.config.show()}")
+        self._model = self.config.model.create().to(
+            default_device(self.config.use_cuda)
+        )
+        rospy.loginfo(f"'{rospy.get_name()}': finished initializing!")
+        self._embedder = semantic_inference_ros.PromptEncoder(self._model)
+
+    def spin(self):
+        """Wait until ROS shuts down."""
+        rospy.spin()
+
+
+def main():
+    """Start the node."""
+    rospy.init_node("language_embedding_node")
+    semantic_inference_ros.setup_ros_log_forwarding()
+
+    node = LanguageEmbeddingNode()
+    node.spin()
+
+
+if __name__ == "__main__":
+    main()

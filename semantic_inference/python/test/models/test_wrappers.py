@@ -8,14 +8,14 @@ import pytest
 @pytest.mark.skipif(not helpers.validate_modules("clip"), reason="tbd")
 def test_clip_wrapper():
     """Test that input size works for open clip."""
-    model = models.ClipVisionWrapper.construct()
+    model = models.ClipWrapper.construct()
     assert model.input_size == 224
 
 
 @pytest.mark.skipif(not helpers.validate_modules("open_clip"), reason="tbd")
 def test_open_clip_wrapper():
     """Test that input size works for open clip."""
-    model = models.OpenClipVisionWrapper.construct()
+    model = models.OpenClipWrapper.construct()
     assert model.input_size == 224
 
 

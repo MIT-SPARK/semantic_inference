@@ -3,7 +3,10 @@ project(semantic_inference_msgs)
 
 find_package(catkin REQUIRED message_generation sensor_msgs std_msgs)
 
-add_message_files(FILES FeatureVector.msg FeatureVectorStamped.msg FeatureImage.msg)
+add_message_files(
+  FILES FeatureVector.msg FeatureVectors.msg FeatureVectorStamped.msg FeatureImage.msg
+)
+add_service_files(FILES EncodeFeature.srv)
 
 generate_messages(DEPENDENCIES sensor_msgs std_msgs)
 

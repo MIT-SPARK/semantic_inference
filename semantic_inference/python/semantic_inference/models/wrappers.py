@@ -1,13 +1,13 @@
 """Model wrappers for image segmentation."""
 
+import dataclasses
+
+import einops
+import torch
+import torch.nn as nn
+import torchvision
 from semantic_inference import root_path
 from semantic_inference.config import Config, register_config
-import torch.nn as nn
-import torch
-import torchvision
-
-import dataclasses
-import einops
 
 
 def models_path():
@@ -176,24 +176,24 @@ class DenseFeatures(nn.Module):
         return einops.rearrange(embeddings, "b (h w) c -> b h w c", h=h_out, w=w_out)
 
 
-class ClipVisionWrapper(nn.Module):
+class ClipWrapper(nn.Module):
     """Quick wrapper around clip to simplifiy interface for encoding images."""
 
     def __init__(self, config):
         """Load the visual encoder for CLIP."""
-        super(ClipVisionWrapper, self).__init__()
+        super(ClipWrapper, self).__init__()
         import clip
 
-        model, preprocess = clip.load(config.model_name)
-
         self.config = config
-        self.model = model.visual
-        self._transform = preprocess
+        self.model, self._transform = clip.load(config.model_name)
+        self._canary_param = nn.Parameter(torch.empty(0))
+        self._tokenize = clip.tokenize
 
+    @torch.no_grad()
     def forward(self, imgs):
         """Encode multiple images (without transformation)."""
         # TODO(nathan) think about validation
-        return self.model(imgs.to(self.model.conv1.weight.dtype))
+        return self.model.visual(imgs.to(self.model.dtype))
 
     @classmethod
     def construct(cls, **kwargs):
@@ -210,14 +210,25 @@ class ClipVisionWrapper(nn.Module):
     @property
     def input_size(self):
         """Get input patch size for clip."""
-        return self.model.input_resolution
+        return self.model.visual.input_resolution
+
+    @property
+    def device(self):
+        """Get current model device."""
+        return self._canary_param.device
 
     def get_dense_encoder(self):
         """Get corresponding dense encoder."""
         return DenseFeatures(self.model_name)
 
+    @torch.no_grad()
+    def embed_text(self, text):
+        """Encode text."""
+        tokens = self._tokenize(text).to(self.device)
+        return self.model.encode_text(tokens)
 
-@register_config("clip", name="clip", constructor=ClipVisionWrapper)
+
+@register_config("clip", name="clip", constructor=ClipWrapper)
 @dataclasses.dataclass
 class ClipConfig(Config):
     """Configuration for OpenCLIP."""
@@ -230,21 +241,20 @@ class ClipConfig(Config):
         return Config.load(cls, filepath)
 
 
-class OpenClipVisionWrapper(nn.Module):
+class OpenClipWrapper(nn.Module):
     """Quick wrapper around openclip to simplifiy image encoding interface."""
 
     def __init__(self, config):
         """Load the visual encoder for OpenCLIP."""
-        super(OpenClipVisionWrapper, self).__init__()
+        super(OpenClipWrapper, self).__init__()
         import open_clip
 
-        model, _, preprocess = open_clip.create_model_and_transforms(
+        self.config = config
+        self.model, _, self._transform = open_clip.create_model_and_transforms(
             config.model_name, pretrained=config.pretrained
         )
-
-        self.config = config
-        self.model = model.visual
-        self._transform = preprocess
+        self._canary_param = nn.Parameter(torch.empty(0))
+        # TODO(nathan) load tokenize function
 
     @classmethod
     def construct(cls, **kwargs):
@@ -255,24 +265,35 @@ class OpenClipVisionWrapper(nn.Module):
 
     def forward(self, imgs):
         """Encode multiple images (without transformation)."""
-        return self.model(imgs)
+        return self.visual.model(imgs)
 
     @property
     def input_size(self):
         """Get input patch size for clip."""
-        return self.model.image_size[0]
+        return self.model.visual.image_size[0]
 
     @property
     def model_name(self):
         """Get current model name."""
         return self.config.model_name
 
+    @property
+    def device(self):
+        """Get current model device."""
+        return self._canary_param.device
+
     def get_dense_encoder(self):
         """Get corresponding dense encoder."""
         return None
 
+    @torch.no_grad()
+    def embed_text(self, text):
+        """Encode text."""
+        tokens = self._tokenize(text).to(self.device)
+        return self.model.encode_text(tokens)
 
-@register_config("clip", name="open_clip", constructor=OpenClipVisionWrapper)
+
+@register_config("clip", name="open_clip", constructor=OpenClipWrapper)
 @dataclasses.dataclass
 class OpenClipConfig(Config):
     """Configuration for OpenCLIP."""

@@ -1,11 +1,13 @@
 """Base config class for config structures."""
 
-from semantic_inference.misc import Logger
+import copy
 import dataclasses
 import pathlib
 import pprint
-import copy
+
 import yaml
+
+from semantic_inference.misc import Logger
 
 
 class Config:
@@ -104,7 +106,9 @@ class ConfigFactory:
         instance._factories[category][name] = config_type
         instance._lookup[str(config_type)] = (category, name)
         if constructor:
-            instance._constructors[str(config_type)] = constructor
+            if category not in instance._constructors:
+                instance._constructors[category] = {}
+            instance._constructors[category][str(config_type)] = constructor
 
     @staticmethod
     def registered():
@@ -131,7 +135,7 @@ class ConfigFactory:
             return None
 
         typename = str(category_factories[name])
-        return instance._constructors.get(typename)
+        return instance._constructors[category][typename]
 
 
 class VirtualConfig:

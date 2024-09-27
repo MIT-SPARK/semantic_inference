@@ -1,0 +1,3 @@
+string prompt
+---
+semantic_inference_msgs/FeatureVectorStamped feature
