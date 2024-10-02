@@ -36,10 +36,12 @@ class OpensetSegmentationNode:
         self._model.eval()
         rospy.loginfo(f"'{rospy.get_name()}': finished initializing!")
 
-        self._pub = rospy.Publisher("~openset_segmentation", FeatureImage, queue_size=1)
-        self._clip_pub = rospy.Publisher("~feature", FeatureVectorStamped, queue_size=1)
+        self._pub = rospy.Publisher("~semantic/image_raw", FeatureImage, queue_size=1)
+        self._clip_pub = rospy.Publisher(
+            "~semantic/feature", FeatureVectorStamped, queue_size=1
+        )
         self._worker = semantic_inference_ros.ImageWorker(
-            self.config.worker, "~image", self._spin_once
+            self.config.worker, "~color/image_raw", self._spin_once
         )
         self._embedder = semantic_inference_ros.PromptEncoder(self._model.encoder)
 
