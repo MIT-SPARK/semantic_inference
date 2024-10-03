@@ -10,6 +10,7 @@ Most users should follow NVIDIA's documentation [here](https://docs.nvidia.com/d
 
 > **Note**<br>
 > The packages in this repository will compile without TensorRT and CUDA, and some functionality (e.g., remapping label images and visualizing the results) is available without TensorRT and CUDA.
+> If you do not have a NVIDIA GPU, you can skip straight to [building](#building).
 
 In some cases, a more minimal installation is desirable (e.g., containers).  The following steps *should* ensure a minimum viable installation of TensorRT:
 
@@ -53,6 +54,7 @@ catkin test semantic_inference
 
 Running dense 2D semantic segmentation requires obtaining a pre-trained model.
 Several pre-exported models live [here](https://drive.google.com/drive/folders/1GrmgFDFCssDxKe_Nyx8PPTK1pRMA0gEO?usp=sharing).
+By default, the code uses [this](https://drive.google.com/file/d/1XRcsyLSvqqhqNIaOI_vmqpUpmBT6gk9-/view?usp=drive_link) model.
 
 > **Note** <br>
 > We recommend using models within the [dense2d](https://drive.google.com/drive/folders/17p_ZZIxI9jI_3GjjtbMijC2WFnc9Bz-a?usp=sharing) folder, which are named corresponding to the labelspace they output to.
@@ -61,39 +63,44 @@ Several pre-exported models live [here](https://drive.google.com/drive/folders/1
 All models should be placed in the `models` directory of the `semantic_inference` package in local clone of the repository.
 To use a specific downloaded model, use the argument `model_name:=MODEL_NAME` when running the appropriate launch file (where `MODEL_NAME` is the filename of the model to use minus the extension).
 
-Note that the pipeline as implemented works with any pre-trained model exported to onnx as long as the model takes 32-bit float 3-channel tensors as input and outputs labels in a single-channel tensor as integers.
+Note that the pipeline as implemented works with any pre-trained model exported to [onnx](https://onnx.ai/) as long as the model takes 32-bit float 3-channel tensors as input and outputs labels in a single-channel tensor as integers.
 The pipeline can optionally rescale and offset the input tensor.
 See [here](exporting.md) for details on exporting a new model.
 
----
+### Python utilities
 
-# Outdated Instructions
+You may find it useful to set up some of the included model utilities. From the top-level of this repository, run:
+```
+python3 -m virtualenv /path/to/new/environment
+source /path/to/new/environment/bin/activate
+pip install ./semantic_inference
+```
 
-## New Datasets
+## Using closed-set segmentation online
 
-To adapt to a new dataset (or new set of labels), you will have to:
+To use the open-set segmentation as part of a larger system, include [semantic_inference.launch](../semantic_inference_ros/launch/semantic_inference.launch) in your launch file. Often this will look like this:
+```xml
+<launch>
+
+    <!-- ... rest of launch file ... -->
+
+    <remap from="semantic_inference/color/image_raw" to="YOUR_INPUT_TOPIC_HERE"/>
+    <include file="$(find semantic_inference_ros)/launch/semantic_inference.launch"/>
+
+</launch>
+```
+
+## Adding New Datasets
+
+To adapt to a new dataset (or to make a new grouping of labels), you will have to:
 
   - Make a new grouping config (see [this](config/label_groupings/ade150_outdoor.yaml) or [this](config/label_groupings/ade150_indoor.yaml) for examples)
-  - Run [this](scripts/make_color_config.py) to export the color configuration. A typical invocation is `python scripts/make_color_config.py config/label_groupings/new_config.yaml config/colors/` from the root repo directory with your environment sourced.
-  - Pass in the appropriate arguments to the launch file (`dataset_name`)
+  - Pass in the appropriate arguments to the launch file (`labelspace_name`)
 
-You can view the groupings for a particular category label space by running [this](scripts/show_label_groupings.py).
-A typical invocation is `python scripts/show_label_groupings.py resources/ade20k_categories.csv config/label_groupings/ade150_indoor.yaml` or `python scripts/show_label_groupings.py resources/mpcat40.tsv config/label_groupings/mpcat40_objects.yaml -n 1`.
-
-You can also view the groupings for a particular color csv files via [this](scripts/show_csv_groupings.py).
-For most color configs exported by this package, the group names will be one-to-one with the category labels.
-
-## Pre-recorded Semantics
-
-You can produce a rosbag of semantic images and labels using [this](scripts/make_rosbag.py). The script can be invoked like this:
-
+You can view the groupings for a particular labelspace by running `semantic_inference labelspace compare`.
+For a grouping of the ade20k labelspace:
+```bash
+source ~/path/to/environment/bin/activate
+cd path/to/semantic_inference
+semantic_inference labelspace compare resources/ade20k_categories.csv config/label_groupings/ade150_indoor.yaml
 ```
-python scripts/make_rosbag.py path/to/input/bag rgb_topic [--is-compressed]
-```
-
-The script reads every image in the input bag for the provided topic (which can optionally be a compressed image) and then sends the image to a remote "inference" server using zmq and gets back a label image which it writes to the output bag.
-See [this](third_party/one_former.py) for an example using oneformer.
-
-By default, the produced bag has both the original labels and a color image using the provided color configuration.
-You can use the semantically colored image directly like you would for the normal output of the online nodelet.
-Alternatively, you can use the recolor nodelet to recolor the labels online (especially if you want to change what labels map to what colors), see [this](launch/recolor_pointcloud.launch) for more details.
