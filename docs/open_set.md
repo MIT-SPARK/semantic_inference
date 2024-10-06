@@ -4,6 +4,12 @@
 
 The open-set segmentation interface works with and without ROS. For working with ROS, we assume you have already built your catkin workspace with this repository in it beforehand (i.e., by running `catkin build`).
 
+> **Note </br>**
+> If you intend only to use the open-set segmentation interface, you may want to turn off building against TensorRT, which you can do by the following:
+> ```
+> catkin config -a -DSEMANTIC_INFERENCE_USE_TRT=OFF
+> ```
+
 ### Installing
 
 We assume you are using a virtual environment. You may want to install `virtualenv` (usually `sudo apt install python3-virtualenv`) if you haven't already.

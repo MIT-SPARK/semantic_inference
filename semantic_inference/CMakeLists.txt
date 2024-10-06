@@ -8,6 +8,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 add_compile_options(-Wall -Wextra)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
+option(SEMANTIC_INFERENCE_USE_TRT "Build with TensorRT" ON)
 option(SEMANTIC_INFERENCE_BUILD_TESTS "Build tests" ON)
 option(BUILD_SHARED_LIBS "Build shared libs" ON)
 
@@ -18,10 +19,16 @@ find_package(CUDA)
 find_package(TensorRT COMPONENTS onnxparser infer_plugin)
 
 set(ENABLE_TENSORRT_CXX_VALUE 1)
-if(NOT CUDA_FOUND AND NOT TensorRT_FOUND)
+if(SEMANTIC_INFERENCE_USE_TRT
+   AND NOT CUDA_FOUND
+   AND NOT TensorRT_FOUND
+)
   message(WARNING "TensorRT is required for inference to run!"
                   " Follow the install instructions (if possible) to enable inference"
   )
+  set(ENABLE_TENSORRT_CXX_VALUE 0)
+elseif(NOT SEMANTIC_INFERENCE_USE_TRT)
+  message(STATUS "Disabling TensorRT! Inference will not work!")
   set(ENABLE_TENSORRT_CXX_VALUE 0)
 endif()
 
