@@ -143,7 +143,7 @@ void SegmentationNodelet::runSegmentation(const sensor_msgs::ImageConstPtr& msg)
     return;
   }
 
-  const auto derotated = image_rotator_.rotate(result.labels);
+  const auto derotated = image_rotator_.derotate(result.labels);
   output_pub_->publish(img_ptr->header, derotated, img_ptr->image);
 }
 
