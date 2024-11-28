@@ -30,9 +30,10 @@
  * * -------------------------------------------------------------------------- */
 
 #pragma once
-#include <cv_bridge/cv_bridge.h>
-#include <image_transport/image_transport.h>
 #include <semantic_inference/image_recolor.h>
+
+#include <cv_bridge/cv_bridge.hpp>
+#include <image_transport/image_transport.hpp>
 
 namespace semantic_inference {
 
