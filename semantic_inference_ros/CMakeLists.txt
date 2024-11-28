@@ -12,6 +12,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(image_transport REQUIRED)
+find_package(message_filters REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_components REQUIRED)
 find_package(semantic_inference REQUIRED)
@@ -25,13 +26,19 @@ target_include_directories(
   ${PROJECT_NAME} PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
                          "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
 )
-ament_target_dependencies(
-  ${PROJECT_NAME} cv_bridge image_transport rclcpp rclcpp_components
+target_link_libraries(
+  ${PROJECT_NAME}
+  PUBLIC cv_bridge::cv_bridge image_transport::image_transport
+         message_filters::message_filters rclcpp::rclcpp rclcpp_components::component
+         semantic_inference::semantic_inference
 )
-target_link_libraries(${PROJECT_VERSION} semantic_inference::semantic_inference)
 
 rclcpp_components_register_node(
   ${PROJECT_NAME} PLUGIN semantic_inference_ros::MaskNode EXECUTABLE mask_node
+)
+
+rclcpp_components_register_node(
+  ${PROJECT_NAME} PLUGIN semantic_inference_ros::RecolorNode EXECUTABLE recolor_node
 )
 
 install(

@@ -31,13 +31,14 @@
 
 #pragma once
 
-#include <ros/ros.h>
 #include <semantic_inference/logging.h>
+
+#include <rclcpp/logging.hpp>
 
 namespace semantic_inference {
 
 struct RosLogSink : logging::LogSink {
-  RosLogSink() = default;
+  explicit RosLogSink(const rclcpp::Logger logger) : logger(logger){};
   virtual ~RosLogSink() = default;
 
   void dispatch(const logging::LogEntry& entry) const override {
@@ -45,23 +46,25 @@ struct RosLogSink : logging::LogSink {
     ss << entry.prefix() << entry.message();
     switch (entry.level) {
       case logging::Level::WARNING:
-        ROS_WARN_STREAM(ss.str());
+        RCLCPP_WARN_STREAM(logger, ss.str());
         break;
       case logging::Level::ERROR:
-        ROS_ERROR_STREAM(ss.str());
+        RCLCPP_ERROR_STREAM(logger, ss.str());
         break;
       case logging::Level::FATAL:
-        ROS_FATAL_STREAM(ss.str());
+        RCLCPP_FATAL_STREAM(logger, ss.str());
         break;
       case logging::Level::INFO:
-        ROS_INFO_STREAM(ss.str());
+        RCLCPP_INFO_STREAM(logger, ss.str());
         break;
       default:
       case logging::Level::DEBUG:
-        ROS_DEBUG_STREAM(ss.str());
+        RCLCPP_DEBUG_STREAM(logger, ss.str());
         break;
     }
   }
+
+  rclcpp::Logger logger;
 };
 
 }  // namespace semantic_inference
