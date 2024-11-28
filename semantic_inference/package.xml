@@ -1,12 +1,13 @@
 <?xml version="1.0"?>
-<package format="2">
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
   <name>semantic_inference</name>
   <version>0.0.1</version>
   <description>Package wrapping tensort for semantic segmentation</description>
 
   <maintainer email="na26933@mit.edu">Nathan Hughes</maintainer>
   <author email="na26933@mit.edu">Nathan Hughes</author>
-  <license>TODO</license>
+  <license>BSD 3-Clause</license>
 
   <buildtool_depend>cmake</buildtool_depend>
   <depend>config_utilities</depend>
