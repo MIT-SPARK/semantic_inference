@@ -49,7 +49,7 @@ class OutputPublisher {
 
   OutputPublisher(const Config& config, image_transport::ImageTransport& transport);
 
-  void publish(const std_msgs::Header& header,
+  void publish(const std_msgs::msg::Header& header,
                const cv::Mat& labels,
                const cv::Mat& color);
 

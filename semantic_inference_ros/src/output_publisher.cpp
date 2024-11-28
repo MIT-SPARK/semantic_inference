@@ -32,7 +32,6 @@
 #include "semantic_inference_ros/output_publisher.h"
 
 #include <config_utilities/config.h>
-#include <config_utilities/parsing/ros.h>
 #include <config_utilities/validation.h>
 #include <semantic_inference/image_utilities.h>
 #include <semantic_inference/logging.h>
@@ -56,7 +55,7 @@ OutputPublisher::OutputPublisher(const Config& config, ImageTransport& transport
   }
 }
 
-void OutputPublisher::publish(const std_msgs::Header& header,
+void OutputPublisher::publish(const std_msgs::msg::Header& header,
                               const cv::Mat& labels,
                               const cv::Mat& color) {
   if (labels.empty() || color.empty()) {
