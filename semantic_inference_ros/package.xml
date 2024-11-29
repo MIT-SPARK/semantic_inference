@@ -21,6 +21,5 @@
 
   <export>
       <build_type>ament_cmake</build_type>
-      <nodelet plugin="${prefix}/nodelet_plugins.xml"/>
   </export>
 </package>
