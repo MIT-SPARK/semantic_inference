@@ -22,7 +22,7 @@ find_package(semantic_inference REQUIRED)
 add_library(
   ${PROJECT_NAME} SHARED
   src/mask_nodelet.cpp src/rgbd_segmentation_nodelet.cpp src/segmentation_nodelet.cpp
-  src/output_publisher.cpp src/recolor_nodelet.cpp
+  src/output_publisher.cpp src/relabel_nodelet.cpp
 )
 target_include_directories(
   ${PROJECT_NAME} PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
@@ -36,11 +36,21 @@ target_link_libraries(
 )
 
 rclcpp_components_register_node(
+  ${PROJECT_NAME} PLUGIN semantic_inference::SegmentationNode EXECUTABLE
+  closed_set_node
+)
+
+rclcpp_components_register_node(
   ${PROJECT_NAME} PLUGIN semantic_inference::MaskNode EXECUTABLE mask_node
 )
 
 rclcpp_components_register_node(
-  ${PROJECT_NAME} PLUGIN semantic_inference_ros::RecolorNode EXECUTABLE recolor_node
+    ${PROJECT_NAME} PLUGIN semantic_inference::RelabelNode EXECUTABLE relabel_node
+)
+
+rclcpp_components_register_node(
+  ${PROJECT_NAME} PLUGIN semantic_inference::RGBDSegmentationNode EXECUTABLE
+  rgbd_closed_set_node
 )
 
 install(
@@ -49,8 +59,7 @@ install(
   LIBRARY DESTINATION lib
 )
 install(PROGRAMS app/clip_publisher_node app/language_embedding_node app/make_rosbag
-                 app/merge_rosbag app/openset_segmentation_node
-        DESTINATION lib/${PROJECT_NAME}
+                 app/merge_rosbag app/open_set_node DESTINATION lib/${PROJECT_NAME}
 )
 install(DIRECTORY include/${PROJECT_NAME}/ DESTINATION include/${PROJECT_NAME}/)
 install(DIRECTORY launch/ DESTINATION shared/${PROJECT_NAME}/launch)

@@ -29,8 +29,7 @@
 #
 """Utility for prompt embedding service."""
 
-import rospy
-from semantic_inference_msgs.srv import EncodeFeature, EncodeFeatureResponse
+from semantic_inference_msgs.srv import EncodeFeature
 
 from semantic_inference_ros.ros_conversions import Conversions
 
@@ -38,8 +37,9 @@ from semantic_inference_ros.ros_conversions import Conversions
 class PromptEncoder:
     """Node implementation."""
 
-    def __init__(self, model, name="~embed"):
+    def __init__(self, node, model, name="~embed"):
         """Construct a feature encoder node."""
+        self._node = node
         self._model = model
         self._srv = rospy.Service(name, EncodeFeature, self._callback)
 
