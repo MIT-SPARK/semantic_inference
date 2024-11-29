@@ -53,18 +53,18 @@ class MaskNode : public rclcpp::Node {
 
 MaskNode::MaskNode(const rclcpp::NodeOptions& options)
     : rclcpp::Node("mask_node", options) {
-  declare_parameter<std::string>("mask_path");
+  declare_parameter<std::string>("mask_path", "");
 
   std::string mask_path = "";
-  if (!get_parameter("mask_path", mask_path)) {
-    RCLCPP_FATAL(get_logger(), "mask path is required!");
+  if (!get_parameter("mask_path", mask_path) || mask_path.empty()) {
+    RCLCPP_FATAL(get_logger(), "Mask path is required!");
     throw std::runtime_error("mask path not specified");
   }
 
-  RCLCPP_INFO_STREAM(get_logger(), "Reading mask from " << mask_path);
+  RCLCPP_INFO_STREAM(get_logger(), "Reading mask from '" << mask_path << "'");
   mask_ = cv::imread(mask_path, cv::IMREAD_GRAYSCALE);
   if (mask_.empty()) {
-    RCLCPP_FATAL(get_logger(), "invalid mask; mat is empty");
+    RCLCPP_FATAL(get_logger(), "Invalid mask; mat is empty");
     throw std::runtime_error("invalid mask!");
   }
 
@@ -78,7 +78,7 @@ void MaskNode::callback(const Image::ConstSharedPtr& msg) {
   try {
     img_ptr = cv_bridge::toCvShare(msg);
   } catch (const cv_bridge::Exception& e) {
-    RCLCPP_ERROR_STREAM(get_logger(), "cv_bridge exception: " << e.what());
+    RCLCPP_ERROR_STREAM(get_logger(), "Image conversion error: " << e.what());
     return;
   }
 
