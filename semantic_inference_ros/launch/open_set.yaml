@@ -1,0 +1,15 @@
+---
+launch:
+  - arg: {name: verbose, default: true, doc: Show output via stdout}
+  - arg: {name: config_path, default: $(find semantic_inference_ros)/config/openset_segmentation.yaml,
+      doc: Configuration file for object detector}
+  - arg: {name: min_separation_s, default: 0.0, doc: Minimum time between input images}
+  - node:
+    pkg: semantic_inference_ros
+    exec: openset_segmentation_node
+    name: semantic_inference
+    output: $(eval 'screen' if verbose else 'log')
+    required: true
+    param:
+      - {from: $(arg config_path)}
+      - {name: worker/min_separation_s, value: $(arg min_separation_s)}
