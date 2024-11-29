@@ -18,8 +18,9 @@ find_package(rclcpp REQUIRED)
 find_package(rclcpp_components REQUIRED)
 find_package(semantic_inference REQUIRED)
 
+# SHARED is required for composable nodes
 add_library(
-  ${PROJECT_NAME}
+  ${PROJECT_NAME} SHARED
   src/mask_nodelet.cpp src/rgbd_segmentation_nodelet.cpp src/segmentation_nodelet.cpp
   src/output_publisher.cpp src/recolor_nodelet.cpp
 )
@@ -35,7 +36,7 @@ target_link_libraries(
 )
 
 rclcpp_components_register_node(
-  ${PROJECT_NAME} PLUGIN semantic_inference_ros::MaskNode EXECUTABLE mask_node
+  ${PROJECT_NAME} PLUGIN semantic_inference::MaskNode EXECUTABLE mask_node
 )
 
 rclcpp_components_register_node(
