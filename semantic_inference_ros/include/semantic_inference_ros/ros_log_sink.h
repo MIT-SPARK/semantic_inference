@@ -38,7 +38,7 @@
 namespace semantic_inference {
 
 struct RosLogSink : logging::LogSink {
-  explicit RosLogSink(const rclcpp::Logger logger) : logger(logger){};
+  explicit RosLogSink(const rclcpp::Logger& logger) : logger(logger) {}
   virtual ~RosLogSink() = default;
 
   void dispatch(const logging::LogEntry& entry) const override {

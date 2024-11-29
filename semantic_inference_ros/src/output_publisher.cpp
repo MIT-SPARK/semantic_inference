@@ -117,13 +117,12 @@ void OutputPublisher::publish(const std_msgs::msg::Header& header,
 }
 
 void declare_config(OutputPublisher::Config& config) {
-  using namespace config;
-  name("OutputPublisher::Config");
-  field(config.recolor, "recolor");
-  field(config.publish_labels, "publish_labels");
-  field(config.publish_color, "publish_color");
-  field(config.publish_overlay, "publish_overlay");
-  field(config.overlay_alpha, "overlay_alpha");
+  config::name("OutputPublisher::Config");
+  config::field(config.recolor, "recolor");
+  config::field(config.publish_labels, "publish_labels");
+  config::field(config.publish_color, "publish_color");
+  config::field(config.publish_overlay, "publish_overlay");
+  config::field(config.overlay_alpha, "overlay_alpha");
 }
 
 }  // namespace semantic_inference

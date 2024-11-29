@@ -35,12 +35,13 @@
 #include <semantic_inference/segmenter.h>
 
 #include <atomic>
-#include <cv_bridge/cv_bridge.hpp>
-#include <image_transport/image_transport.hpp>
 #include <mutex>
-#include <opencv2/core.hpp>
 #include <optional>
 #include <thread>
+
+#include <cv_bridge/cv_bridge.hpp>
+#include <image_transport/image_transport.hpp>
+#include <opencv2/core.hpp>
 
 #include "semantic_inference_ros/output_publisher.h"
 #include "semantic_inference_ros/ros_log_sink.h"
@@ -79,12 +80,11 @@ class SegmentationNode : public rclcpp::Node {
 };
 
 void declare_config(SegmentationNode::Config& config) {
-  using namespace config;
-  name("SegmentationNode::Config");
-  field(config.segmenter, "segmenter");
-  field(config.output, "output");
-  field(config.worker, "worker");
-  field(config.image_rotator, "image_rotator");
+  config::name("SegmentationNode::Config");
+  config::field(config.segmenter, "segmenter");
+  config::field(config.output, "output");
+  config::field(config.worker, "worker");
+  config::field(config.image_rotator, "image_rotator");
 }
 
 SegmentationNode::SegmentationNode(const rclcpp::NodeOptions& options)

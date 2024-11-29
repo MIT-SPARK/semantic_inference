@@ -83,10 +83,9 @@ class RecolorNode : public rclcpp::Node {
 };
 
 void declare_config(RecolorNode::Config& config) {
-  using namespace config;
-  name("RecolorNode::Config");
-  field(config.output, "output");
-  field(config.worker, "worker");
+  config::name("RecolorNode::Config");
+  config::field(config.output, "output");
+  config::field(config.worker, "worker");
 }
 
 RecolorNode::RecolorNode(const rclcpp::NodeOptions& options)
