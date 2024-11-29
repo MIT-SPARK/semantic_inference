@@ -34,6 +34,7 @@
 #include <config_utilities/types/path.h>
 
 #include <chrono>
+
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 
@@ -42,7 +43,7 @@
 #include "semantic_inference/model_config.h"
 #include "semantic_inference/segmenter.h"
 
-using namespace semantic_inference;
+namespace semantic_inference {
 
 struct DemoConfig {
   std::filesystem::path input_file;
@@ -88,6 +89,41 @@ void outputDemoImage(const DemoConfig& config,
   cv::imwrite(output_path.string(), new_image);
 }
 
+void evaluateTiming(const Segmenter& segmenter, const cv::Mat& img, size_t passes) {
+  const auto start = std::chrono::high_resolution_clock::now();
+  size_t num_valid = 0;
+  for (size_t iter = 0; iter < passes; ++iter) {
+    num_valid += (segmenter.infer(img)) ? 1 : 0;
+  }
+
+  const auto end = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> elapsed_s = end - start;
+
+  double average_period_s = elapsed_s.count() / static_cast<double>(passes);
+  double percent_valid = static_cast<double>(num_valid) / static_cast<double>(passes);
+
+  SLOG(INFO) << "Inference took an average of " << average_period_s << " [s] over "
+             << passes << " total iterations of which " << percent_valid * 100.0
+             << "% were valid";
+}
+
+bool runInference(const DemoConfig& config,
+                  const Segmenter& segmenter,
+                  const cv::Mat& img) {
+  auto result = segmenter.infer(img);
+  if (!result) {
+    SLOG(FATAL) << "Failed to run inference";
+    return false;
+  }
+
+  SLOG(INFO) << getLabelPercentages(result.labels);
+  outputDemoImage(config, img, result.labels);
+  return true;
+}
+
+}  // namespace semantic_inference
+
+// TODO(nathan) command line parsing
 int main(int argc, char* argv[]) {
   logging::Logger::addSink("cout",
                            std::make_shared<logging::CoutSink>(logging::Level::INFO));
@@ -103,7 +139,7 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  const auto config = config::fromYamlFile<DemoConfig>(config_path);
+  semantic_inference::DemoConfig config;
   SLOG(INFO) << "\n" << config::toString(config);
 
   cv::Mat img = cv::imread(config.input_file.string());
@@ -112,31 +148,11 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  Segmenter segmenter(config.segmenter);
-  auto result = segmenter.infer(img);
-  if (!result) {
-    SLOG(FATAL) << "Failed to run inference";
-    return 1;
+  semantic_inference::Segmenter segmenter(config.segmenter);
+  if (!semantic_inference::runInference(config, segmenter, img)) {
+    return EXIT_FAILURE;
   }
 
-  const auto start = std::chrono::high_resolution_clock::now();
-  size_t num_valid = 0;
-  for (int iter = 0; iter < config.num_timing_inferences; ++iter) {
-    num_valid += (segmenter.infer(img)) ? 1 : 0;
-  }
-  const auto end = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double> elapsed_s = end - start;
-
-  double average_period_s =
-      elapsed_s.count() / static_cast<double>(config.num_timing_inferences);
-  double percent_valid = static_cast<double>(num_valid) /
-                         static_cast<double>(config.num_timing_inferences);
-
-  SLOG(INFO) << "Inference took an average of " << average_period_s << " [s] over "
-             << config.num_timing_inferences << " total iterations of which "
-             << percent_valid * 100.0 << "% were valid";
-
-  SLOG(INFO) << getLabelPercentages(result.labels);
-  outputDemoImage(config, img, result.labels);
+  semantic_inference::evaluateTiming(segmenter, img, config.num_timing_inferences);
   return EXIT_SUCCESS;
 }
