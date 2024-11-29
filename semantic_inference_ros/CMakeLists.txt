@@ -10,6 +10,7 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 find_package(ament_cmake REQUIRED)
+find_package(ament_cmake_python REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(image_transport REQUIRED)
 find_package(message_filters REQUIRED)
@@ -46,6 +47,10 @@ install(
   EXPORT ${PROJECT_NAME}-targets
   LIBRARY DESTINATION lib
 )
+install(PROGRAMS app/clip_publisher_node app/language_embedding_node app/make_rosbag
+                 app/merge_rosbag app/openset_segmentation_node
+        DESTINATION lib/${PROJECT_NAME}
+)
 install(DIRECTORY include/${PROJECT_NAME}/ DESTINATION include/${PROJECT_NAME}/)
 install(DIRECTORY launch/ DESTINATION shared/${PROJECT_NAME}/launch)
 
@@ -55,4 +60,5 @@ if(BUILD_TESTING)
 endif()
 
 ament_export_targets(${PROJECT_NAME}-targets)
+ament_python_install_package(${PROJECT_NAME})
 ament_package()
