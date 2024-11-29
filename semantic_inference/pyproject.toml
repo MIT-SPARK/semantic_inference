@@ -44,3 +44,6 @@ openset = [
 ]
 f3rm = ["f3rm@git+https://github.com/f3rm/f3rm.git"]
 sam = ["segment-anything@git+https://github.com/facebookresearch/segment-anything.git"]
+
+[tool.pytest.ini_options]
+markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]
