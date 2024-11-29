@@ -35,12 +35,13 @@
 #include <semantic_inference/segmenter.h>
 
 #include <atomic>
-#include <cv_bridge/cv_bridge.hpp>
-#include <image_transport/image_transport.hpp>
 #include <mutex>
-#include <opencv2/core.hpp>
 #include <optional>
 #include <thread>
+
+#include <cv_bridge/cv_bridge.hpp>
+#include <image_transport/image_transport.hpp>
+#include <opencv2/core.hpp>
 
 #include "semantic_inference_ros/output_publisher.h"
 #include "semantic_inference_ros/ros_log_sink.h"

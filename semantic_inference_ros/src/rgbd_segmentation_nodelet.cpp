@@ -75,12 +75,12 @@ class RGBDSegmentationNode : public rclcpp::Node {
 };
 
 void declare_config(RGBDSegmentationNode::Config& config) {
-  using namespace config;
-  name("RGBDSegmentationNode::Config");
-  field(config.segmenter, "segmenter");
-  field(config.output, "output");
-  field(config.depth_scale, "depth_scale");
-  check(config.depth_scale, GT, 0.0, "depth_scale");
+  using config::GT;
+  config::name("RGBDSegmentationNode::Config");
+  config::field(config.segmenter, "segmenter");
+  config::field(config.output, "output");
+  config::field(config.depth_scale, "depth_scale");
+  config::check(config.depth_scale, GT, 0.0, "depth_scale");
 }
 
 RGBDSegmentationNode::RGBDSegmentationNode(const rclcpp::NodeOptions& options)

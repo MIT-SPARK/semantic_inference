@@ -28,11 +28,14 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * * -------------------------------------------------------------------------- */
+#pragma once
 
 #include <config_utilities/config.h>
 #include <semantic_inference/logging.h>
 
 #include <atomic>
+#include <list>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <thread>
@@ -46,11 +49,10 @@ struct WorkerConfig {
 };
 
 inline void declare_config(WorkerConfig& config) {
-  using namespace config;
-  name("WorkerConfig");
-  field(config.max_queue_size, "max_queue_size");
-  field(config.image_separation_s, "image_separation_s", "s");
-  field(config.poll_period_us, "poll_period_us", "us");
+  config::name("WorkerConfig");
+  config::field(config.max_queue_size, "max_queue_size");
+  config::field(config.image_separation_s, "image_separation_s", "s");
+  config::field(config.poll_period_us, "poll_period_us", "us");
 }
 
 template <typename T>
