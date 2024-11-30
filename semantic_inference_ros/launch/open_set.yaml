@@ -1,7 +1,6 @@
 ---
 launch:
-  - arg: {name: config_path, default: $(find-pkg-share semantic_inference_ros)/config/openset_segmentation.yaml,
-      description: Configuration file for object detector}
+  - arg: {name: config_path, default: $(find-pkg-share semantic_inference_ros)/config/openset_segmentation.yaml, description: Configuration file for object detector}
   - arg: {name: min_period_s, default: '0.0', description: Minimum time between inputs}
   - arg: {name: compressed_rgb, default: false, description: Triggers decompression for RGB stream}
   - node:
