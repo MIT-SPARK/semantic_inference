@@ -62,7 +62,7 @@ install(PROGRAMS app/clip_publisher_node app/language_embedding_node app/make_ro
                  app/merge_rosbag app/open_set_node DESTINATION lib/${PROJECT_NAME}
 )
 install(DIRECTORY include/${PROJECT_NAME}/ DESTINATION include/${PROJECT_NAME}/)
-install(DIRECTORY launch/ DESTINATION shared/${PROJECT_NAME}/launch)
+install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

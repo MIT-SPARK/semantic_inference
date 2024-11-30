@@ -2,7 +2,9 @@
 """Node that runs openset segmentation."""
 from dataclasses import dataclass, field
 
-import rospy
+import rclpy
+from rclpy.node import Node
+
 import semantic_inference.models as models
 import semantic_inference_ros
 import torch
@@ -12,7 +14,7 @@ from semantic_inference_ros import Conversions, ImageWorkerConfig
 
 
 @dataclass
-class OpensetSegmentationNodeConfig(Config):
+class OpenSetNodeConfig(Config):
     """Configuration for ClipPublisherNode."""
 
     worker: ImageWorkerConfig = field(default_factory=ImageWorkerConfig)
@@ -21,29 +23,28 @@ class OpensetSegmentationNodeConfig(Config):
     )
 
 
-class OpensetSegmentationNode:
+class OpenSetNode(Node):
     """Node to run openset segmentation."""
 
     def __init__(self):
         """Start subscriber and publisher."""
-        self.config = semantic_inference_ros.load_from_ros(
-            OpensetSegmentationNodeConfig, ns="~"
-        )
+        super(OpenSetNode, self).__init__("open_set_node")
+        self.config = semantic_inference_ros.load_from_ros(OpenSetNodeConfig, ns="~")
 
-        rospy.loginfo(f"'{rospy.get_name()}': Initializing with {self.config.show()}")
+        self.get_logger().info(f"Initializing with {self.config.show()}")
         device = models.default_device()
         self._model = models.OpensetSegmenter(self.config.model).to(device)
         self._model.eval()
-        rospy.loginfo(f"'{rospy.get_name()}': finished initializing!")
+        self.get_logger().info("Finished initializing!")
 
-        self._pub = rospy.Publisher("~semantic/image_raw", FeatureImage, queue_size=1)
-        self._clip_pub = rospy.Publisher(
-            "~semantic/feature", FeatureVectorStamped, queue_size=1
+        self._pub = self.create_publisher(FeatureImage, "~/semantic/image_raw", 1)
+        self._clip_pub = self.create_publisher(
+            FeatureVectorStamped, "~/semantic/feature", 1
         )
         self._worker = semantic_inference_ros.ImageWorker(
-            self.config.worker, "~color/image_raw", self._spin_once
+            self, self.config.worker, "~/color/image_raw", self._spin_once
         )
-        self._embedder = semantic_inference_ros.PromptEncoder(self._model.encoder)
+        self._embedder = semantic_inference_ros.PromptEncoder(self, self._model.encoder)
 
     def _spin_once(self, header, img):
         with torch.no_grad():
@@ -55,18 +56,24 @@ class OpensetSegmentationNode:
             Conversions.to_stamped_feature(header, ret.image_embedding)
         )
 
-    def spin(self):
-        """Wait until ros shuts down."""
-        self._worker.spin()
+    def stop(self):
+        """Stop the underlying image worker."""
+        self._worker.stop()
 
 
 def main():
     """Start a node."""
-    rospy.init_node("openset_segmentation_node")
-    semantic_inference_ros.setup_ros_log_forwarding()
+    rclpy.init()
 
-    node = OpensetSegmentationNode()
-    node.spin()
+    node = None
+    try:
+        node = OpenSetNode()
+        semantic_inference_ros.setup_ros_log_forwarding(node)
+        rclpy.spin(node)
+    finally:
+        rclpy.try_shutdown()
+        if node is not None:
+            node.stop()
 
 
 if __name__ == "__main__":
