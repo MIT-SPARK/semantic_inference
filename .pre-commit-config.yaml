@@ -29,7 +29,7 @@ repos:
         additional_dependencies: [flake8-docstrings]
         exclude: .*setup\.py
   - repo: https://github.com/lyz-code/yamlfix
-    rev: main
+    rev: 1.17.0
     hooks:
       - id: yamlfix
-        entry: env YAMLFIX_LINE_LENGTH=80 yamlfix
+        entry: env YAMLFIX_LINE_LENGTH=120 yamlfix
