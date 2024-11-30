@@ -65,12 +65,12 @@ def load_ros_params(ns=""):
 
         _insert_nested(params[curr], "/".join(rest), value)
 
-    resolved = "" if ns == "" else rospy.resolve_name(ns)
-    param_names = rospy.get_param_names()
+    # resolved = "" if ns == "" else rospy.resolve_name(ns)
+    # param_names = rospy.get_param_names()
     params = {}
-    for name in param_names:
-        if resolved == "" or name.find(resolved) == 0:
-            _insert_nested(params, _relative_to(resolved, name), rospy.get_param(name))
+    #     for name in param_names:
+    # if resolved == "" or name.find(resolved) == 0:
+    # _insert_nested(params, _relative_to(resolved, name), rospy.get_param(name))
 
     return params
 
