@@ -2,18 +2,18 @@
 launch:
   - arg: {name: config_path, default: $(find-pkg-share semantic_inference_ros)/config/openset_segmentation.yaml, description: Configuration file for object detector}
   - arg: {name: min_period_s, default: '0.0', description: Minimum time between inputs}
-  - arg: {name: compressed_rgb, default: false, description: Triggers decompression for RGB stream}
+  - arg: {name: compressed_rgb, default: 'false', description: Triggers decompression for RGB stream}
   - node:
       if: $(var compressed_rgb)
       pkg: image_transport
       exec: republish
       name: decompress_rgb
       args: compressed in:=semantic_inference/color/image_raw raw out:=semantic_inference/color/image_raw
-  - node:
+  - configured_node:
       pkg: semantic_inference_ros
       exec: open_set_node
       name: semantic_inference
       on_exit: shutdown
-      param:
+      config:
         - {from: $(var config_path)}
         - {name: worker/min_separation_s, value: $(var min_period_s)}
