@@ -35,7 +35,6 @@ from dataclasses import dataclass
 
 import sensor_msgs.msg
 
-import rclpy
 import queue
 import threading
 import time
