@@ -10,7 +10,8 @@
     <arg name="use_prerecorded_semantics" default="false" doc="Remap prerecorded labels instead of running inference"/>
     <arg name="force_rebuild" default="false" doc="Force TensorRT to rebuild engine file"/>
     <!-- Input configuration -->
-    <arg name="rgb_image_transport" default="raw" doc="Input image transport type"/>
+    <arg name="compressed_rgb" default="false" doc="Triggers decompression for RGB stream"/>
+    <arg name="rgb_image_transport" default="$(eval 'compressed' if compressed_rgb else 'raw')" doc="Input image transport type"/>
     <arg name="max_image_queue_size" default="1" doc="Max number of images to store"/>
     <arg name="min_separation_s" default="0.0" doc="Enforced separation between input images"/>
     <arg name="rotation_type" default="none" doc="Input camera rotation"/>
