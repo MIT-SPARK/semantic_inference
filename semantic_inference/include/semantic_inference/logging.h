@@ -54,6 +54,7 @@ class Logger {
   static Logger& instance();
   static void addSink(const std::string& name, const LogSink::Ptr& sink);
   static void dispatchLogEntry(const LogEntry& entry);
+  static void logMessage(Level level, const std::string& message);
 
  private:
   Logger();
@@ -64,7 +65,7 @@ class Logger {
 
 class LogEntry {
  public:
-  LogEntry(Level level, const std::string& filename, int lineno);
+  LogEntry(Level level, const std::string& filename = "", int lineno = 0);
 
   ~LogEntry();
 
@@ -93,6 +94,8 @@ struct CoutSink : logging::LogSink {
 
   Level level;
 };
+
+void setConfigUtilitiesLogger();
 
 }  // namespace logging
 

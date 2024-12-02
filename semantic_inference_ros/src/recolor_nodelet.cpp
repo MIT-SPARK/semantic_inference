@@ -94,6 +94,7 @@ void declare_config(RecolorNodelet::Config& config) {
 void RecolorNodelet::onInit() {
   ros::NodeHandle nh = getPrivateNodeHandle();
   logging::Logger::addSink("ros", std::make_shared<RosLogSink>());
+  logging::setConfigUtilitiesLogger();
 
   transport_.reset(new image_transport::ImageTransport(nh));
 
@@ -125,7 +126,7 @@ void RecolorNodelet::publish(const ColorLabelPacket& msg) const {
   try {
     color_ptr = cv_bridge::toCvShare(msg.color, "rgb8");
   } catch (const cv_bridge::Exception& e) {
-    ROS_ERROR_STREAM("cv_bridge exception: " << e.what());
+    SLOG(ERROR) << "cv_bridge exception: " << e.what();
     return;
   }
 
@@ -133,7 +134,7 @@ void RecolorNodelet::publish(const ColorLabelPacket& msg) const {
   try {
     label_ptr = cv_bridge::toCvShare(msg.labels);
   } catch (const cv_bridge::Exception& e) {
-    ROS_ERROR_STREAM("cv_bridge exception: " << e.what());
+    SLOG(ERROR) << "cv_bridge exception: " << e.what();
     return;
   }
 

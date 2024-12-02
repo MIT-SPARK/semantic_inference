@@ -91,6 +91,7 @@ void declare_config(SegmentationNodelet::Config& config) {
 void SegmentationNodelet::onInit() {
   ros::NodeHandle nh = getPrivateNodeHandle();
   logging::Logger::addSink("ros", std::make_shared<RosLogSink>());
+  logging::setConfigUtilitiesLogger();
 
   config_ = config::fromRos<SegmentationNodelet::Config>(nh);
   SLOG(INFO) << "\n" << config::toString(config_);

@@ -42,6 +42,7 @@
 #include <semantic_inference/segmenter.h>
 
 #include "semantic_inference_ros/output_publisher.h"
+#include "semantic_inference_ros/ros_log_sink.h"
 
 namespace semantic_inference {
 
@@ -87,8 +88,11 @@ void declare_config(RgbdSegmentationNodelet::Config& config) {
 
 void RgbdSegmentationNodelet::onInit() {
   auto nh = getPrivateNodeHandle();
+  logging::Logger::addSink("ros", std::make_shared<RosLogSink>());
+  logging::setConfigUtilitiesLogger();
+
   config_ = config::fromRos<Config>(nh);
-  ROS_INFO_STREAM("config: " << config::toString(config_));
+  SLOG(INFO) << "config: " << config::toString(config_);
   config::checkValid(config_);
 
   segmenter_ = std::make_unique<Segmenter>(config_.segmenter);
@@ -107,7 +111,7 @@ void RgbdSegmentationNodelet::callback(const sensor_msgs::ImageConstPtr& rgb_msg
   try {
     img_ptr = cv_bridge::toCvShare(rgb_msg, "rgb8");
   } catch (const cv_bridge::Exception& e) {
-    ROS_ERROR_STREAM("cv_bridge exception: " << e.what());
+    SLOG(ERROR) << "cv_bridge exception: " << e.what();
     return;
   }
 
@@ -115,7 +119,7 @@ void RgbdSegmentationNodelet::callback(const sensor_msgs::ImageConstPtr& rgb_msg
   try {
     depth_img_ptr = cv_bridge::toCvShare(depth_msg);
   } catch (const cv_bridge::Exception& e) {
-    ROS_ERROR_STREAM("cv_bridge exception: " << e.what());
+    SLOG(ERROR) << "cv_bridge exception: " << e.what();
     return;
   }
 
@@ -128,7 +132,7 @@ void RgbdSegmentationNodelet::callback(const sensor_msgs::ImageConstPtr& rgb_msg
 
   const auto result = segmenter_->infer(img_ptr->image, depth_img_float);
   if (!result) {
-    ROS_ERROR("failed to run inference!");
+    SLOG(ERROR) << "failed to run inference!";
     return;
   }
 
