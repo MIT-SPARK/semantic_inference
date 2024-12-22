@@ -85,6 +85,7 @@ void declare_config(RGBDSegmentationNode::Config& config) {
 
 RGBDSegmentationNode::RGBDSegmentationNode(const rclcpp::NodeOptions& options)
     : Node("rgbd_segmentation_node", options) {
+  logging::Logger::addSink("ros", std::make_shared<RosLogSink>(get_logger()));
   logging::setConfigUtilitiesLogger();
 
   // config_ = config::fromRos<Config>(nh);
