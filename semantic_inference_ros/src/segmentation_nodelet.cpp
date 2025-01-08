@@ -29,6 +29,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * * -------------------------------------------------------------------------- */
 
+#include "semantic_inference_ros/segmentation_nodelet.h"
+
 #include <config_utilities/config_utilities.h>
 #include <semantic_inference/image_rotator.h>
 #include <semantic_inference/model_config.h>
@@ -50,36 +52,6 @@
 namespace semantic_inference {
 
 using sensor_msgs::msg::Image;
-
-class SegmentationNode : public rclcpp::Node {
- public:
-  using ImageWorker = Worker<Image::ConstSharedPtr>;
-
-  struct Config {
-    Segmenter::Config segmenter;
-    WorkerConfig worker;
-    ImageRotator::Config image_rotator;
-    bool show_output_config = false;
-  };
-
-  explicit SegmentationNode(const rclcpp::NodeOptions& options);
-
-  virtual ~SegmentationNode();
-
- private:
-  void runSegmentation(const Image::ConstSharedPtr& msg);
-
-  Config config_;
-  OutputPublisher::Config output_;
-
-  std::unique_ptr<Segmenter> segmenter_;
-  ImageRotator image_rotator_;
-  std::unique_ptr<ImageWorker> worker_;
-
-  std::unique_ptr<image_transport::ImageTransport> transport_;
-  std::unique_ptr<OutputPublisher> output_pub_;
-  image_transport::Subscriber sub_;
-};
 
 void declare_config(SegmentationNode::Config& config) {
   using namespace config;

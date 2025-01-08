@@ -1,14 +1,18 @@
 ---
 launch:
-  # segmentation model options. Make sure you have one downloaded. Options:
+  # Segmentation configuration
+  # Other model options
   # - ade20k-hrnetv2-c1
   # - ade20k-mobilnetv2dilated-c1_deepsup
   - arg: {name: model_name, default: ade20k-efficientvit_seg_l2, description: Model to use}
   - arg: {name: use_prerecorded, default: 'false', description: Remap prerecorded labels}
   - arg: {name: force_rebuild, default: 'false', description: Force TensorRT to rebuild engine}
+  # Run options
+  - arg: {name: debug, default: 'false', description: Run with GDB}
+  - arg: {name: verbose, default: 'true', description: Disable console logging if false}
   # Input configuration
-  - arg: {name: compressed_rgb, default: false, description: Triggers decompression for RGB stream}
-  - arg: {name: rgb_image_transport, default: $(eval 'compressed' if compressed_rgb else 'raw')}
+  - arg: {name: compressed_rgb, default: 'false', description: Triggers decompression for RGB stream}
+  - arg: {name: rgb_image_transport, default: $(if $(var compressed_rgb) 'compressed' 'raw')}
   - arg: {name: max_image_queue_size, default: '1', description: Max number of images to store}
   - arg: {name: min_separation_s, default: '0.0', description: Time separation between inputs}
   - arg: {name: rotation_type, default: none, description: Input camera rotation}
@@ -21,9 +25,12 @@ launch:
       exec: closed_set_node
       name: semantic_inference
       on_exit: shutdown
+      args: |
+        $(if $(not $(var verbose)) '--disable-stdout-logs')
+        $(find-pkg-share semantic_inference_ros)/config/models/$(var model_name).yaml
+        $(find-pkg-share semantic_inference_ros)/config/label_groupings/$(var labelspace_name).yaml
+      launch-prefix: $(if $(var debug) 'gdb -ex run --args')
       param:
-        - {from: $(find-pkg-share semantic_inference_ros)/config/models/$(var model_name).yaml}
-        - {from: $(find-pkg-share semantic_inference_ros)/config/label_groupings/$(var labelspace_name).yaml}
         - {name: segmenter/model/model_file, value: $(find-pkg-share semantic_inference_ros)/models/$(var model_name).onnx}
         - {name: segmenter/model/engine_file, value: $(find-pkg-share semantic_inference_ros)/engines/$(var model_name).trt}
         - {name: segmenter/model/force_rebuild, value: $(var force_rebuild)}

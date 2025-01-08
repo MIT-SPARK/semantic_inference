@@ -35,10 +35,13 @@ target_link_libraries(
          semantic_inference::semantic_inference
 )
 
-rclcpp_components_register_node(
-  ${PROJECT_NAME} PLUGIN semantic_inference::SegmentationNode EXECUTABLE
-  closed_set_node
-)
+add_executable(closed_set_node app/closed_set_node.cpp)
+target_link_libraries(closed_set_node ${PROJECT_NAME})
+
+#rclcpp_components_register_node(
+  #${PROJECT_NAME} PLUGIN semantic_inference::SegmentationNode EXECUTABLE
+  #closed_set_node
+#)
 
 rclcpp_components_register_node(
   ${PROJECT_NAME} PLUGIN semantic_inference::MaskNode EXECUTABLE mask_node
@@ -54,9 +57,10 @@ rclcpp_components_register_node(
 )
 
 install(
-  TARGETS ${PROJECT_NAME}
+  TARGETS ${PROJECT_NAME} closed_set_node
   EXPORT ${PROJECT_NAME}-targets
   LIBRARY DESTINATION lib
+  RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
 install(PROGRAMS app/clip_publisher_node app/language_embedding_node app/make_rosbag
                  app/merge_rosbag app/open_set_node DESTINATION lib/${PROJECT_NAME}
