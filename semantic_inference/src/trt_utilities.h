@@ -36,6 +36,7 @@
 #include <memory>
 #include <numeric>
 #include <string>
+#include <optional>
 
 #include <opencv2/core/mat.hpp>
 
