@@ -35,10 +35,12 @@
 #include <filesystem>
 #include <memory>
 #include <numeric>
-#include <string>
 #include <optional>
+#include <string>
 
 #include <opencv2/core/mat.hpp>
+
+#include "semantic_inference/model_config.h"
 
 namespace semantic_inference {
 
@@ -94,9 +96,7 @@ RuntimePtr getRuntime(const std::string& verbosity);
 EnginePtr deserializeEngine(nvinfer1::IRuntime& runtime,
                             const std::filesystem::path& engine_path);
 
-EnginePtr buildEngineFromOnnx(nvinfer1::IRuntime& runtime,
-                              const std::filesystem::path& model_path,
-                              const std::filesystem::path& engine_path,
-                              const std::string& verbosity = "INFO");
+EnginePtr buildEngineFromOnnx(const ModelConfig& model_config,
+                              nvinfer1::IRuntime& runtime);
 
 }  // namespace semantic_inference

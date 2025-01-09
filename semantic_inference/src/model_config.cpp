@@ -34,20 +34,45 @@
 #include <config_utilities/config.h>
 #include <config_utilities/types/path.h>
 
+#include <cstdlib>
+
 namespace semantic_inference {
+
+std::filesystem::path getModelDirectory() {
+  const auto env_path = std::getenv("SEMANTIC_INFERENCE_MODEL_DIR");
+  if (env_path) {
+    return std::filesystem::absolute(std::filesystem::path(env_path));
+  }
+
+  const auto home_path = std::getenv("HOME");
+  if (!home_path) {
+    throw std::runtime_error(
+        "cannot infer default model location via HOME! Please set "
+        "SEMANTIC_INFERENCE_MODEL_DIR instead!");
+  }
+
+  return std::filesystem::path(home_path) / ".semantic_inference";
+}
+
+std::filesystem::path ModelConfig::model_path() const {
+  return getModelDirectory() / model_file;
+}
+
+std::filesystem::path ModelConfig::engine_path() const {
+  return model_path().replace_extension(".trt");
+}
 
 void declare_config(ModelConfig& config) {
   using namespace config;
   name("ModelConfig");
   // params
   field<Path>(config.model_file, "model_file");
-  field<Path>(config.engine_file, "engine_file");
   field(config.log_severity, "log_severity");
   field(config.force_rebuild, "force_rebuild");
   field(config.color, "color");
   field(config.depth, "depth");
   // checks
-  check<Path::Exists>(config.model_file, "model_file");
+  check<Path::Exists>(config.model_path(), "model_file");
   checkIsOneOf(config.log_severity,
                {"INTERNAL_ERROR", "ERROR", "WARNING", "INFO", "VERBOSE"},
                "log_severity");

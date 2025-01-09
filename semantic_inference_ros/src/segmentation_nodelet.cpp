@@ -86,7 +86,15 @@ SegmentationNode::SegmentationNode(const rclcpp::NodeOptions& options)
   }
 
   image_rotator_ = ImageRotator(config_.image_rotator);
+}
 
+SegmentationNode::~SegmentationNode() {
+  if (worker_) {
+    worker_->stop();
+  }
+}
+
+void SegmentationNode::start() {
   transport_ = std::make_unique<image_transport::ImageTransport>(shared_from_this());
   output_pub_ = std::make_unique<OutputPublisher>(output_, *transport_);
   worker_ = std::make_unique<ImageWorker>(
@@ -96,12 +104,6 @@ SegmentationNode::SegmentationNode(const rclcpp::NodeOptions& options)
 
   sub_ = transport_->subscribe(
       "color/image_raw", 1, &ImageWorker::addMessage, worker_.get());
-}
-
-SegmentationNode::~SegmentationNode() {
-  if (worker_) {
-    worker_->stop();
-  }
 }
 
 void SegmentationNode::runSegmentation(const Image::ConstSharedPtr& msg) {

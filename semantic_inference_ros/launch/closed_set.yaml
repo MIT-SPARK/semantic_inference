@@ -1,12 +1,16 @@
 ---
 launch:
   # Segmentation configuration
-  # Other model options
-  # - ade20k-hrnetv2-c1
-  # - ade20k-mobilnetv2dilated-c1_deepsup
-  - arg: {name: model_name, default: ade20k-efficientvit_seg_l2, description: Model to use}
-  - let: {name: model_path, value: $(find-pkg-share semantic_inference_ros)/models/$(var model_name).onnx}
-  - let: {name: engine_path, value: $(find-pkg-share semantic_inference_ros)/engines/$(var model_name).trt}
+  - arg:
+      name: model_name
+      # Other model options:
+      # - ade20k-hrnetv2-c1
+      # - ade20k-mobilnetv2dilated-c1_deepsup
+      default: ade20k-efficientvit_seg_l2
+      description: >
+        Model to use (typically the filename without the .onnx extension).
+        Can be specified as an absolute path, but requires settings 'model_config' to the correct filepath.
+  - arg: {name: model_config, default: $(find-pkg-share semantic_inference_ros)/config/models/$(var model_name).yaml, description: Model-specific configuration}
   - arg: {name: use_prerecorded, default: 'false', description: Remap prerecorded labels}
   - arg: {name: force_rebuild, default: 'false', description: Force TensorRT to rebuild engine}
   # Run options
@@ -27,11 +31,11 @@ launch:
       exec: closed_set_node
       name: semantic_inference
       on_exit: shutdown
-      launch-prefix: $(if $(var debug) 'gdb -ex run --args')
+      launch-prefix: $(if $(var debug) 'gdbserver localhost:3000')
       args: >
-        --config-utilities-file $(find-pkg-share semantic_inference_ros)/config/models/$(var model_name).yaml
+        --config-utilities-file $(var model_config)
         --config-utilities-file $(find-pkg-share semantic_inference_ros)/config/label_groupings/$(var labelspace_name).yaml
-        --config-utilities-yaml {segmenter: {model: {model_file: $(var model_path), engine_file: $(var engine_path), force_rebuild: $(var force_rebuild)}}}
+        --config-utilities-yaml {segmenter: {model: {model_file: $(var model_name).onnx, force_rebuild: $(var force_rebuild)}}}
         --config-utilities-yaml {output: {recolor: {colormap_path: $(var colormap_path)}}}
         --config-utilities-yaml {worker: {max_queue_size: $(var max_image_queue_size), image_separation_s: $(var min_separation_s)}}
         --config-utilities-yaml {image_rotator: {rotation: $(var rotation_type)}}
@@ -41,7 +45,7 @@ launch:
       exec: recolor_node
       name: semantic_inference
       on_exit: shutdown
-      args: |
+      args: |-
         $(if $(not $(var verbose)) --disable-stdout-logs)
         --config-utilities-file $(find-pkg-share semantic_inference_ros)/config/label_groupings/$(var labelspace_name).yaml
         --config-utilities-yaml {worker: {max_queue_size: $(var max_image_queue_size),  image_separation_s: $(var min_separation_s)}}

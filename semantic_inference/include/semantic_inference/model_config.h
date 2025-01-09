@@ -41,12 +41,17 @@ namespace semantic_inference {
 
 struct ModelConfig {
   std::filesystem::path model_file;
-  std::filesystem::path engine_file;
   std::string log_severity = "INFO";
   bool force_rebuild = false;
+  size_t min_optimization_size = 100;
+  size_t max_optimization_size = 2000;
+  size_t target_optimization_size = 500;
 
   ColorConverter::Config color;
   DepthConverter::Config depth;
+
+  std::filesystem::path model_path() const;
+  std::filesystem::path engine_path() const;
 };
 
 void declare_config(ModelConfig& config);

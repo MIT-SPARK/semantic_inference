@@ -66,6 +66,8 @@ class SegmentationNode : public rclcpp::Node {
 
   virtual ~SegmentationNode();
 
+  void start();
+
  private:
   void runSegmentation(const sensor_msgs::msg::Image::ConstSharedPtr& msg);
 
