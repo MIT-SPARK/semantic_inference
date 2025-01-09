@@ -5,6 +5,8 @@ launch:
   # - ade20k-hrnetv2-c1
   # - ade20k-mobilnetv2dilated-c1_deepsup
   - arg: {name: model_name, default: ade20k-efficientvit_seg_l2, description: Model to use}
+  - let: {name: model_path, value: $(find-pkg-share semantic_inference_ros)/models/$(var model_name).onnx}
+  - let: {name: engine_path, value: $(find-pkg-share semantic_inference_ros)/engines/$(var model_name).trt}
   - arg: {name: use_prerecorded, default: 'false', description: Remap prerecorded labels}
   - arg: {name: force_rebuild, default: 'false', description: Force TensorRT to rebuild engine}
   # Run options
@@ -25,26 +27,21 @@ launch:
       exec: closed_set_node
       name: semantic_inference
       on_exit: shutdown
-      args: |
-        $(if $(not $(var verbose)) '--disable-stdout-logs')
-        $(find-pkg-share semantic_inference_ros)/config/models/$(var model_name).yaml
-        $(find-pkg-share semantic_inference_ros)/config/label_groupings/$(var labelspace_name).yaml
       launch-prefix: $(if $(var debug) 'gdb -ex run --args')
-      param:
-        - {name: segmenter/model/model_file, value: $(find-pkg-share semantic_inference_ros)/models/$(var model_name).onnx}
-        - {name: segmenter/model/engine_file, value: $(find-pkg-share semantic_inference_ros)/engines/$(var model_name).trt}
-        - {name: segmenter/model/force_rebuild, value: $(var force_rebuild)}
-        - {name: output/recolor/colormap_path, value: $(var colormap_path)}
-        - {name: worker/max_queue_size, value: $(var max_image_queue_size)}
-        - {name: worker/image_separation_s, value: $(var min_separation_s)}
-        - {name: image_rotator/rotation, value: $(var rotation_type)}
+      args: >
+        --config-utilities-file $(find-pkg-share semantic_inference_ros)/config/models/$(var model_name).yaml
+        --config-utilities-file $(find-pkg-share semantic_inference_ros)/config/label_groupings/$(var labelspace_name).yaml
+        --config-utilities-yaml {segmenter: {model: {model_file: $(var model_path), engine_file: $(var engine_path), force_rebuild: $(var force_rebuild)}}}
+        --config-utilities-yaml {output: {recolor: {colormap_path: $(var colormap_path)}}}
+        --config-utilities-yaml {worker: {max_queue_size: $(var max_image_queue_size), image_separation_s: $(var min_separation_s)}}
+        --config-utilities-yaml {image_rotator: {rotation: $(var rotation_type)}}
   - node:  # Remapping pre-recorded labels
       if: $(var use_prerecorded)
       pkg: semantic_inference_ros
       exec: recolor_node
       name: semantic_inference
       on_exit: shutdown
-      param:
-        - {from: $(find-pkg-share semantic_inference_ros)/config/label_groupings/$(var labelspace_name).yaml}
-        - {name: worker/max_queue_size, value: $(var max_image_queue_size)}
-        - {name: worker/image_separation_s, value: $(var min_separation_s)}
+      args: |
+        $(if $(not $(var verbose)) --disable-stdout-logs)
+        --config-utilities-file $(find-pkg-share semantic_inference_ros)/config/label_groupings/$(var labelspace_name).yaml
+        --config-utilities-yaml {worker: {max_queue_size: $(var max_image_queue_size),  image_separation_s: $(var min_separation_s)}}

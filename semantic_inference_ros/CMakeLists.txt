@@ -38,17 +38,16 @@ target_link_libraries(
 add_executable(closed_set_node app/closed_set_node.cpp)
 target_link_libraries(closed_set_node ${PROJECT_NAME})
 
-#rclcpp_components_register_node(
-  #${PROJECT_NAME} PLUGIN semantic_inference::SegmentationNode EXECUTABLE
-  #closed_set_node
-#)
+# rclcpp_components_register_node(
+# ${PROJECT_NAME} PLUGIN semantic_inference::SegmentationNode EXECUTABLE closed_set_node
+# )
 
 rclcpp_components_register_node(
   ${PROJECT_NAME} PLUGIN semantic_inference::MaskNode EXECUTABLE mask_node
 )
 
 rclcpp_components_register_node(
-    ${PROJECT_NAME} PLUGIN semantic_inference::RelabelNode EXECUTABLE relabel_node
+  ${PROJECT_NAME} PLUGIN semantic_inference::RelabelNode EXECUTABLE relabel_node
 )
 
 rclcpp_components_register_node(
@@ -68,8 +67,6 @@ install(PROGRAMS app/clip_publisher_node app/language_embedding_node app/make_ro
 install(DIRECTORY include/${PROJECT_NAME}/ DESTINATION include/${PROJECT_NAME}/)
 install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
 install(DIRECTORY config DESTINATION share/${PROJECT_NAME})
-
-
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
