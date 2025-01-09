@@ -32,6 +32,7 @@
 #include "semantic_inference_ros/segmentation_nodelet.h"
 
 #include <config_utilities/config_utilities.h>
+#include <config_utilities/parsing/context.h>
 #include <semantic_inference/image_rotator.h>
 #include <semantic_inference/model_config.h>
 #include <semantic_inference/segmenter.h>
@@ -67,9 +68,9 @@ SegmentationNode::SegmentationNode(const rclcpp::NodeOptions& options)
   logging::Logger::addSink("ros", std::make_shared<RosLogSink>(get_logger()));
   logging::setConfigUtilitiesLogger();
 
-  // config_ = config::fromRos<SegmentationNode::Config>(nh);
+  config_ = config::fromContext<SegmentationNode::Config>();
   // NOTE(nathan) parsed separately to avoid spamming console with labelspace remapping
-  // output_ = config::fromRos<OutputPublisher::Config>(nh, "output");
+  output_ = config::fromContext<OutputPublisher::Config>("output");
   SLOG(INFO) << "\n" << config::toString(config_);
   if (config_.show_output_config) {
     SLOG(INFO) << "\n" << config::toString(output_);
