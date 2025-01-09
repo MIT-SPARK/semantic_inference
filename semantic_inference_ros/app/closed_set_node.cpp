@@ -7,7 +7,6 @@
 #include "semantic_inference_ros/segmentation_nodelet.h"
 
 int main(int argc, char* argv[]) {
-  config::Settings().print_width = 300;
   config::initContext(argc, argv);
 
   rclcpp::init(argc, argv);
