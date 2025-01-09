@@ -12,11 +12,13 @@ int main(int argc, char* argv[]) {
 
   rclcpp::init(argc, argv);
 
-  const rclcpp::NodeOptions options;
-  auto node = std::make_shared<semantic_inference::SegmentationNode>(options);
-  node->start();
+  {  // node lifetime scope
+    const rclcpp::NodeOptions options;
+    auto node = std::make_shared<semantic_inference::SegmentationNode>(options);
+    node->start();
+    rclcpp::spin(node);
+  }  // end node lifetime scope
 
-  rclcpp::spin(node);
   rclcpp::shutdown();
   return 0;
 }

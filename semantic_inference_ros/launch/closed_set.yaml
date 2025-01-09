@@ -34,7 +34,7 @@ launch:
       launch-prefix: $(if $(var debug) 'gdbserver localhost:3000')
       args: >
         --config-utilities-file $(var model_config)
-        --config-utilities-file $(find-pkg-share semantic_inference_ros)/config/label_groupings/$(var labelspace_name).yaml
+        --config-utilities-file $(find-pkg-share semantic_inference_ros)/config/label_groupings/$(var labelspace_name).yaml@output/recolor
         --config-utilities-yaml {segmenter: {model: {model_file: $(var model_name).onnx, force_rebuild: $(var force_rebuild)}}}
         --config-utilities-yaml {output: {recolor: {colormap_path: $(var colormap_path)}}}
         --config-utilities-yaml {worker: {max_queue_size: $(var max_image_queue_size), image_separation_s: $(var min_separation_s)}}
