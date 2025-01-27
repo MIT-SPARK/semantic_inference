@@ -51,7 +51,8 @@ groups:
   - {name: bicycle, labels: [128]}
   - {name: food, labels: [99, 121]}
   - {name: clothes, labels: [82, 93, 132]}
-  - {name: thing, labels: [68, 75, 90, 109, 120, 131, 133, 138, 142, 144, 126, 136, 140, 143, 148]}
+  - {name: thing, labels: [68, 75, 90, 109, 120, 131, 133, 138, 142, 144, 126, 136,
+      140, 143, 148]}
   - {name: animal, labels: [127]}
   - {name: human, labels: [13]}
 specified_colors:
@@ -71,4 +72,3 @@ specified_colors:
   - {name: seating, source: expanded, color: red}
   - {name: surface, source: expanded, color: magenta}
   - {name: window, source: expanded, color: lightred}
-default_color: [0.9677975592919913, 0.44127456009157356, 0.5358103155058701]

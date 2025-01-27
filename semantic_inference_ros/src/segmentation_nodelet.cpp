@@ -31,6 +31,7 @@
 
 #include <config_utilities/config_utilities.h>
 #include <config_utilities/parsing/ros.h>
+#include <config_utilities/settings.h>
 #include <cv_bridge/cv_bridge.h>
 #include <image_transport/image_transport.h>
 #include <nodelet/nodelet.h>
@@ -57,9 +58,9 @@ class SegmentationNodelet : public nodelet::Nodelet {
 
   struct Config {
     Segmenter::Config segmenter;
-    OutputPublisher::Config output;
     WorkerConfig worker;
     ImageRotator::Config image_rotator;
+    bool show_output_config = false;
   };
 
   virtual void onInit() override;
@@ -70,6 +71,8 @@ class SegmentationNodelet : public nodelet::Nodelet {
   void runSegmentation(const sensor_msgs::ImageConstPtr& msg);
 
   Config config_;
+  OutputPublisher::Config output_;
+
   std::unique_ptr<Segmenter> segmenter_;
   ImageRotator image_rotator_;
   std::unique_ptr<ImageWorker> worker_;
@@ -83,9 +86,9 @@ void declare_config(SegmentationNodelet::Config& config) {
   using namespace config;
   name("SegmentationNodelet::Config");
   field(config.segmenter, "segmenter");
-  field(config.output, "output");
   field(config.worker, "worker");
   field(config.image_rotator, "image_rotator");
+  field(config.show_output_config, "show_output_config");
 }
 
 void SegmentationNodelet::onInit() {
@@ -94,7 +97,14 @@ void SegmentationNodelet::onInit() {
   logging::setConfigUtilitiesLogger();
 
   config_ = config::fromRos<SegmentationNodelet::Config>(nh);
+  // NOTE(nathan) parsed separately to avoid spamming console with labelspace remapping
+  output_ = config::fromRos<OutputPublisher::Config>(nh, "output");
+
   SLOG(INFO) << "\n" << config::toString(config_);
+  if (config_.show_output_config) {
+    SLOG(INFO) << "\n" << config::toString(output_);
+  }
+
   config::checkValid(config_);
 
   try {
@@ -107,7 +117,7 @@ void SegmentationNodelet::onInit() {
   image_rotator_ = ImageRotator(config_.image_rotator);
 
   transport_ = std::make_unique<image_transport::ImageTransport>(nh);
-  output_pub_ = std::make_unique<OutputPublisher>(config_.output, *transport_);
+  output_pub_ = std::make_unique<OutputPublisher>(output_, *transport_);
   worker_ = std::make_unique<ImageWorker>(
       config_.worker,
       [this](const auto& msg) { runSegmentation(msg); },
