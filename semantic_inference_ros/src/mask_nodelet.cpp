@@ -28,10 +28,13 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * * -------------------------------------------------------------------------- */
+#include <ianvs/image_publisher.h>
+#include <ianvs/image_subscription.h>
+
 #include <cv_bridge/cv_bridge.hpp>
-#include <image_transport/image_transport.hpp>
 #include <opencv2/core.hpp>
 #include <opencv2/imgcodecs.hpp>
+#include <rclcpp/node.hpp>
 
 namespace semantic_inference {
 
@@ -43,16 +46,14 @@ class MaskNode : public rclcpp::Node {
   void callback(const Image::ConstSharedPtr& msg);
 
  private:
-  std::unique_ptr<image_transport::ImageTransport> transport_;
-  image_transport::Subscriber sub_;
-  image_transport::Publisher pub_;
-
   cv_bridge::CvImagePtr result_image_;
+  ianvs::ImagePublisher pub_;
+  ianvs::ImageSubscription sub_;
   cv::Mat mask_;
 };
 
 MaskNode::MaskNode(const rclcpp::NodeOptions& options)
-    : rclcpp::Node("mask_node", options) {
+    : rclcpp::Node("mask_node", options), sub_(*this) {
   declare_parameter<std::string>("mask_path", "");
 
   std::string mask_path = "";
@@ -68,9 +69,10 @@ MaskNode::MaskNode(const rclcpp::NodeOptions& options)
     throw std::runtime_error("invalid mask!");
   }
 
-  transport_.reset(new image_transport::ImageTransport(shared_from_this()));
-  sub_ = transport_->subscribe("input/image_raw", 1, &MaskNode::callback, this);
-  pub_ = transport_->advertise("masked/image_raw", 1);
+  pub_ = ianvs::ImagePublisher(*this, "masked/image_raw", 1);
+
+  sub_.registerCallback(&MaskNode::callback, this);
+  sub_.subscribe("input/image_raw");
 }
 
 void MaskNode::callback(const Image::ConstSharedPtr& msg) {

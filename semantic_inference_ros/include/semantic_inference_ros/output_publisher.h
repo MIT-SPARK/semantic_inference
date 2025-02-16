@@ -32,13 +32,19 @@
 #pragma once
 #include <semantic_inference/image_recolor.h>
 
-#include <cv_bridge/cv_bridge.hpp>
-#include <image_transport/image_transport.hpp>
+#include <rclcpp/node_interfaces/node_interfaces.hpp>
+#include <rclcpp/node_interfaces/node_parameters_interface.hpp>
+#include <rclcpp/node_interfaces/node_topics_interface.hpp>
+#include <std_msgs/msg/header.hpp>
 
 namespace semantic_inference {
 
 class OutputPublisher {
  public:
+  using Interface = rclcpp::node_interfaces::NodeInterfaces<
+      rclcpp::node_interfaces::NodeTopicsInterface,
+      rclcpp::node_interfaces::NodeParametersInterface>;
+
   struct Config {
     ImageRecolor::Config recolor;
     bool publish_labels = true;
@@ -47,7 +53,8 @@ class OutputPublisher {
     double overlay_alpha = 0.4;
   } const config;
 
-  OutputPublisher(const Config& config, image_transport::ImageTransport& transport);
+  OutputPublisher(const Config& config, Interface node);
+  ~OutputPublisher();
 
   void publish(const std_msgs::msg::Header& header,
                const cv::Mat& labels,
@@ -56,12 +63,8 @@ class OutputPublisher {
  private:
   ImageRecolor image_recolor_;
 
-  image_transport::Publisher label_pub_;
-  image_transport::Publisher color_pub_;
-  image_transport::Publisher overlay_pub_;
-  cv_bridge::CvImagePtr label_image_;
-  cv_bridge::CvImagePtr color_image_;
-  cv_bridge::CvImagePtr overlay_image_;
+  struct Impl;
+  std::unique_ptr<Impl> impl_;
 };
 
 void declare_config(OutputPublisher::Config& config);

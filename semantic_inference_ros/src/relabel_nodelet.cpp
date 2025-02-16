@@ -31,12 +31,11 @@
 
 #include <config_utilities/printing.h>
 #include <config_utilities/validation.h>
+#include <ianvs/image_subscription.h>
 #include <message_filters/sync_policies/exact_time.h>
 #include <message_filters/synchronizer.h>
 
 #include <cv_bridge/cv_bridge.hpp>
-#include <image_transport/image_transport.hpp>
-#include <image_transport/subscriber_filter.hpp>
 
 #include "semantic_inference_ros/output_publisher.h"
 #include "semantic_inference_ros/ros_log_sink.h"
@@ -74,9 +73,8 @@ class RelabelNode : public rclcpp::Node {
   Config config_;
   std::unique_ptr<ImageWorker> worker_;
 
-  std::unique_ptr<image_transport::ImageTransport> transport_;
-  image_transport::SubscriberFilter color_sub_;
-  image_transport::SubscriberFilter label_sub_;
+  ianvs::ImageSubscription color_sub_;
+  ianvs::ImageSubscription label_sub_;
   std::unique_ptr<message_filters::Synchronizer<SyncPolicy>> sync_;
 
   std::unique_ptr<OutputPublisher> pub_;
@@ -89,28 +87,26 @@ void declare_config(RelabelNode::Config& config) {
 }
 
 RelabelNode::RelabelNode(const rclcpp::NodeOptions& options)
-    : Node("recolor_node", options) {
+    : Node("recolor_node", options), color_sub_(*this), label_sub_(*this) {
   logging::Logger::addSink("ros", std::make_shared<RosLogSink>(get_logger()));
   logging::setConfigUtilitiesLogger();
-
-  transport_.reset(new image_transport::ImageTransport(shared_from_this()));
 
   // config_ = config::fromRos<RelabelNode::Config>(nh);
   SLOG(INFO) << "\n" << config::toString(config_);
   config::checkValid(config_);
 
-  pub_ = std::make_unique<OutputPublisher>(config_.output, *transport_);
-
+  pub_ = std::make_unique<OutputPublisher>(config_.output, *this);
   worker_ = std::make_unique<ImageWorker>(
       config_.worker,
       [this](const auto& msg) { publish(msg); },
       [](const auto& msg) { return msg.color->header.stamp; });
 
-  color_sub_.subscribe(this, "color/image_raw", "raw");
-  label_sub_.subscribe(this, "labels/image_raw", "raw");
   sync_.reset(new Synchronizer<SyncPolicy>(SyncPolicy(10), color_sub_, label_sub_));
   sync_->registerCallback(std::bind(
       &RelabelNode::callback, this, std::placeholders::_1, std::placeholders::_2));
+
+  color_sub_.subscribe("color/image_raw");
+  label_sub_.subscribe("labels/image_raw");
 }
 
 void RelabelNode::callback(const Image::ConstSharedPtr& color,

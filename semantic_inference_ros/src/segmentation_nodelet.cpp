@@ -29,10 +29,9 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * * -------------------------------------------------------------------------- */
 
-#include "semantic_inference_ros/segmentation_nodelet.h"
-
 #include <config_utilities/config_utilities.h>
 #include <config_utilities/parsing/context.h>
+#include <ianvs/image_subscription.h>
 #include <semantic_inference/image_rotator.h>
 #include <semantic_inference/model_config.h>
 #include <semantic_inference/segmenter.h>
@@ -43,8 +42,8 @@
 #include <thread>
 
 #include <cv_bridge/cv_bridge.hpp>
-#include <image_transport/image_transport.hpp>
 #include <opencv2/core.hpp>
+#include <rclcpp/node.hpp>
 
 #include "semantic_inference_ros/output_publisher.h"
 #include "semantic_inference_ros/ros_log_sink.h"
@@ -53,6 +52,32 @@
 namespace semantic_inference {
 
 using sensor_msgs::msg::Image;
+
+class SegmentationNode : public rclcpp::Node {
+ public:
+  using ImageWorker = Worker<Image::ConstSharedPtr>;
+
+  struct Config {
+    Segmenter::Config segmenter;
+    OutputPublisher::Config output;
+    WorkerConfig worker;
+    ImageRotator::Config image_rotator;
+  };
+
+  explicit SegmentationNode(const rclcpp::NodeOptions& options);
+  virtual ~SegmentationNode();
+
+ private:
+  void runSegmentation(const Image::ConstSharedPtr& msg);
+
+  Config config_;
+  std::unique_ptr<Segmenter> segmenter_;
+  ImageRotator image_rotator_;
+  std::unique_ptr<ImageWorker> worker_;
+
+  std::unique_ptr<OutputPublisher> output_pub_;
+  ianvs::ImageSubscription sub_;
+};
 
 void declare_config(SegmentationNode::Config& config) {
   using namespace config;
@@ -64,7 +89,7 @@ void declare_config(SegmentationNode::Config& config) {
 }
 
 SegmentationNode::SegmentationNode(const rclcpp::NodeOptions& options)
-    : Node("segmentation_node", options) {
+    : Node("segmentation_node", options), sub_(*this) {
   logging::Logger::addSink("ros", std::make_shared<RosLogSink>(get_logger()));
   logging::setConfigUtilitiesLogger();
 
@@ -86,24 +111,21 @@ SegmentationNode::SegmentationNode(const rclcpp::NodeOptions& options)
   }
 
   image_rotator_ = ImageRotator(config_.image_rotator);
+
+  output_pub_ = std::make_unique<OutputPublisher>(output_, *this);
+  worker_ = std::make_unique<ImageWorker>(
+      config_.worker,
+      [this](const auto& msg) { runSegmentation(msg); },
+      [](const auto& msg) { return msg->header.stamp; });
+
+  sub_.registerCallback(&ImageWorker::addMessage, worker_.get());
+  sub_.subscribe("color/image_raw");
 }
 
 SegmentationNode::~SegmentationNode() {
   if (worker_) {
     worker_->stop();
   }
-}
-
-void SegmentationNode::start() {
-  transport_ = std::make_unique<image_transport::ImageTransport>(shared_from_this());
-  output_pub_ = std::make_unique<OutputPublisher>(output_, *transport_);
-  worker_ = std::make_unique<ImageWorker>(
-      config_.worker,
-      [this](const auto& msg) { runSegmentation(msg); },
-      [](const auto& msg) { return msg->header.stamp; });
-
-  sub_ = transport_->subscribe(
-      "color/image_raw", 1, &ImageWorker::addMessage, worker_.get());
 }
 
 void SegmentationNode::runSegmentation(const Image::ConstSharedPtr& msg) {

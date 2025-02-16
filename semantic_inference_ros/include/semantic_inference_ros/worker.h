@@ -40,6 +40,10 @@
 #include <optional>
 #include <thread>
 
+#include <rclcpp/time.hpp>
+
+#include <condition_variable>
+
 namespace semantic_inference {
 
 struct WorkerConfig {
