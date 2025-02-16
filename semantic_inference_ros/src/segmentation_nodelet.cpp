@@ -30,7 +30,7 @@
  * * -------------------------------------------------------------------------- */
 
 #include <config_utilities/config_utilities.h>
-#include <config_utilities/parsing/context.h>
+#include <config_utilities/parsing/commandline.h>
 #include <ianvs/image_subscription.h>
 #include <semantic_inference/image_rotator.h>
 #include <semantic_inference/model_config.h>
@@ -59,23 +59,23 @@ class SegmentationNode : public rclcpp::Node {
 
   struct Config {
     Segmenter::Config segmenter;
-    OutputPublisher::Config output;
     WorkerConfig worker;
     ImageRotator::Config image_rotator;
-  };
+  } const config;
 
   explicit SegmentationNode(const rclcpp::NodeOptions& options);
   virtual ~SegmentationNode();
 
+  const OutputPublisher::Config output_config;
+
  private:
   void runSegmentation(const Image::ConstSharedPtr& msg);
 
-  Config config_;
   std::unique_ptr<Segmenter> segmenter_;
-  ImageRotator image_rotator_;
   std::unique_ptr<ImageWorker> worker_;
 
-  std::unique_ptr<OutputPublisher> output_pub_;
+  OutputPublisher output_pub_;
+  ImageRotator image_rotator_;
   ianvs::ImageSubscription sub_;
 };
 
@@ -89,32 +89,31 @@ void declare_config(SegmentationNode::Config& config) {
 }
 
 SegmentationNode::SegmentationNode(const rclcpp::NodeOptions& options)
-    : Node("segmentation_node", options), sub_(*this) {
+    : Node("segmentation_node", options),
+      config(config::fromCLI<Config>(options.arguments())),
+      output_config(config::fromCLI<Config>(options.arguments(), "output")),
+      output_pub_(output_config, *this),
+      image_rotator_(config.image_rotator),
+      sub_(*this) {
   logging::Logger::addSink("ros", std::make_shared<RosLogSink>(get_logger()));
   logging::setConfigUtilitiesLogger();
-
-  config_ = config::fromContext<SegmentationNode::Config>();
-  // NOTE(nathan) parsed separately to avoid spamming console with labelspace remapping
-  output_ = config::fromContext<OutputPublisher::Config>("output");
-  SLOG(INFO) << "\n" << config::toString(config_);
+  SLOG(INFO) << "\n" << config::toString(config);
   if (config_.show_output_config) {
     SLOG(INFO) << "\n" << config::toString(output_);
   }
 
-  config::checkValid(config_);
+  config::checkValid(config);
+  config::checkValid(output_config);
 
   try {
-    segmenter_ = std::make_unique<Segmenter>(config_.segmenter);
+    segmenter_ = std::make_unique<Segmenter>(config.segmenter);
   } catch (const std::exception& e) {
     SLOG(ERROR) << "Exception: " << e.what();
     throw e;
   }
 
-  image_rotator_ = ImageRotator(config_.image_rotator);
-
-  output_pub_ = std::make_unique<OutputPublisher>(output_, *this);
   worker_ = std::make_unique<ImageWorker>(
-      config_.worker,
+      config.worker,
       [this](const auto& msg) { runSegmentation(msg); },
       [](const auto& msg) { return msg->header.stamp; });
 
@@ -150,7 +149,7 @@ void SegmentationNode::runSegmentation(const Image::ConstSharedPtr& msg) {
   }
 
   const auto derotated = image_rotator_.derotate(result.labels);
-  output_pub_->publish(img_ptr->header, derotated, img_ptr->image);
+  output_pub_.publish(img_ptr->header, derotated, img_ptr->image);
 }
 
 }  // namespace semantic_inference
