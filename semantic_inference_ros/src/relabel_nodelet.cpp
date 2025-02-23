@@ -29,15 +29,13 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * * -------------------------------------------------------------------------- */
 
-#include <config_utilities/parsing/ros.h>
 #include <config_utilities/printing.h>
-#include <cv_bridge/cv_bridge.h>
-#include <image_transport/image_transport.h>
-#include <image_transport/subscriber_filter.h>
+#include <config_utilities/validation.h>
+#include <ianvs/image_subscription.h>
 #include <message_filters/sync_policies/exact_time.h>
 #include <message_filters/synchronizer.h>
-#include <nodelet/nodelet.h>
-#include <pluginlib/class_list_macros.h>
+
+#include <cv_bridge/cv_bridge.hpp>
 
 #include "semantic_inference_ros/output_publisher.h"
 #include "semantic_inference_ros/ros_log_sink.h"
@@ -46,82 +44,83 @@
 namespace semantic_inference {
 
 using message_filters::Synchronizer;
+using sensor_msgs::msg::Image;
 
 struct ColorLabelPacket {
-  sensor_msgs::ImageConstPtr color;
-  sensor_msgs::ImageConstPtr labels;
+  Image::ConstSharedPtr color;
+  Image::ConstSharedPtr labels;
 };
 
-class RecolorNodelet : public nodelet::Nodelet {
+class RelabelNode : public rclcpp::Node {
  public:
   using ImageWorker = Worker<ColorLabelPacket>;
-  using SyncPolicy =
-      message_filters::sync_policies::ExactTime<sensor_msgs::Image, sensor_msgs::Image>;
+  using SyncPolicy = message_filters::sync_policies::ExactTime<Image, Image>;
 
   struct Config {
     OutputPublisher::Config output;
     WorkerConfig worker;
   };
 
-  virtual void onInit() override;
-
-  virtual ~RecolorNodelet();
+  explicit RelabelNode(const rclcpp::NodeOptions& options);
+  virtual ~RelabelNode();
 
  private:
-  void publish(const ColorLabelPacket& packet) const;
+  void callback(const Image::ConstSharedPtr& color,
+                const Image::ConstSharedPtr& labels);
 
-  void callback(const sensor_msgs::ImageConstPtr& color,
-                const sensor_msgs::ImageConstPtr& labels);
+  void publish(const ColorLabelPacket& packet) const;
 
   Config config_;
   std::unique_ptr<ImageWorker> worker_;
 
-  std::unique_ptr<image_transport::ImageTransport> transport_;
-  image_transport::SubscriberFilter color_sub_;
-  image_transport::SubscriberFilter label_sub_;
+  ianvs::ImageSubscription color_sub_;
+  ianvs::ImageSubscription label_sub_;
   std::unique_ptr<message_filters::Synchronizer<SyncPolicy>> sync_;
 
   std::unique_ptr<OutputPublisher> pub_;
 };
 
-void declare_config(RecolorNodelet::Config& config) {
-  using namespace config;
-  name("RecolorNodelet::Config");
-  field(config.output, "output");
-  field(config.worker, "worker");
+void declare_config(RelabelNode::Config& config) {
+  config::name("RelabelNode::Config");
+  config::field(config.output, "output");
+  config::field(config.worker, "worker");
 }
 
-void RecolorNodelet::onInit() {
-  ros::NodeHandle nh = getPrivateNodeHandle();
-  logging::Logger::addSink("ros", std::make_shared<RosLogSink>());
+RelabelNode::RelabelNode(const rclcpp::NodeOptions& options)
+    : Node("recolor_node", options), color_sub_(*this), label_sub_(*this) {
+  logging::Logger::addSink("ros", std::make_shared<RosLogSink>(get_logger()));
   logging::setConfigUtilitiesLogger();
 
-  transport_.reset(new image_transport::ImageTransport(nh));
-
-  config_ = config::fromRos<RecolorNodelet::Config>(nh);
+  // config_ = config::fromRos<RelabelNode::Config>(nh);
   SLOG(INFO) << "\n" << config::toString(config_);
   config::checkValid(config_);
 
-  pub_ = std::make_unique<OutputPublisher>(config_.output, *transport_);
-
+  pub_ = std::make_unique<OutputPublisher>(config_.output, *this);
   worker_ = std::make_unique<ImageWorker>(
       config_.worker,
       [this](const auto& msg) { publish(msg); },
       [](const auto& msg) { return msg.color->header.stamp; });
 
-  color_sub_.subscribe(*transport_, "color/image_raw", 1);
-  label_sub_.subscribe(*transport_, "labels/image_raw", 1);
   sync_.reset(new Synchronizer<SyncPolicy>(SyncPolicy(10), color_sub_, label_sub_));
-  sync_->registerCallback(boost::bind(&RecolorNodelet::callback, this, _1, _2));
+  sync_->registerCallback(std::bind(
+      &RelabelNode::callback, this, std::placeholders::_1, std::placeholders::_2));
+
+  color_sub_.subscribe("color/image_raw");
+  label_sub_.subscribe("labels/image_raw");
 }
 
-RecolorNodelet::~RecolorNodelet() {
+void RelabelNode::callback(const Image::ConstSharedPtr& color,
+                           const Image::ConstSharedPtr& labels) {
+  worker_->addMessage({color, labels});
+}
+
+RelabelNode::~RelabelNode() {
   if (worker_) {
     worker_->stop();
   }
 }
 
-void RecolorNodelet::publish(const ColorLabelPacket& msg) const {
+void RelabelNode::publish(const ColorLabelPacket& msg) const {
   cv_bridge::CvImageConstPtr color_ptr;
   try {
     color_ptr = cv_bridge::toCvShare(msg.color, "rgb8");
@@ -141,11 +140,7 @@ void RecolorNodelet::publish(const ColorLabelPacket& msg) const {
   pub_->publish(color_ptr->header, label_ptr->image, color_ptr->image);
 }
 
-void RecolorNodelet::callback(const sensor_msgs::ImageConstPtr& color,
-                              const sensor_msgs::ImageConstPtr& labels) {
-  worker_->addMessage({color, labels});
-}
-
 }  // namespace semantic_inference
 
-PLUGINLIB_EXPORT_CLASS(semantic_inference::RecolorNodelet, nodelet::Nodelet)
+#include <rclcpp_components/register_node_macro.hpp>
+RCLCPP_COMPONENTS_REGISTER_NODE(semantic_inference::RelabelNode)

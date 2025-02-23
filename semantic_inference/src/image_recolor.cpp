@@ -36,6 +36,7 @@
 #include <config_utilities/validation.h>
 
 #include <fstream>
+
 #include <opencv2/imgproc.hpp>
 
 #include "semantic_inference/logging.h"

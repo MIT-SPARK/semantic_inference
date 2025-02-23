@@ -35,7 +35,6 @@ from dataclasses import dataclass
 
 import sensor_msgs.msg
 
-import rospy
 import queue
 import threading
 import time
@@ -58,8 +57,11 @@ class ImageWorkerConfig(Config):
 class ImageWorker:
     """Class to simplify message processing."""
 
-    def __init__(self, config, topic, callback, **kwargs):
+    def __init__(self, node, config, topic, callback, **kwargs):
         """Register worker with ros."""
+        self._node = node
+        self._node.context.on_shutdown(self.stop)
+
         self._config = config
         self._callback = callback
 
@@ -68,11 +70,8 @@ class ImageWorker:
         self._last_stamp = None
 
         self._queue = queue.Queue(maxsize=config.queue_size)
-
-        rospy.on_shutdown(self.stop)
-
-        self._sub = rospy.Subscriber(
-            topic, sensor_msgs.msg.Image, self.add_message, queue_size=1, **kwargs
+        self._sub = node.create_subscription(
+            sensor_msgs.msg.Image, topic, self.add_message, 1
         )
         self.start()
 

@@ -30,16 +30,13 @@
  * * -------------------------------------------------------------------------- */
 
 #include <config_utilities/config_utilities.h>
-#include <config_utilities/parsing/ros.h>
-#include <cv_bridge/cv_bridge.h>
-#include <image_transport/image_transport.h>
-#include <image_transport/subscriber_filter.h>
+#include <ianvs/image_subscription.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/synchronizer.h>
-#include <nodelet/nodelet.h>
-#include <pluginlib/class_list_macros.h>
 #include <semantic_inference/model_config.h>
 #include <semantic_inference/segmenter.h>
+
+#include <cv_bridge/cv_bridge.hpp>
 
 #include "semantic_inference_ros/output_publisher.h"
 #include "semantic_inference_ros/ros_log_sink.h"
@@ -47,12 +44,11 @@
 namespace semantic_inference {
 
 using message_filters::Synchronizer;
+using sensor_msgs::msg::Image;
 
-class RgbdSegmentationNodelet : public nodelet::Nodelet {
+class RGBDSegmentationNode : public rclcpp::Node {
  public:
-  using SyncPolicy =
-      message_filters::sync_policies::ApproximateTime<sensor_msgs::Image,
-                                                      sensor_msgs::Image>;
+  using SyncPolicy = message_filters::sync_policies::ApproximateTime<Image, Image>;
 
   struct Config {
     Segmenter::Config segmenter;
@@ -60,53 +56,55 @@ class RgbdSegmentationNodelet : public nodelet::Nodelet {
     double depth_scale = 1.0;
   };
 
-  virtual void onInit() override;
+  explicit RGBDSegmentationNode(const rclcpp::NodeOptions& options);
 
  private:
-  void callback(const sensor_msgs::ImageConstPtr& rgb_msg,
-                const sensor_msgs::ImageConstPtr& depth_msg);
+  void callback(const Image::ConstSharedPtr& rgb_msg,
+                const Image::ConstSharedPtr& depth_msg);
 
   Config config_;
 
   std::unique_ptr<Segmenter> segmenter_;
-  std::unique_ptr<image_transport::ImageTransport> transport_;
-  image_transport::SubscriberFilter image_sub_;
-  image_transport::SubscriberFilter depth_sub_;
+  ianvs::ImageSubscription image_sub_;
+  ianvs::ImageSubscription depth_sub_;
   std::unique_ptr<message_filters::Synchronizer<SyncPolicy>> sync;
 
   std::unique_ptr<OutputPublisher> output_pub_;
 };
 
-void declare_config(RgbdSegmentationNodelet::Config& config) {
-  using namespace config;
-  name("RgbdSegmentationNodelet::Config");
-  field(config.segmenter, "segmenter");
-  field(config.output, "output");
-  field(config.depth_scale, "depth_scale");
-  check(config.depth_scale, GT, 0.0, "depth_scale");
+void declare_config(RGBDSegmentationNode::Config& config) {
+  using config::GT;
+  config::name("RGBDSegmentationNode::Config");
+  config::field(config.segmenter, "segmenter");
+  config::field(config.output, "output");
+  config::field(config.depth_scale, "depth_scale");
+  config::check(config.depth_scale, GT, 0.0, "depth_scale");
 }
 
-void RgbdSegmentationNodelet::onInit() {
-  auto nh = getPrivateNodeHandle();
-  logging::Logger::addSink("ros", std::make_shared<RosLogSink>());
+RGBDSegmentationNode::RGBDSegmentationNode(const rclcpp::NodeOptions& options)
+    : Node("rgbd_segmentation_node", options), image_sub_(*this), depth_sub_(*this) {
+  logging::Logger::addSink("ros", std::make_shared<RosLogSink>(get_logger()));
   logging::setConfigUtilitiesLogger();
 
-  config_ = config::fromRos<Config>(nh);
+  // config_ = config::fromRos<Config>(nh);
   SLOG(INFO) << "config: " << config::toString(config_);
   config::checkValid(config_);
 
   segmenter_ = std::make_unique<Segmenter>(config_.segmenter);
-  transport_ = std::make_unique<image_transport::ImageTransport>(nh);
-  output_pub_ = std::make_unique<OutputPublisher>(config_.output, *transport_);
+  output_pub_ = std::make_unique<OutputPublisher>(config_.output, *this);
 
-  image_sub_.subscribe(*transport_, "color/image_raw", 1);
-  depth_sub_.subscribe(*transport_, "depth/image_rect", 1);
   sync.reset(new Synchronizer<SyncPolicy>(SyncPolicy(10), image_sub_, depth_sub_));
-  sync->registerCallback(boost::bind(&RgbdSegmentationNodelet::callback, this, _1, _2));
+  sync->registerCallback(std::bind(&RGBDSegmentationNode::callback,
+                                   this,
+                                   std::placeholders::_1,
+                                   std::placeholders::_2));
+
+  image_sub_.subscribe("color/image_raw");
+  depth_sub_.subscribe("depth/image_rect");
 }
 
-void RgbdSegmentationNodelet::callback(const sensor_msgs::ImageConstPtr& rgb_msg,
-                                       const sensor_msgs::ImageConstPtr& depth_msg) {
+void RGBDSegmentationNode::callback(const Image::ConstSharedPtr& rgb_msg,
+                                    const Image::ConstSharedPtr& depth_msg) {
   cv_bridge::CvImageConstPtr img_ptr;
   try {
     img_ptr = cv_bridge::toCvShare(rgb_msg, "rgb8");
@@ -141,4 +139,5 @@ void RgbdSegmentationNodelet::callback(const sensor_msgs::ImageConstPtr& rgb_msg
 
 }  // namespace semantic_inference
 
-PLUGINLIB_EXPORT_CLASS(semantic_inference::RgbdSegmentationNodelet, nodelet::Nodelet)
+#include <rclcpp_components/register_node_macro.hpp>
+RCLCPP_COMPONENTS_REGISTER_NODE(semantic_inference::RGBDSegmentationNode)

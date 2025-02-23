@@ -29,53 +29,56 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * * -------------------------------------------------------------------------- */
 
-#include "semantic_inference/model_config.h"
+#pragma once
 
-#include <config_utilities/config.h>
-#include <config_utilities/types/path.h>
+#include <config_utilities/config_utilities.h>
+#include <semantic_inference/image_rotator.h>
+#include <semantic_inference/model_config.h>
+#include <semantic_inference/segmenter.h>
 
-#include <cstdlib>
+#include <atomic>
+#include <mutex>
+#include <optional>
+#include <thread>
+
+#include <cv_bridge/cv_bridge.hpp>
+#include <image_transport/image_transport.hpp>
+#include <opencv2/core.hpp>
+
+#include "semantic_inference_ros/output_publisher.h"
+#include "semantic_inference_ros/ros_log_sink.h"
+#include "semantic_inference_ros/worker.h"
 
 namespace semantic_inference {
 
-std::filesystem::path getModelDirectory() {
-  const auto env_path = std::getenv("SEMANTIC_INFERENCE_MODEL_DIR");
-  if (env_path) {
-    return std::filesystem::absolute(std::filesystem::path(env_path));
-  }
+class SegmentationNode : public rclcpp::Node {
+ public:
+  using ImageWorker = Worker<sensor_msgs::msg::Image::ConstSharedPtr>;
 
-  const auto home_path = std::getenv("HOME");
-  if (!home_path) {
-    throw std::runtime_error(
-        "cannot infer default model location via HOME! Please set "
-        "SEMANTIC_INFERENCE_MODEL_DIR instead!");
-  }
+  struct Config {
+    Segmenter::Config segmenter;
+    OutputPublisher::Config output;
+    WorkerConfig worker;
+    ImageRotator::Config image_rotator;
+  };
 
-  return std::filesystem::path(home_path) / ".semantic_inference";
-}
+  explicit SegmentationNode(const rclcpp::NodeOptions& options);
 
-std::filesystem::path ModelConfig::model_path() const {
-  return getModelDirectory() / model_file;
-}
+  virtual ~SegmentationNode();
 
-std::filesystem::path ModelConfig::engine_path() const {
-  return model_path().replace_extension(".trt");
-}
+  void start();
 
-void declare_config(ModelConfig& config) {
-  using namespace config;
-  name("ModelConfig");
-  // params
-  field<Path>(config.model_file, "model_file");
-  field(config.log_severity, "log_severity");
-  field(config.force_rebuild, "force_rebuild");
-  field(config.color, "color");
-  field(config.depth, "depth");
-  // checks
-  check<Path::Exists>(config.model_path(), "model_file");
-  checkIsOneOf(config.log_severity,
-               {"INTERNAL_ERROR", "ERROR", "WARNING", "INFO", "VERBOSE"},
-               "log_severity");
-}
+ private:
+  void runSegmentation(const sensor_msgs::msg::Image::ConstSharedPtr& msg);
+
+  Config config_;
+  std::unique_ptr<Segmenter> segmenter_;
+  ImageRotator image_rotator_;
+  std::unique_ptr<ImageWorker> worker_;
+
+  std::unique_ptr<image_transport::ImageTransport> transport_;
+  std::unique_ptr<OutputPublisher> output_pub_;
+  image_transport::Subscriber sub_;
+};
 
 }  // namespace semantic_inference
