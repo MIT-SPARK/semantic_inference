@@ -92,15 +92,16 @@ void declare_config(SegmentationNode::Config& config) {
 SegmentationNode::SegmentationNode(const rclcpp::NodeOptions& options)
     : Node("segmentation_node", options),
       config(config::fromCLI<Config>(options.arguments())),
-      output_config(config::fromCLI<Config>(options.arguments(), "output")),
+      output_config(
+          config::fromCLI<OutputPublisher::Config>(options.arguments(), "output")),
       output_pub_(output_config, *this),
       image_rotator_(config.image_rotator),
       sub_(*this) {
   logging::Logger::addSink("ros", std::make_shared<RosLogSink>(get_logger()));
   logging::setConfigUtilitiesLogger();
   SLOG(INFO) << "\n" << config::toString(config);
-  if (config_.show_output_config) {
-    SLOG(INFO) << "\n" << config::toString(output_);
+  if (config.show_output_config) {
+    SLOG(INFO) << "\n" << config::toString(output_config);
   }
 
   config::checkValid(config);
