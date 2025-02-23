@@ -33,10 +33,11 @@
 #include <cstdint>
 #include <filesystem>
 #include <map>
-#include <opencv2/core/mat.hpp>
 #include <set>
 #include <string>
 #include <vector>
+
+#include <opencv2/core/mat.hpp>
 
 namespace semantic_inference {
 

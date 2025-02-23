@@ -1,0 +1,11 @@
+---
+launch:
+  - arg: {name: model_name, default: ViT-L/14, description: Model to use for segmentation}
+  - arg: {name: min_period_s, default: '0.0', description: Minimum time between inputs}
+  - node:
+      pkg: semantic_inference_ros
+      exec: clip_publisher_node
+      name: clip_publisher_node
+      param:
+        - {name: model/model_name, value: $(var model_name)}
+        - {name: worker/min_separation_s, value: $(var min_period_s)}

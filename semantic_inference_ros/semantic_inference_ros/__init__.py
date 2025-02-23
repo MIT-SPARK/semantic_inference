@@ -27,6 +27,10 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-from setuptools import setup
+"""Useful ROS utility functions."""
 
-setup()  # TODO(nathan) remove once we're on a newer setuptools version
+from semantic_inference_ros.image_worker import ImageWorkerConfig, ImageWorker  # NOQA
+from semantic_inference_ros.ros_config import load_from_ros  # NOQA
+from semantic_inference_ros.ros_conversions import Conversions  # NOQA
+from semantic_inference_ros.ros_logging import setup_ros_log_forwarding  # NOQA
+from semantic_inference_ros.prompt_encoder import PromptEncoder  # NOQA

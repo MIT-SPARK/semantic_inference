@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "semantic_inference"
+version = "0.0.1"
+authors = [
+ { name = "Nathan Hughes", email = "na26933@mit.edu" },
+]
+description = "Python package for managing semantic segmentation models"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "click",
+    "distinctipy",
+    "einops",
+    "imageio",
+    "onnx",
+    "pandas",
+    "pyyaml",
+    "seaborn",
+    "torch",
+    "torchvision",
+]
+
+[tool.setuptools.packages.find]
+where = ["python"]
+
+[project.scripts]
+semantic-inference = "semantic_inference.__main__:cli"
+
+[project.optional-dependencies]
+dev = ["pytest"]
+openset = [
+    "ultralytics",
+    "clip@git+https://github.com/openai/CLIP.git",
+    "open_clip_torch",
+    "numpy >= 1.20",
+]
+f3rm = ["f3rm@git+https://github.com/f3rm/f3rm.git"]
+sam = ["segment-anything@git+https://github.com/facebookresearch/segment-anything.git"]
+
+[tool.pytest.ini_options]
+markers = ["slow: marks tests as slow (deselect with '-m \"not slow\"')"]

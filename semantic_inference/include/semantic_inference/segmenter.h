@@ -30,6 +30,8 @@
  * * -------------------------------------------------------------------------- */
 
 #pragma once
+#include <memory>
+
 #include <opencv2/core/mat.hpp>
 
 #include "semantic_inference/model_config.h"
@@ -55,7 +57,7 @@ class Segmenter {
 
   virtual ~Segmenter();
 
-  SegmentationResult infer(const cv::Mat& img, const cv::Mat& depth = cv::Mat());
+  SegmentationResult infer(const cv::Mat& img, const cv::Mat& depth = cv::Mat()) const;
 
  private:
   struct Impl;

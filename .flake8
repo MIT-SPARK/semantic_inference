@@ -1,6 +1,7 @@
 [flake8]
 max-line-length = 88
 extend-ignore = E203,D301
+docstring-convention = pep257
 per-file-ignores =
     *__init__.py:F401,F403,D104
     notebooks/*.py:D100

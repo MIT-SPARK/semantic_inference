@@ -79,7 +79,7 @@ Segmenter::Segmenter(const Config& config)
 
 Segmenter::~Segmenter() = default;
 
-SegmentationResult Segmenter::infer(const cv::Mat& color, const cv::Mat& depth) {
+SegmentationResult Segmenter::infer(const cv::Mat& color, const cv::Mat& depth) const {
   auto result = impl_->infer(color, depth);
   if (!result || depth.empty() || !config.mask_predictions_with_depth) {
     return result;

@@ -36,8 +36,7 @@ groups:
   - {name: Couch, labels: [24, 40, 70, 98]}
   - {name: Light, labels: [37, 83, 86, 88, 135, 140]}
   - {name: Appliance, labels: [38, 48, 51, 66, 72, 108, 119, 125, 130, 134, 146, 147]}
-  - {name: Thing, labels: [68, 75, 90, 109, 120, 128, 131, 133, 138, 139, 142, 144,
-      99, 121, 126, 136, 143, 148]}
+  - {name: Thing, labels: [68, 75, 90, 109, 120, 128, 131, 133, 138, 139, 142, 144, 99, 121, 126, 136, 143, 148]}
   - {name: Deformable, labels: [82, 93, 132]}
   - {name: Dynamic_NonHuman, labels: [127]}
   - {name: Human, labels: [13]}
@@ -58,7 +57,4 @@ specified_colors:
   - {name: Couch, source: expanded, color: red}
   - {name: Table, source: expanded, color: magenta}
   - {name: Window, source: expanded, color: lightred}
-default_color:
-  - 0.9677975592919913
-  - 0.44127456009157356
-  - 0.5358103155058701
+default_color: [0.9677975592919913, 0.44127456009157356, 0.5358103155058701]

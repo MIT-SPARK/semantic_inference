@@ -1,9 +1,0 @@
----
-normalize: true
-normalize_depth: false
-map_to_unit_range: true
-mean: [0.493, 0.468, 0.438]
-stddev: [0.544, 0.521, 0.499]
-depth_mean: 0.213
-depth_stddev: 0.285
-mask_predictions: false

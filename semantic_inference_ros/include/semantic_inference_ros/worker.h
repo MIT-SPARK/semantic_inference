@@ -28,35 +28,42 @@
  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * * -------------------------------------------------------------------------- */
+#pragma once
 
 #include <config_utilities/config.h>
-#include <ros/ros.h>
 #include <semantic_inference/logging.h>
 
 #include <atomic>
+#include <list>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <thread>
+
+#include <rclcpp/time.hpp>
+
+#include <condition_variable>
 
 namespace semantic_inference {
 
 struct WorkerConfig {
   size_t max_queue_size = 30;
   double image_separation_s = 0.0;
+  int poll_period_us = 1000;
 };
 
 inline void declare_config(WorkerConfig& config) {
-  using namespace config;
-  name("WorkerConfig");
-  field(config.max_queue_size, "max_queue_size");
-  field(config.image_separation_s, "image_separation_s");
+  config::name("WorkerConfig");
+  config::field(config.max_queue_size, "max_queue_size");
+  config::field(config.image_separation_s, "image_separation_s", "s");
+  config::field(config.poll_period_us, "poll_period_us", "us");
 }
 
 template <typename T>
 class Worker {
  public:
   using Callback = std::function<void(const T&)>;
-  using StampGetter = std::function<ros::Time(const T&)>;
+  using StampGetter = std::function<rclcpp::Time(const T&)>;
 
   Worker(const WorkerConfig& config,
          const Callback& callback,
@@ -70,7 +77,7 @@ class Worker {
   const WorkerConfig config;
 
  private:
-  bool haveWork() const;
+  bool poll() const;
 
   void spin();
 
@@ -78,6 +85,7 @@ class Worker {
   const StampGetter stamp_getter_;
 
   mutable std::mutex mutex_;
+  mutable std::condition_variable cv_;
   std::atomic<bool> should_shutdown_;
   std::unique_ptr<std::thread> spin_thread_;
   std::list<T> queue_;
@@ -109,50 +117,51 @@ void Worker<T>::stop() {
 
 template <typename T>
 void Worker<T>::addMessage(const T& msg) {
-  std::lock_guard<std::mutex> lock(mutex_);
-  while (config.max_queue_size > 0 && queue_.size() >= config.max_queue_size) {
-    queue_.pop_front();
-  }
+  {  // critical section for queue modification
+    std::lock_guard<std::mutex> lock(mutex_);
+    while (config.max_queue_size > 0 && queue_.size() >= config.max_queue_size) {
+      queue_.pop_front();
+    }
 
-  queue_.push_back(msg);
+    queue_.push_back(msg);
+  }  // end critical section
+
+  cv_.notify_all();
 }
 
 template <typename T>
-bool Worker<T>::haveWork() const {
-  std::lock_guard<std::mutex> lock(mutex_);
-  return !queue_.empty();
+bool Worker<T>::poll() const {
+  const std::chrono::microseconds wait_duration(config.poll_period_us);
+  std::unique_lock<std::mutex> lock(mutex_);
+  return cv_.wait_for(lock, wait_duration, [&] { return !queue_.empty(); });
 }
 
 template <typename T>
 void Worker<T>::spin() {
-  ros::WallRate r(100);
-  std::optional<ros::Time> last_time;
-  while (ros::ok() && !should_shutdown_) {
-    ros::spinOnce();
-    if (!haveWork()) {
-      r.sleep();
+  std::optional<rclcpp::Time> last_time;
+  while (!should_shutdown_) {
+    if (!poll()) {
       continue;
     }
 
     T msg;
     {  // start mutex scope
       std::lock_guard<std::mutex> lock(mutex_);
-      const auto curr_stamp = stamp_getter_(queue_.front());
-      if (last_time) {
-        const auto curr_diff_s = std::abs((curr_stamp - *last_time).toSec());
-        SLOG(DEBUG) << "current time diff: " << curr_diff_s
-                    << "[s] (min: " << config.image_separation_s << "[s])";
-        if (curr_diff_s < config.image_separation_s) {
-          queue_.pop_front();
-          continue;
-        }
-      }
-
-      last_time = curr_stamp;
       msg = queue_.front();
       queue_.pop_front();
     }  // end mutex scope
 
+    const auto curr_stamp = stamp_getter_(msg);
+    if (last_time) {
+      const auto curr_diff_s = std::abs((curr_stamp - *last_time).seconds());
+      SLOG(DEBUG) << "current time diff: " << curr_diff_s
+                  << "[s] (min: " << config.image_separation_s << "[s])";
+      if (curr_diff_s < config.image_separation_s) {
+        continue;
+      }
+    }
+
+    last_time = curr_stamp;
     callback_(msg);
   }
 }

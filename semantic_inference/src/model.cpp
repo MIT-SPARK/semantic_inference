@@ -204,13 +204,12 @@ std::ostream& operator<<(std::ostream& out, const ModelInfo& info) {
 Model::Model(const ModelConfig& config)
     : model(config::checkValid(config)),
       runtime_(getRuntime(model.log_severity)),
-      engine_(deserializeEngine(*runtime_, model.engine_file)),
+      engine_(deserializeEngine(*runtime_, model.engine_path())),
       color_conversion_(config.color),
       depth_conversion_(config.depth) {
   if (!engine_ || config.force_rebuild) {
     SLOG(WARNING) << "Engine file not found! rebuilding...";
-    engine_ = buildEngineFromOnnx(
-        *runtime_, model.model_file, model.engine_file, model.log_severity);
+    engine_ = buildEngineFromOnnx(model, *runtime_);
     SLOG(INFO) << "Finished building engine";
   } else {
     SLOG(INFO) << "Loaded engine file";
