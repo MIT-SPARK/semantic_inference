@@ -61,6 +61,7 @@ class SegmentationNode : public rclcpp::Node {
     Segmenter::Config segmenter;
     WorkerConfig worker;
     ImageRotator::Config image_rotator;
+    bool show_output_config = false;
   } const config;
 
   explicit SegmentationNode(const rclcpp::NodeOptions& options);
