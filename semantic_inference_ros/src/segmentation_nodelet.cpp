@@ -60,6 +60,7 @@ class SegmentationNodelet : public nodelet::Nodelet {
     Segmenter::Config segmenter;
     WorkerConfig worker;
     ImageRotator::Config image_rotator;
+    bool show_config = true;
     bool show_output_config = false;
   };
 
@@ -88,6 +89,7 @@ void declare_config(SegmentationNodelet::Config& config) {
   field(config.segmenter, "segmenter");
   field(config.worker, "worker");
   field(config.image_rotator, "image_rotator");
+  field(config.show_config, "show_config");
   field(config.show_output_config, "show_output_config");
 }
 
@@ -100,9 +102,11 @@ void SegmentationNodelet::onInit() {
   // NOTE(nathan) parsed separately to avoid spamming console with labelspace remapping
   output_ = config::fromRos<OutputPublisher::Config>(nh, "output");
 
-  SLOG(INFO) << "\n" << config::toString(config_);
-  if (config_.show_output_config) {
-    SLOG(INFO) << "\n" << config::toString(output_);
+  if (config_.show_config) {
+    SLOG(INFO) << "\n" << config::toString(config_);
+    if (config_.show_output_config) {
+      SLOG(INFO) << "\n" << config::toString(output_);
+    }
   }
 
   config::checkValid(config_);
