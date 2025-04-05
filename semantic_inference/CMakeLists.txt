@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.17)
 project(semantic_inference VERSION 0.0.1)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -18,12 +18,12 @@ option(BUILD_SHARED_LIBS "Build shared libs" ON)
 find_package(config_utilities REQUIRED)
 find_package(OpenCV REQUIRED)
 
-find_package(CUDA)
+find_package(CUDAToolkit)
 find_package(TensorRT COMPONENTS onnxparser infer_plugin)
 
 set(ENABLE_TENSORRT_CXX_VALUE 1)
 if(SEMANTIC_INFERENCE_USE_TRT
-   AND NOT CUDA_FOUND
+   AND NOT CUDAToolkit_FOUND
    AND NOT TensorRT_FOUND
 )
   message(WARNING "TensorRT is required for inference to run!"
@@ -35,22 +35,18 @@ elseif(NOT SEMANTIC_INFERENCE_USE_TRT)
   set(ENABLE_TENSORRT_CXX_VALUE 0)
 endif()
 
-configure_file(
-  cmake/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/semantic_inference_config.h
-)
+configure_file(cmake/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/semantic_inference_config.h)
 
 add_library(
   ${PROJECT_NAME}
   src/image_recolor.cpp src/image_rotator.cpp src/image_utilities.cpp src/logging.cpp
   src/model_config.cpp src/segmenter.cpp
 )
-target_link_libraries(
-  ${PROJECT_NAME} PUBLIC config_utilities::config_utilities ${OpenCV_LIBRARIES}
-)
+target_link_libraries(${PROJECT_NAME} PUBLIC config_utilities::config_utilities ${OpenCV_LIBRARIES})
 target_include_directories(
   ${PROJECT_NAME}
-  PUBLIC $<INSTALL_INTERFACE:include>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> ${OpenCV_INCLUDE_DIRS}
+  PUBLIC $<INSTALL_INTERFACE:include> $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+         ${OpenCV_INCLUDE_DIRS}
   PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
           $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
 )
@@ -60,8 +56,7 @@ add_library(
 )
 
 if(ENABLE_TENSORRT_CXX_VALUE)
-  target_link_libraries(${PROJECT_NAME} PRIVATE TensorRT::TensorRT ${CUDA_LIBRARIES})
-  target_include_directories(${PROJECT_NAME} PRIVATE ${CUDA_INCLUDE_DIRS})
+  target_link_libraries(${PROJECT_NAME} PRIVATE TensorRT::TensorRT CUDA::cudart)
   target_sources(${PROJECT_NAME} PRIVATE src/trt_utilities.cpp src/model.cpp)
 endif()
 
