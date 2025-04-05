@@ -11,7 +11,7 @@ parse:
     catkin_add_gtest:
       pargs: 1
 format:
-  line_width: 88
+  line_width: 100
   tab_size: 2
   use_tabchars: false
   max_subgroups_hwrap: 2
