@@ -1,35 +1,28 @@
-#include <config_utilities/config.h>
 #include <config_utilities/config_utilities.h>
-#include <config_utilities/types/path.h>
-#include <config_utilities/validation.h>
+#include <config_utilities/parsing/commandline.h>
+// #include <config_utilities/types/path.h>
 #include <glog/logging.h>
+#include <ianvs/image_subscription.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/synchronizer.h>
-
-#include <image_geometry/pinhole_camera_model.hpp>
-#include <sensor_msgs/point_cloud2_iterator.hpp>
-// #include <pcl/common/transforms.h>
-// #include <pcl/point_cloud.h>
-// #include <pcl/point_types.h>
-// #include <pcl_ros/point_cloud.h>
+#include <semantic_inference/image_recolor.h>
 #include <tf2_ros/transform_listener.h>
 
 #include <cstdint>
-#include <map>
-#include <set>
-#include <stdexcept>
 #include <string>
-#include <vector>
 
 #include <cv_bridge/cv_bridge.hpp>
+#include <image_geometry/pinhole_camera_model.hpp>
 #include <opencv2/core.hpp>
 #include <rclcpp/node.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
+#include <sensor_msgs/point_cloud2_iterator.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
 
+#include "semantic_inference_ros/ros_log_sink.h"
 #include <Eigen/Geometry>
 
 namespace semantic_inference {
@@ -38,294 +31,181 @@ using message_filters::Synchronizer;
 using sensor_msgs::msg::CameraInfo;
 using sensor_msgs::msg::Image;
 using sensor_msgs::msg::PointCloud2;
+using sensor_msgs::msg::PointField;
 
-class SemanticProjector {
- public:
-  struct Config {
-    bool discard_out_of_view = false;
-    bool create_color = true;
-    int16_t unknown_label = 0;
-    std::string output_cloud_reference_frame = "camera";  // "lidar" or "camera"
-    std::string colormap_path;
-  } const config;
-
-  explicit SemanticProjector(const Config& config);
-
-  void projectSemanticImage(const cv::Mat& semantic_image,
-                            const PointCloud2& cloud,
-                            const Eigen::Affine3d& image_T_cloud,
-                            PointCloud2& output) const;
-
-  void setCamInfo(const CameraInfo& msg) { cam_model_.fromCameraInfo(msg); }
-
- private:
-  image_geometry::PinholeCameraModel cam_model_;
-  std::string output_cloud_reference_frame_ = "camera";
+struct ProjectionConfig {
+  bool use_lidar_frame = true;
+  bool discard_out_of_view = false;
+  int16_t unknown_label = 0;
 };
 
-SemanticProjector::SemanticProjector(const Config& config)
-    : config(config::checkValid(config)) {
-  output_cloud_reference_frame_ = config.output_cloud_reference_frame;
+void declare_config(ProjectionConfig& config) {
+  using namespace config;
+  name("ProjectionConfig::Config");
+  field(config.use_lidar_frame, "use_lidar_frame");
+  field(config.discard_out_of_view, "discard_out_of_view");
+  field(config.unknown_label, "unknown_label");
 }
 
-void SemanticProjector::projectSemanticImage(const cv::Mat& semantic_image,
-                                             const PointCloud2& cloud,
-                                             const Eigen::Affine3d& image_T_cloud,
-                                             PointCloud2& output) const {
+void projectSemanticImage(const ProjectionConfig& config,
+                          const CameraInfo& intrinsics,
+                          const cv::Mat& image,
+                          const PointCloud2& cloud,
+                          const Eigen::Isometry3f& image_T_cloud,
+                          PointCloud2& output) {
+  image_geometry::PinholeCameraModel model;
+  model.fromCameraInfo(intrinsics);
+
   sensor_msgs::PointCloud2Modifier mod(output);
-  mod.setPointCloud2FieldsByString("xyz", 
+  // clang-format off
+  mod.setPointCloud2Fields(4,
+                           "x", 1, PointField::FLOAT32,
+                           "y", 1, PointField::FLOAT32,
+                           "z", 1, PointField::FLOAT32,
+                           "label", 1, PointField::INT32);
+  // clang-format on
   mod.resize(cloud.width, cloud.height);
-  output_cloud.clear();
-  output_cloud.reserve(transformed_cloud.size());
-  colored_cloud.clear();
-  colored_cloud.reserve(transformed_cloud.size());
-  for (size_t i = 0; i < transformed_cloud.size(); i++) {
-    const auto& pt = transformed_cloud.points[i];
-    pcl::PointXYZL pt_labeled;
-    pt_labeled.x = pt.x;
-    pt_labeled.y = pt.y;
-    pt_labeled.z = pt.z;
-    pt_labeled.label = config.unknown_label;
 
-    if (pt.z < 0) {
-      if (!config.discard_out_of_view) {
-        output_cloud.points.emplace_back(pt_labeled);
-        if (create_color_) {
-          colored_cloud.points.emplace_back(labeledPointToColored(pt_labeled));
-        }
-      }
-      continue;
+  // techinically we could probably just have one iterator, but (small) chance that
+  // someone sends a non-contiguous pointcloud
+  auto x_in = sensor_msgs::PointCloud2ConstIterator<float>(cloud, "x");
+  auto y_in = sensor_msgs::PointCloud2ConstIterator<float>(cloud, "y");
+  auto z_in = sensor_msgs::PointCloud2ConstIterator<float>(cloud, "z");
+  auto label_iter = sensor_msgs::PointCloud2Iterator<int32_t>(output, "label");
+  while (x_in != x_in.end()) {
+    const Eigen::Vector3f p_cloud(*x_in, *y_in, *z_in);
+    const Eigen::Vector3f p_image = image_T_cloud * p_cloud;
+    ++x_in;
+    ++y_in;
+    ++z_in;
+
+    int u = -1;
+    int v = -1;
+    if (p_image.z() > 0.0f) {
+      const auto& pixel =
+          model.project3dToPixel(cv::Point3d(p_image.x(), p_image.y(), p_image.z()));
+      u = std::round(pixel.x);
+      v = std::round(pixel.y);
     }
 
-    const auto& pixel_uv = cam_model_.project3dToPixel(cv::Point3d(pt.x, pt.y, pt.z));
-    int u = static_cast<int>(pixel_uv.x);
-    int v = static_cast<int>(pixel_uv.y);
+    const auto in_view = u >= 0 && u < image.cols && v >= 0 && v < image.rows;
+    *label_iter = in_view ? image.at<int32_t>(v, u) : config.unknown_label;
+    ++label_iter;
 
-    if (u < 0 || u >= semantic_image.cols || v < 0 || v >= semantic_image.rows) {
-      if (!config.discard_out_of_view) {
-        output_cloud.points.emplace_back(pt_labeled);
-        if (create_color_) {
-          colored_cloud.points.emplace_back(labeledPointToColored(pt_labeled));
-        }
-      }
-      continue;
+    if (!in_view && config.discard_out_of_view) {
     }
 
-    pt_labeled.label = semantic_image.at<int16_t>(v, u);
-    output_cloud.points.emplace_back(pt_labeled);
-    if (create_color_) {
-      colored_cloud.points.emplace_back(labeledPointToColored(pt_labeled));
-    }
-  }
-
-  if (output_cloud_reference_frame_ == "lidar") {
-    const auto output_tmp = output_cloud;
-    const auto colored_tmp = colored_cloud;
-    pcl::transformPointCloud(
-        output_tmp, output_cloud, image_T_cloud.cast<float>().inverse());
-    pcl::transformPointCloud(
-        colored_tmp, colored_cloud, image_T_cloud.cast<float>().inverse());
-  } else if (output_cloud_reference_frame_ != "camera") {
-    throw std::invalid_argument("Unsupported parameter detected.");
+    // TODO(nathan) optionally null out out-of-view points
   }
 }
 
-// NOTE(hyungtae) You might not need this function, as Hydra already has
-// `color_mesh_by_label` option
-void SemanticProjector::projectSemanticImage(
-    const cv::Mat& semantic_image,
-    const pcl::PointCloud<InputPointType>& cloud,
-    const Eigen::Affine3d& image_T_cloud,
-    pcl::PointCloud<pcl::PointXYZRGBL>& output_cloud) const {
-  pcl::PointCloud<InputPointType> transformed_cloud;
-  pcl::transformPointCloud(cloud, transformed_cloud, image_T_cloud.cast<float>());
-
-  output_cloud.clear();
-  output_cloud.reserve(transformed_cloud.size());
-  for (size_t i = 0; i < transformed_cloud.size(); i++) {
-    const auto& pt = transformed_cloud.points[i];
-    pcl::PointXYZRGBL pt_labeled;
-    pt_labeled.x = pt.x;
-    pt_labeled.y = pt.y;
-    pt_labeled.z = pt.z;
-    pt_labeled.r = 0;
-    pt_labeled.g = 0;
-    pt_labeled.b = 0;
-    pt_labeled.label = config.unknown_label;
-
-    if (pt.z < 0) {
-      if (!config.discard_out_of_view) {
-        if (create_color_) {
-          labeledPointToLabeledAndColored(pt_labeled);
-        }
-        output_cloud.points.emplace_back(pt_labeled);
-      }
-      continue;
-    }
-
-    const auto& pixel_uv = cam_model_.project3dToPixel(cv::Point3d(pt.x, pt.y, pt.z));
-    int u = static_cast<int>(pixel_uv.x);
-    int v = static_cast<int>(pixel_uv.y);
-
-    if (u < 0 || u >= semantic_image.cols || v < 0 || v >= semantic_image.rows) {
-      if (!config.discard_out_of_view) {
-        if (create_color_) {
-          labeledPointToLabeledAndColored(pt_labeled);
-        }
-        output_cloud.points.emplace_back(pt_labeled);
-      }
-      continue;
-    }
-
-    pt_labeled.label = semantic_image.at<int16_t>(v, u);
-    if (create_color_) {
-      labeledPointToLabeledAndColored(pt_labeled);
-    }
-    output_cloud.points.emplace_back(pt_labeled);
-  }
-
-  if (output_cloud_reference_frame_ == "lidar") {
-    const auto output_tmp = output_cloud;
-    pcl::transformPointCloud(
-        output_tmp, output_cloud, image_T_cloud.cast<float>().inverse());
-  } else if (output_cloud_reference_frame_ != "camera") {
-    throw std::invalid_argument("Unsupported parameter detected.");
+void colorPointcloud(const ImageRecolor& recolor, PointCloud2& input) {
+  auto label_iter = sensor_msgs::PointCloud2ConstIterator<int32_t>(input, "label");
+  auto color_iter = sensor_msgs::PointCloud2Iterator<float>(input, "rgb");
+  while (label_iter != label_iter.end()) {
+    const auto& color = recolor.getColor(*label_iter);
+    color_iter[0] = color[0];
+    color_iter[1] = color[1];
+    color_iter[2] = color[2];
+    ++label_iter;
+    ++color_iter;
   }
 }
 
-pcl::PointXYZRGB SemanticProjector::labeledPointToColored(
-    const pcl::PointXYZL& pt_labeled) const {
-  pcl::PointXYZRGB colored_pt;
-  colored_pt.x = pt_labeled.x;
-  colored_pt.y = pt_labeled.y;
-  colored_pt.z = pt_labeled.z;
-
-  if (!color_map_.count(pt_labeled.label)) {
-    if (pt_labeled.label != static_cast<uint32_t>(config.unknown_label)) {
-      LOG_EVERY_N(ERROR, 100) << "Encountered unknown label: " << pt_labeled.label;
-    }
-
-    return colored_pt;
-  }
-
-  const auto& color = color_map_.at(pt_labeled.label);
-  colored_pt.r = static_cast<uint8_t>(color[0]);
-  colored_pt.g = static_cast<uint8_t>(color[1]);
-  colored_pt.b = static_cast<uint8_t>(color[2]);
-  return colored_pt;
-}
-
-void SemanticProjector::labeledPointToLabeledAndColored(
-    pcl::PointXYZRGBL& pt_labeled) const {
-  if (!color_map_.count(pt_labeled.label)) {
-    LOG_EVERY_N(ERROR, 100) << "Encountered unknown label: " << pt_labeled.label;
-    return;
-  }
-
-  const auto& color = color_map_.at(pt_labeled.label);
-  pt_labeled.r = static_cast<uint8_t>(color[0]);
-  pt_labeled.g = static_cast<uint8_t>(color[1]);
-  pt_labeled.b = static_cast<uint8_t>(color[2]);
-}
-
-struct BackprojectionNodelet : public rclcpp::Node {
+struct BackprojectionNode : public rclcpp::Node {
  public:
   using SyncPolicy =
       message_filters::sync_policies::ApproximateTime<Image, CameraInfo, PointCloud2>;
 
   struct Config {
-    size_t image_queue_size = 1;
-    size_t ptcld_queue_size = 3;
+    ProjectionConfig projection;
+    size_t input_queue_size = 1;
     size_t output_queue_size = 1;
-    std::string output_cloud_reference_frame = "camera";  // "lidar" or "camera"
-    bool create_color_with_label = false;
-    SemanticProjector::Config projector;
     bool show_config = true;
-  };
+  } const config;
 
-  explicit BackprojectionNodelet(const rclcpp::NodeOptions& options);
+  explicit BackprojectionNode(const rclcpp::NodeOptions& options);
 
  private:
-  Eigen::Affine3d getTransform(std::string parent_link,
-                               std::string child_link,
-                               const ros::Time& stamp);
+  Eigen::Isometry3f getTransform(const std::string& parent_link,
+                                 const std::string& child_link,
+                                 const rclcpp::Time& stamp);
 
   void callback(const Image::ConstSharedPtr& image_msg,
                 const CameraInfo::ConstSharedPtr& info_msg,
                 const PointCloud2::ConstSharedPtr& cloud_msg);
 
-  Config config_;
-
-  message_filters::Subscriber<Image> image_sub_;
+  ianvs::ImageSubscription image_sub_;
   message_filters::Subscriber<CameraInfo> info_sub_;
   message_filters::Subscriber<PointCloud2> cloud_sub_;
   std::unique_ptr<message_filters::Synchronizer<SyncPolicy>> sync;
 
-  rclcpp::Publisher<PointCloud2>::SharedPtr output_pub_;
-  rclcpp::Publisher<PointCloud2>::SharedPtr colored_pub_;
-
   tf2_ros::Buffer tf_buffer_;
-  std::unique_ptr<tf2_ros::TransformListener> tf_listener_;
-
-  std::unique_ptr<SemanticProjector> projector_;
+  tf2_ros::TransformListener tf_listener_;
+  rclcpp::Publisher<PointCloud2>::SharedPtr pub_;
 };
 
-void BackprojectionNodelet::onInit() {
-  auto nh = getPrivateNodeHandle();
-  config_ = config::fromRos<Config>(nh);
-  if (config_.show_config) {
-    ROS_INFO_STREAM("config:\n" << config::toString(config_));
+void declare_config(BackprojectionNode::Config& config) {
+  using namespace config;
+  name("BackprojectionNode::Config");
+  field(config.projection, "projection");
+  field(config.input_queue_size, "input_queue_size");
+  field(config.output_queue_size, "output_queue_size");
+  field(config.show_config, "show_config");
+  check(config.input_queue_size, GT, 0, "input_queue_size");
+  check(config.output_queue_size, GT, 0, "output_queue_size");
+}
+
+BackprojectionNode::BackprojectionNode(const rclcpp::NodeOptions& options)
+    : Node("backprojection_node", options),
+      config(config::fromCLI<Config>(options.arguments())),
+      image_sub_(*this),
+      tf_buffer_(get_clock()),
+      tf_listener_(tf_buffer_) {
+  using namespace std::placeholders;
+
+  logging::Logger::addSink("ros", std::make_shared<RosLogSink>(get_logger()));
+  logging::setConfigUtilitiesLogger();
+  if (config.show_config) {
+    SLOG(INFO) << "\n" << config::toString(config);
   }
-  config::checkValid(config_);
 
-  // Do not use image_transport for now since we want to receive raw semantic images
-  // semantic_recolor published compressed semantic images have incorrect step size
-  image_sub_.subscribe(nh, "semantic_image", config_.image_queue_size);
+  config::checkValid(config);
 
-  info_sub_.subscribe(nh, "camera_info", config_.image_queue_size);
+  pub_ = create_publisher<PointCloud2>("labeled_cloud", config.output_queue_size);
 
-  cloud_sub_.subscribe(nh, "cloud", config_.ptcld_queue_size);
+  const rclcpp::QoS qos(config.input_queue_size);
+  image_sub_.subscribe("image", config.input_queue_size);
+  info_sub_.subscribe(this, "camera_info", qos.get_rmw_qos_profile());
+  cloud_sub_.subscribe(this, "cloud", qos.get_rmw_qos_profile());
 
   sync.reset(
       new Synchronizer<SyncPolicy>(SyncPolicy(10), image_sub_, info_sub_, cloud_sub_));
-  sync->registerCallback(
-      boost::bind(&BackprojectionNodelet::callback, this, _1, _2, _3));
-
-  output_pub_ = nh.advertise<pcl::PointCloud<pcl::PointXYZL>>(
-      "semantic_inference", config_.output_queue_size);
-  colored_pub_ = nh.advertise<pcl::PointCloud<pcl::PointXYZRGB>>(
-      "semantic_colored_pointcloud", config_.output_queue_size);
-
-  tf_listener_.reset(new tf2_ros::TransformListener(tf_buffer_));
-
-  projector_.reset(new SemanticProjector(config_.projector));
+  sync->registerCallback(std::bind(&BackprojectionNode::callback, this, _1, _2, _3));
 }
 
-Eigen::Affine3d BackprojectionNodelet::getTransform(std::string parent_link,
-                                                    std::string child_link,
-                                                    const ros::Time& stamp) {
+Eigen::Isometry3f BackprojectionNode::getTransform(const std::string& parent_link,
+                                                   const std::string& child_link,
+                                                   const rclcpp::Time& stamp) {
   const auto& tf_stamped = tf_buffer_.lookupTransform(parent_link, child_link, stamp);
-  return tf2::transformToEigen(tf_stamped);
+  const auto tf_double = tf2::transformToEigen(tf_stamped);
+  return tf_double.cast<float>();
 }
 
-void BackprojectionNodelet::callback(const Image::ConstSharedPtr& image_msg,
-                                     const CameraInfo::ConstSharedPtr& info_msg,
-                                     const PointCloud2::ConstSharedPtr& cloud_msg) {
-  if (!projector_->camModelInit()) {
-    projector_->setCamInfo(info_msg);
-  }
-
+void BackprojectionNode::callback(const Image::ConstSharedPtr& image_msg,
+                                  const CameraInfo::ConstSharedPtr& info_msg,
+                                  const PointCloud2::ConstSharedPtr& cloud_msg) {
   // Find transform from cloud to image frame
-  const auto& eigen_tf = getTransform(image_msg->header.frame_id,
-                                      cloud_msg->header.frame_id,
-                                      ros::Time().fromNSec(cloud_msg->header.stamp));
+  const rclcpp::Time stamp(cloud_msg->header.stamp);
+  const auto image_T_cloud =
+      getTransform(image_msg->header.frame_id, cloud_msg->header.frame_id, stamp);
 
   // Convert image
   cv_bridge::CvImageConstPtr img_ptr;
   try {
     img_ptr = cv_bridge::toCvShare(image_msg);
   } catch (const cv_bridge::Exception& e) {
-    ROS_ERROR_STREAM("cv_bridge exception: " << e.what());
+    SLOG(ERROR) << "cv_bridge exception: " << e.what();
     return;
   }
 
@@ -336,64 +216,22 @@ void BackprojectionNodelet::callback(const Image::ConstSharedPtr& image_msg,
     img_ptr->image.convertTo(semantic_labels, CV_16SC1);
   }
 
-  if (config_.create_color_with_label) {
-    pcl::PointCloud<pcl::PointXYZRGBL> output_cloud;
-    projector_->projectSemanticImage(
-        semantic_labels, *cloud_msg, eigen_tf, output_cloud);
+  auto output = std::make_unique<PointCloud2>();
+  projectSemanticImage(config.projection,
+                       *info_msg,
+                       semantic_labels,
+                       *cloud_msg,
+                       image_T_cloud,
+                       *output);
 
-    output_cloud.header = cloud_msg->header;
-    output_cloud.header.frame_id = config_.output_cloud_reference_frame == "camera"
-                                       ? image_msg->header.frame_id
-                                       : cloud_msg->header.frame_id;
-    output_pub_.publish(output_cloud);
-  } else {
-    pcl::PointCloud<pcl::PointXYZL> output_cloud;
-    pcl::PointCloud<pcl::PointXYZRGB> colored_cloud;
-    projector_->projectSemanticImage(
-        semantic_labels, *cloud_msg, eigen_tf, output_cloud, colored_cloud);
-
-    output_cloud.header = cloud_msg->header;
-    output_cloud.header.frame_id = config_.output_cloud_reference_frame == "camera"
-                                       ? image_msg->header.frame_id
-                                       : cloud_msg->header.frame_id;
-    output_pub_.publish(output_cloud);
-
-    if (colored_cloud.size() > 0 && colored_pub_.getNumSubscribers() > 0) {
-      colored_cloud.header = cloud_msg->header;
-      colored_cloud.header.frame_id = config_.output_cloud_reference_frame == "camera"
-                                          ? image_msg->header.frame_id
-                                          : cloud_msg->header.frame_id;
-      colored_pub_.publish(colored_cloud);
-    }
-  }
-}
-
-void declare_config(SemanticProjector::Config& config) {
-  using namespace config;
-  name("SemanticProjector::Config");
-  field(config.discard_out_of_view, "discard_out_of_view");
-  field(config.create_color, "create_color");
-  field(config.unknown_label, "unknown_label");
-  field(config.output_cloud_reference_frame, "output_cloud_reference_frame");
-  field(config.colormap_path, "colormap_path");
-}
-
-void declare_config(BackprojectionNodelet::Config& config) {
-  using namespace config;
-  name("BackprojectionNodelet::Config");
-  field(config.output_queue_size, "output_queue_size");
-  field(config.ptcld_queue_size, "ptcld_queue_size");
-  field(config.image_queue_size, "image_queue_size");
-  field(config.output_cloud_reference_frame, "output_cloud_reference_frame");
-  field(config.create_color_with_label, "create_color_with_label");
-  field(config.projector, "projector");
-  field(config.show_config, "show_config");
-  check(config.output_queue_size, GE, 0, "output_queue_size");
-  check(config.ptcld_queue_size, GE, 0, "ptcld_queue_size");
-  check(config.image_queue_size, GE, 0, "image_queue_size");
+  output->header = cloud_msg->header;
+  output->header.frame_id = config.projection.use_lidar_frame
+                                ? cloud_msg->header.frame_id
+                                : image_msg->header.frame_id;
+  pub_->publish(std::move(output));
 }
 
 }  // namespace semantic_inference
 
 #include <rclcpp_components/register_node_macro.hpp>
-RCLCPP_COMPONENTS_REGISTER_NODE(semantic_inference::BackprojectionNodelet)
+RCLCPP_COMPONENTS_REGISTER_NODE(semantic_inference::BackprojectionNode)

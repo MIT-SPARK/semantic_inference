@@ -41,9 +41,11 @@
 
 namespace semantic_inference {
 
+using Label = int16_t;
+
 struct GroupInfo {
   std::string name;
-  std::vector<int16_t> labels;
+  std::vector<Label> labels;
 };
 
 class ImageRecolor {
@@ -51,15 +53,17 @@ class ImageRecolor {
   struct Config {
     std::vector<GroupInfo> groups;
     std::vector<uint8_t> default_color{0, 0, 0};
-    int16_t default_id = -1;
-    int16_t offset = 0;
+    Label default_id = -1;
+    Label offset = 0;
     std::filesystem::path colormap_path;
+    bool skip_header = true;
+    char delimiter = ',';
   } const config;
 
   explicit ImageRecolor(const Config& config,
-                        const std::map<int16_t, std::array<uint8_t, 3>>& colormap = {});
+                        const std::map<Label, std::array<uint8_t, 3>>& colormap = {});
 
-  static ImageRecolor fromHLS(int16_t num_classes,
+  static ImageRecolor fromHLS(size_t num_classes,
                               float luminance = 0.8,
                               float saturation = 0.8);
 
@@ -67,15 +71,19 @@ class ImageRecolor {
 
   void relabelImage(const cv::Mat& classes, cv::Mat& output) const;
 
- protected:
-  void fillColor(int16_t class_id, uint8_t* pixel, size_t pixel_size = 3) const;
+  const std::array<uint8_t, 3>& getColor(Label label) const;
 
-  int16_t getRemappedLabel(int16_t class_id) const;
+  const std::array<uint8_t, 3> default_color;
+  const std::map<Label, Label> label_remapping;
+  const std::map<Label, std::array<uint8_t, 3>> color_map;
+
+ protected:
+  void fillColor(Label class_id, uint8_t* pixel, size_t pixel_size = 3) const;
+
+  Label getRemappedLabel(Label class_id) const;
 
  private:
-  std::map<int16_t, int16_t> label_remapping_;
-  std::map<int16_t, std::array<uint8_t, 3>> color_map_;
-  mutable std::set<int16_t> seen_unknown_labels_;
+  mutable std::set<Label> seen_unknown_labels_;
 };
 
 void declare_config(ImageRecolor::Config& config);
