@@ -24,8 +24,13 @@ find_package(tf2_ros REQUIRED)
 # SHARED is required for composable nodes
 add_library(
   ${PROJECT_NAME} SHARED
-  src/backprojection_nodelet.cpp src/mask_nodelet.cpp src/rgbd_segmentation_nodelet.cpp
-  src/segmentation_nodelet.cpp src/output_publisher.cpp src/relabel_nodelet.cpp
+  src/backprojection_nodelet.cpp
+  src/mask_nodelet.cpp
+  src/rgbd_segmentation_nodelet.cpp
+  src/segmentation_nodelet.cpp
+  src/output_publisher.cpp
+  src/pointcloud_projection.cpp
+  src/relabel_nodelet.cpp
 )
 target_include_directories(
   ${PROJECT_NAME} PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
