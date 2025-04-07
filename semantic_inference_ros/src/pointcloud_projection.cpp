@@ -24,12 +24,84 @@ void declare_config(ProjectionConfig& config) {
   field(config.unknown_label, "unknown_label");
 }
 
+struct OutputPosIter {
+ public:
+  explicit OutputPosIter(PointCloud2& cloud)
+      : x_iter_(cloud, "x"), y_iter_(cloud, "y"), z_iter_(cloud, "z") {}
+
+  operator bool() const { return x_iter_ != x_iter_.end(); }
+
+  void set(const Eigen::Vector3f& p) {
+    *x_iter_ = p.x();
+    *y_iter_ = p.y();
+    *z_iter_ = p.z();
+  }
+
+  OutputPosIter& operator++() {
+    ++x_iter_;
+    ++y_iter_;
+    ++z_iter_;
+    return *this;
+  }
+
+ private:
+  // techinically we could probably just have one iterator, but (small) chance that
+  // someone sends a non-contiguous pointcloud
+  sensor_msgs::PointCloud2Iterator<float> x_iter_;
+  sensor_msgs::PointCloud2Iterator<float> y_iter_;
+  sensor_msgs::PointCloud2Iterator<float> z_iter_;
+};
+
+struct InputPosIter {
+ public:
+  explicit InputPosIter(const PointCloud2& cloud)
+      : x_iter_(cloud, "x"), y_iter_(cloud, "y"), z_iter_(cloud, "z") {}
+
+  operator bool() const { return x_iter_ != x_iter_.end(); }
+  Eigen::Vector3f operator*() { return Eigen::Vector3f(*x_iter_, *y_iter_, *z_iter_); }
+  InputPosIter& operator++() {
+    ++x_iter_;
+    ++y_iter_;
+    ++z_iter_;
+    return *this;
+  }
+
+ private:
+  // techinically we could probably just have one iterator, but (small) chance that
+  // someone sends a non-contiguous pointcloud
+  sensor_msgs::PointCloud2ConstIterator<float> x_iter_;
+  sensor_msgs::PointCloud2ConstIterator<float> y_iter_;
+  sensor_msgs::PointCloud2ConstIterator<float> z_iter_;
+};
+
 void projectSemanticImage(const ProjectionConfig& config,
                           const CameraInfo& intrinsics,
                           const cv::Mat& image,
                           const PointCloud2& cloud,
                           const Eigen::Isometry3f& image_T_cloud,
                           PointCloud2& output) {
+  std::function<int32_t(int, int)> getter;
+  switch (image.type()) {
+    case CV_8UC1:
+      getter = [image](int r, int c) -> int32_t { return image.at<uint8_t>(r, c); };
+      break;
+    case CV_8SC1:
+      getter = [image](int r, int c) -> int32_t { return image.at<int8_t>(r, c); };
+      break;
+    case CV_16UC1:
+      getter = [image](int r, int c) -> int32_t { return image.at<uint16_t>(r, c); };
+      break;
+    case CV_16SC1:
+      getter = [image](int r, int c) -> int32_t { return image.at<int16_t>(r, c); };
+      break;
+    case CV_32SC1:
+      getter = [image](int r, int c) -> int32_t { return image.at<int32_t>(r, c); };
+      break;
+    default:
+      SLOG(ERROR) << "Unknown label type: " << image.type();
+      return;
+  }
+
   image_geometry::PinholeCameraModel model;
   model.fromCameraInfo(intrinsics);
 
@@ -39,22 +111,18 @@ void projectSemanticImage(const ProjectionConfig& config,
                            "x", 1, PointField::FLOAT32,
                            "y", 1, PointField::FLOAT32,
                            "z", 1, PointField::FLOAT32,
-                           "label", 1, PointField::INT32);
+                           "label", 1, PointField::UINT32);
   // clang-format on
   mod.resize(cloud.width, cloud.height);
 
-  // techinically we could probably just have one iterator, but (small) chance that
-  // someone sends a non-contiguous pointcloud
-  auto x_in = sensor_msgs::PointCloud2ConstIterator<float>(cloud, "x");
-  auto y_in = sensor_msgs::PointCloud2ConstIterator<float>(cloud, "y");
-  auto z_in = sensor_msgs::PointCloud2ConstIterator<float>(cloud, "z");
-  auto label_iter = sensor_msgs::PointCloud2Iterator<int32_t>(output, "label");
-  while (x_in != x_in.end()) {
-    const Eigen::Vector3f p_cloud(*x_in, *y_in, *z_in);
+  auto pos_in_iter = InputPosIter(cloud);
+  auto pos_out_iter = OutputPosIter(output);
+  auto label_iter = sensor_msgs::PointCloud2Iterator<uint32_t>(output, "label");
+  const auto invalid_point =
+      Eigen::Vector3f::Constant(std::numeric_limits<float>::quiet_NaN());
+  while (pos_in_iter) {
+    const Eigen::Vector3f p_cloud = *pos_in_iter;
     const Eigen::Vector3f p_image = image_T_cloud * p_cloud;
-    ++x_in;
-    ++y_in;
-    ++z_in;
 
     int u = -1;
     int v = -1;
@@ -66,13 +134,16 @@ void projectSemanticImage(const ProjectionConfig& config,
     }
 
     const auto in_view = u >= 0 && u < image.cols && v >= 0 && v < image.rows;
-    *label_iter = in_view ? image.at<int32_t>(v, u) : config.unknown_label;
-    ++label_iter;
-
+    *label_iter = in_view ? getter(v, u) : config.unknown_label;
     if (!in_view && config.discard_out_of_view) {
+      pos_out_iter.set(invalid_point);
+    } else {
+      pos_out_iter.set(config.use_lidar_frame ? p_cloud : p_image);
     }
 
-    // TODO(nathan) optionally null out out-of-view points
+    ++pos_in_iter;
+    ++pos_out_iter;
+    ++label_iter;
   }
 }
 

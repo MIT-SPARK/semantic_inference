@@ -83,8 +83,13 @@ install(DIRECTORY config DESTINATION share/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest REQUIRED)
+  # NOTE(nathan) this is janky because pcl, pcl_conversions, and ament can't do cmake right
+  set(PCL_FIND_QUIETLY ON)
+  find_package(PCL REQUIRED COMPONENTS common)
+  find_package(pcl_ros REQUIRED)
   ament_add_gtest(${PROJECT_NAME}_test test/main.cpp test/test_pointcloud_projection.cpp)
-  target_link_libraries(${PROJECT_NAME}_test ${PROJECT_NAME})
+  target_include_directories(${PROJECT_NAME}_test PRIVATE ${pcl_conversions_INCLUDE_DIRS})
+  target_link_libraries(${PROJECT_NAME}_test ${PROJECT_NAME} ${pcl_conversions_LIBRARIES})
 endif()
 
 ament_export_targets(${PROJECT_NAME}-targets)
