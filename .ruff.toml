@@ -1,0 +1,6 @@
+[lint.per-file-ignores]
+"__init__.py" = ["F401", "F403"]
+
+[lint.isort]
+split-on-trailing-comma = true
+known-local-folder = ["semantic_inference*"]
