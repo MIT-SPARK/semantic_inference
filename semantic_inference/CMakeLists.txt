@@ -12,7 +12,6 @@ endif()
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 option(SEMANTIC_INFERENCE_USE_TRT "Build with TensorRT" ON)
-option(SEMANTIC_INFERENCE_BUILD_TESTS "Build tests" ON)
 option(BUILD_SHARED_LIBS "Build shared libs" ON)
 
 find_package(config_utilities REQUIRED)
@@ -63,7 +62,8 @@ endif()
 add_executable(demo_segmentation app/demo_segmentation.cpp)
 target_link_libraries(demo_segmentation ${PROJECT_NAME})
 
-if(SEMANTIC_INFERENCE_BUILD_TESTS)
+include(CTest)
+if(BUILD_TESTING)
   enable_testing()
   add_subdirectory(tests)
 endif()

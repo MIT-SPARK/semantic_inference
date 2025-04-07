@@ -62,7 +62,6 @@ class Conversions:
         Create a stamped feature vector message.
 
         Args:
-        ----
             header (std_msgs.msg.Header): Original image header
             feature (np.ndarray): Image feature
 
@@ -78,7 +77,6 @@ class Conversions:
         Create a FeatureImage from segmentation results.
 
         Args:
-        ----
             header (std_msgs.msg.Header): Original image header
             results: (semantic_inference.SegmentationResults): Segmentation output
 
