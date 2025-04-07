@@ -82,8 +82,9 @@ install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
 install(DIRECTORY config DESTINATION share/${PROJECT_NAME})
 
 if(BUILD_TESTING)
-  find_package(ament_lint_auto REQUIRED)
-  ament_lint_auto_find_test_dependencies()
+  find_package(ament_cmake_gtest REQUIRED)
+  ament_add_gtest(${PROJECT_NAME}_test test/main.cpp test/test_pointcloud_projection.cpp)
+  target_link_libraries(${PROJECT_NAME}_test ${PROJECT_NAME})
 endif()
 
 ament_export_targets(${PROJECT_NAME}-targets)
