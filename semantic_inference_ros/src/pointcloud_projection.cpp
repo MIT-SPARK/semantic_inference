@@ -16,14 +16,7 @@ using sensor_msgs::msg::Image;
 using sensor_msgs::msg::PointCloud2;
 using sensor_msgs::msg::PointField;
 
-void declare_config(ProjectionConfig& config) {
-  using namespace config;
-  name("ProjectionConfig::Config");
-  field(config.use_lidar_frame, "use_lidar_frame");
-  field(config.discard_out_of_view, "discard_out_of_view");
-  field(config.unknown_label, "unknown_label");
-}
-
+namespace {
 struct OutputPosIter {
  public:
   explicit OutputPosIter(PointCloud2& cloud)
@@ -74,12 +67,44 @@ struct InputPosIter {
   sensor_msgs::PointCloud2ConstIterator<float> z_iter_;
 };
 
+void initOutput(const PointCloud2& input, PointCloud2& output, bool use_color) {
+  sensor_msgs::PointCloud2Modifier mod(output);
+  // clang-format off
+  if (use_color) {
+    mod.setPointCloud2Fields(5,
+                             "x", 1, PointField::FLOAT32,
+                             "y", 1, PointField::FLOAT32,
+                             "z", 1, PointField::FLOAT32,
+                             "rgba", 1, PointField::UINT32,
+                             "label", 1, PointField::UINT32);
+  } else {
+    mod.setPointCloud2Fields(4,
+                             "x", 1, PointField::FLOAT32,
+                             "y", 1, PointField::FLOAT32,
+                             "z", 1, PointField::FLOAT32,
+                             "label", 1, PointField::UINT32);
+  }
+  // clang-format on
+  mod.resize(input.width, input.height);
+}
+
+}  // namespace
+
+void declare_config(ProjectionConfig& config) {
+  using namespace config;
+  name("ProjectionConfig::Config");
+  field(config.use_lidar_frame, "use_lidar_frame");
+  field(config.discard_out_of_view, "discard_out_of_view");
+  field(config.unknown_label, "unknown_label");
+}
+
 void projectSemanticImage(const ProjectionConfig& config,
                           const CameraInfo& intrinsics,
                           const cv::Mat& image,
                           const PointCloud2& cloud,
                           const Eigen::Isometry3f& image_T_cloud,
-                          PointCloud2& output) {
+                          PointCloud2& output,
+                          const ImageRecolor* recolor) {
   std::function<int32_t(int, int)> getter;
   switch (image.type()) {
     case CV_8UC1:
@@ -104,16 +129,7 @@ void projectSemanticImage(const ProjectionConfig& config,
 
   image_geometry::PinholeCameraModel model;
   model.fromCameraInfo(intrinsics);
-
-  sensor_msgs::PointCloud2Modifier mod(output);
-  // clang-format off
-  mod.setPointCloud2Fields(4,
-                           "x", 1, PointField::FLOAT32,
-                           "y", 1, PointField::FLOAT32,
-                           "z", 1, PointField::FLOAT32,
-                           "label", 1, PointField::UINT32);
-  // clang-format on
-  mod.resize(cloud.width, cloud.height);
+  initOutput(cloud, output, recolor != nullptr);
 
   auto pos_in_iter = InputPosIter(cloud);
   auto pos_out_iter = OutputPosIter(output);
@@ -145,17 +161,26 @@ void projectSemanticImage(const ProjectionConfig& config,
     ++pos_out_iter;
     ++label_iter;
   }
-}
 
-void colorPointcloud(const ImageRecolor& recolor, PointCloud2& input) {
-  auto label_iter = sensor_msgs::PointCloud2ConstIterator<int32_t>(input, "label");
-  auto color_iter = sensor_msgs::PointCloud2Iterator<float>(input, "rgb");
-  while (label_iter != label_iter.end()) {
-    const auto& color = recolor.getColor(*label_iter);
+  if (!recolor) {
+    return;
+  }
+
+  auto labels_out = sensor_msgs::PointCloud2ConstIterator<uint32_t>(output, "label");
+  auto color_iter = sensor_msgs::PointCloud2Iterator<uint8_t>(output, "rgba");
+  size_t idx = 0;
+  while (labels_out != labels_out.end()) {
+    SLOG(ERROR) << "Curr label: " << *labels_out << ", idx: " << idx;
+    ++idx;
+    const auto& color = recolor->getColor(*labels_out);
+    SLOG(ERROR) << "color: [" << static_cast<int>(color[0]) << ", "
+                << static_cast<int>(color[1]) << ", " << static_cast<int>(color[2])
+                << "]";
     color_iter[0] = color[0];
     color_iter[1] = color[1];
     color_iter[2] = color[2];
-    ++label_iter;
+    color_iter[3] = 255u;
+    ++labels_out;
     ++color_iter;
   }
 }

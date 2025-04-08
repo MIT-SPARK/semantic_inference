@@ -24,8 +24,7 @@ void projectSemanticImage(const ProjectionConfig& config,
                           const cv::Mat& image,
                           const sensor_msgs::msg::PointCloud2& cloud,
                           const Eigen::Isometry3f& image_T_cloud,
-                          sensor_msgs::msg::PointCloud2& output);
-
-void colorPointcloud(const ImageRecolor& recolor, sensor_msgs::msg::PointCloud2& input);
+                          sensor_msgs::msg::PointCloud2& output,
+                          const ImageRecolor* recolor = nullptr);
 
 }  // namespace semantic_inference
