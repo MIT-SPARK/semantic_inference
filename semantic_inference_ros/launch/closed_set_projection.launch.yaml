@@ -18,40 +18,20 @@ launch:
   - arg: {name: verbose, default: 'true', description: Disable console logging if false}
   # Input configuration
   - arg: {name: compressed_rgb, default: 'false', description: Triggers decompression for RGB stream}
+  - arg: {name: rgb_image_transport, default: $(if $(var compressed_rgb) 'compressed' 'raw')}
   - arg: {name: max_image_queue_size, default: '1', description: Max number of images to store}
   - arg: {name: min_separation_s, default: '0.0', description: Time separation between inputs}
   - arg: {name: rotation_type, default: none, description: Input camera rotation}
   # Colormap and label grouping
   - arg: {name: labelspace_name, default: ade20k_mp3d, description: Label remapping configuration}
   - arg: {name: colormap_path, default: $(find-pkg-share semantic_inference_ros)/config/distinct_150_colors.csv, description: Visualization colormap}
-  # nodes
-  - node:
-      if: $(var compressed_rgb)
-      pkg: image_transport
-      exec: republish
-      name: decompress_rgb
-      args: compressed in:=color/image_raw raw out:=color/image_raw
+  - include: {file: $(find-pkg-share semantic_inference_ros)/launch/closed_set.launch.yaml}
   - node:  # 2D semantic segmentation
-      unless: $(var use_prerecorded)
       pkg: semantic_inference_ros
-      exec: closed_set_node
-      name: semantic_inference
+      exec: backprojection_node
+      name: semantic_projector
       on_exit: shutdown
-      launch-prefix: $(if $(var debug) 'gdbserver localhost:3000')
+      remap:
+        - {from: labels, to: semantic/image_raw}
       args: >
-        --config-utilities-file $(var model_config)
-        --config-utilities-file $(find-pkg-share semantic_inference_ros)/config/label_groupings/$(var labelspace_name).yaml@output/recolor
-        --config-utilities-yaml {segmenter: {model: {model_file: $(var model_name).onnx, force_rebuild: $(var force_rebuild)}}}
-        --config-utilities-yaml {output: {recolor: {colormap_path: $(var colormap_path)}}}
-        --config-utilities-yaml {worker: {max_queue_size: $(var max_image_queue_size), image_separation_s: $(var min_separation_s)}}
-        --config-utilities-yaml {image_rotator: {rotation: $(var rotation_type)}}
-  - node:  # Remapping pre-recorded labels
-      if: $(var use_prerecorded)
-      pkg: semantic_inference_ros
-      exec: recolor_node
-      name: semantic_inference
-      on_exit: shutdown
-      args: |-
-        $(if $(not $(var verbose)) --disable-stdout-logs)
-        --config-utilities-file $(find-pkg-share semantic_inference_ros)/config/label_groupings/$(var labelspace_name).yaml
-        --config-utilities-yaml {worker: {max_queue_size: $(var max_image_queue_size),  image_separation_s: $(var min_separation_s)}}
+        --config-utilities-yaml {colormap_path: $(var colormap_path)}

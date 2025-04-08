@@ -89,7 +89,7 @@ BackprojectionNode::BackprojectionNode(const rclcpp::NodeOptions& options)
   pub_ = create_publisher<PointCloud2>("labeled_cloud", config.output_queue_size);
 
   const rclcpp::QoS qos(config.input_queue_size);
-  image_sub_.subscribe("image", config.input_queue_size);
+  image_sub_.subscribe("semantic/image_raw", config.input_queue_size);
   info_sub_.subscribe(this, "camera_info", qos.get_rmw_qos_profile());
   cloud_sub_.subscribe(this, "cloud", qos.get_rmw_qos_profile());
   sync = std::make_unique<Sync>(SyncPolicy(10), image_sub_, info_sub_, cloud_sub_);
