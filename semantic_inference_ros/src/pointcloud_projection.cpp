@@ -133,7 +133,7 @@ void projectSemanticImage(const ProjectionConfig& config,
 
   auto pos_in_iter = InputPosIter(cloud);
   auto pos_out_iter = OutputPosIter(output);
-  auto label_iter = sensor_msgs::PointCloud2Iterator<uint32_t>(output, "label");
+  auto label_iter = sensor_msgs::PointCloud2Iterator<int32_t>(output, "label");
   const auto invalid_point =
       Eigen::Vector3f::Constant(std::numeric_limits<float>::quiet_NaN());
   while (pos_in_iter) {
@@ -166,19 +166,16 @@ void projectSemanticImage(const ProjectionConfig& config,
     return;
   }
 
-  auto labels_out = sensor_msgs::PointCloud2ConstIterator<uint32_t>(output, "label");
+  auto labels_out = sensor_msgs::PointCloud2ConstIterator<int32_t>(output, "label");
   auto color_iter = sensor_msgs::PointCloud2Iterator<uint8_t>(output, "rgba");
-  size_t idx = 0;
   while (labels_out != labels_out.end()) {
-    SLOG(ERROR) << "Curr label: " << *labels_out << ", idx: " << idx;
-    ++idx;
-    const auto& color = recolor->getColor(*labels_out);
-    SLOG(ERROR) << "color: [" << static_cast<int>(color[0]) << ", "
-                << static_cast<int>(color[1]) << ", " << static_cast<int>(color[2])
-                << "]";
-    color_iter[0] = color[0];
+    const auto& color = *labels_out == config.unknown_label
+                            ? recolor->default_color
+                            : recolor->getColor(*labels_out);
+    // annoyingly BGR order even if field is RGBA
+    color_iter[0] = color[2];
     color_iter[1] = color[1];
-    color_iter[2] = color[2];
+    color_iter[2] = color[0];
     color_iter[3] = 255u;
     ++labels_out;
     ++color_iter;
