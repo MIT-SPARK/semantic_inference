@@ -98,7 +98,7 @@ void declare_config(ProjectionConfig& config) {
   field(config.unknown_label, "unknown_label");
 }
 
-void projectSemanticImage(const ProjectionConfig& config,
+bool projectSemanticImage(const ProjectionConfig& config,
                           const CameraInfo& intrinsics,
                           const cv::Mat& image,
                           const PointCloud2& cloud,
@@ -124,7 +124,7 @@ void projectSemanticImage(const ProjectionConfig& config,
       break;
     default:
       SLOG(ERROR) << "Unknown label type: " << image.type();
-      return;
+      return false;
   }
 
   image_geometry::PinholeCameraModel model;
@@ -163,7 +163,7 @@ void projectSemanticImage(const ProjectionConfig& config,
   }
 
   if (!recolor) {
-    return;
+    return true;
   }
 
   auto labels_out = sensor_msgs::PointCloud2ConstIterator<int32_t>(output, "label");
@@ -180,6 +180,8 @@ void projectSemanticImage(const ProjectionConfig& config,
     ++labels_out;
     ++color_iter;
   }
+
+  return true;
 }
 
 }  // namespace semantic_inference

@@ -19,7 +19,7 @@ struct ProjectionConfig {
 
 void declare_config(ProjectionConfig& config);
 
-void projectSemanticImage(const ProjectionConfig& config,
+bool projectSemanticImage(const ProjectionConfig& config,
                           const sensor_msgs::msg::CameraInfo& intrinsics,
                           const cv::Mat& image,
                           const sensor_msgs::msg::PointCloud2& cloud,

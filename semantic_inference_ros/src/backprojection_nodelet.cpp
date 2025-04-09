@@ -25,6 +25,7 @@ using sensor_msgs::msg::CameraInfo;
 using sensor_msgs::msg::Image;
 using sensor_msgs::msg::PointCloud2;
 using sensor_msgs::msg::PointField;
+using OptPose = std::optional<Eigen::Isometry3f>;
 
 struct BackprojectionNode : public rclcpp::Node {
  public:
@@ -42,9 +43,9 @@ struct BackprojectionNode : public rclcpp::Node {
   explicit BackprojectionNode(const rclcpp::NodeOptions& options);
 
  private:
-  Eigen::Isometry3f getTransform(const std::string& parent_link,
-                                 const std::string& child_link,
-                                 const rclcpp::Time& stamp);
+  OptPose getTransform(const std::string& parent_link,
+                       const std::string& child_link,
+                       const rclcpp::Time& stamp);
 
   void callback(const Image::ConstSharedPtr& image_msg,
                 const CameraInfo::ConstSharedPtr& info_msg,
@@ -105,10 +106,17 @@ BackprojectionNode::BackprojectionNode(const rclcpp::NodeOptions& options)
   sync_->registerCallback(std::bind(&BackprojectionNode::callback, this, _1, _2, _3));
 }
 
-Eigen::Isometry3f BackprojectionNode::getTransform(const std::string& parent_link,
-                                                   const std::string& child_link,
-                                                   const rclcpp::Time& stamp) {
-  const auto& tf_stamped = tf_buffer_.lookupTransform(parent_link, child_link, stamp);
+OptPose BackprojectionNode::getTransform(const std::string& parent_link,
+                                         const std::string& child_link,
+                                         const rclcpp::Time& stamp) {
+  geometry_msgs::msg::TransformStamped tf_stamped;
+  try {
+    tf_stamped = tf_buffer_.lookupTransform(parent_link, child_link, stamp);
+  } catch (const std::exception& exception) {
+    SLOG(WARNING) << "Failed to lookup tf: " << exception.what();
+    return std::nullopt;
+  }
+
   const auto tf_double = tf2::transformToEigen(tf_stamped);
   return tf_double.cast<float>();
 }
@@ -120,6 +128,9 @@ void BackprojectionNode::callback(const Image::ConstSharedPtr& image_msg,
   const rclcpp::Time stamp(cloud_msg->header.stamp);
   const auto image_T_cloud =
       getTransform(image_msg->header.frame_id, cloud_msg->header.frame_id, stamp);
+  if (!image_T_cloud) {
+    return;
+  }
 
   // Convert image
   cv_bridge::CvImageConstPtr img_ptr;
@@ -130,21 +141,17 @@ void BackprojectionNode::callback(const Image::ConstSharedPtr& image_msg,
     return;
   }
 
-  cv::Mat semantic_labels;
-  if (img_ptr->image.type() == CV_16SC1) {
-    semantic_labels = img_ptr->image.clone();
-  } else {
-    img_ptr->image.convertTo(semantic_labels, CV_16SC1);
-  }
-
   auto output = std::make_unique<PointCloud2>();
-  projectSemanticImage(config.projection,
-                       *info_msg,
-                       semantic_labels,
-                       *cloud_msg,
-                       image_T_cloud,
-                       *output,
-                       recolor_.get());
+  const auto valid = projectSemanticImage(config.projection,
+                                          *info_msg,
+                                          img_ptr->image,
+                                          *cloud_msg,
+                                          image_T_cloud.value(),
+                                          *output,
+                                          recolor_.get());
+  if (!valid) {
+    return;
+  }
 
   output->header = cloud_msg->header;
   output->header.frame_id = config.projection.use_lidar_frame
