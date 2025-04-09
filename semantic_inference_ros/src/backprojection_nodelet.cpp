@@ -33,6 +33,7 @@ struct BackprojectionNode : public rclcpp::Node {
 
   struct Config {
     ProjectionConfig projection;
+    ImageRecolor::Config recolor;
     size_t input_queue_size = 1;
     size_t output_queue_size = 1;
     bool show_config = true;
@@ -52,7 +53,8 @@ struct BackprojectionNode : public rclcpp::Node {
   ianvs::ImageSubscription image_sub_;
   message_filters::Subscriber<CameraInfo> info_sub_;
   message_filters::Subscriber<PointCloud2> cloud_sub_;
-  std::unique_ptr<Sync> sync;
+  std::unique_ptr<Sync> sync_;
+  std::unique_ptr<ImageRecolor> recolor_;
 
   tf2_ros::Buffer tf_buffer_;
   tf2_ros::TransformListener tf_listener_;
@@ -63,6 +65,7 @@ void declare_config(BackprojectionNode::Config& config) {
   using namespace config;
   name("BackprojectionNode::Config");
   field(config.projection, "projection");
+  field(config.recolor, "recolor");
   field(config.input_queue_size, "input_queue_size");
   field(config.output_queue_size, "output_queue_size");
   field(config.show_config, "show_config");
@@ -85,15 +88,21 @@ BackprojectionNode::BackprojectionNode(const rclcpp::NodeOptions& options)
   }
 
   config::checkValid(config);
+  if (!config.recolor.colormap_path.empty() &&
+      std::filesystem::exists(config.recolor.colormap_path)) {
+    recolor_ = std::make_unique<ImageRecolor>(config.recolor);
+  }
 
   pub_ = create_publisher<PointCloud2>("labeled_cloud", config.output_queue_size);
 
   const rclcpp::QoS qos(config.input_queue_size);
+  // these are designed to default to the same namespaces as the input to the inference
+  // node
   image_sub_.subscribe("semantic/image_raw", config.input_queue_size);
-  info_sub_.subscribe(this, "camera_info", qos.get_rmw_qos_profile());
+  info_sub_.subscribe(this, "color/camera_info", qos.get_rmw_qos_profile());
   cloud_sub_.subscribe(this, "cloud", qos.get_rmw_qos_profile());
-  sync = std::make_unique<Sync>(SyncPolicy(10), image_sub_, info_sub_, cloud_sub_);
-  sync->registerCallback(std::bind(&BackprojectionNode::callback, this, _1, _2, _3));
+  sync_ = std::make_unique<Sync>(SyncPolicy(10), image_sub_, info_sub_, cloud_sub_);
+  sync_->registerCallback(std::bind(&BackprojectionNode::callback, this, _1, _2, _3));
 }
 
 Eigen::Isometry3f BackprojectionNode::getTransform(const std::string& parent_link,
@@ -134,7 +143,8 @@ void BackprojectionNode::callback(const Image::ConstSharedPtr& image_msg,
                        semantic_labels,
                        *cloud_msg,
                        image_T_cloud,
-                       *output);
+                       *output,
+                       recolor_.get());
 
   output->header = cloud_msg->header;
   output->header.frame_id = config.projection.use_lidar_frame
