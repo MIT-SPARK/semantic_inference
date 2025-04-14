@@ -122,6 +122,8 @@ OutputPublisher::OutputPublisher(const Config& config, Interface node)
       image_recolor_(config.recolor),
       impl_(std::make_unique<Impl>(config, node)) {}
 
+OutputPublisher::~OutputPublisher() = default;
+
 void OutputPublisher::publish(const std_msgs::msg::Header& header,
                               const cv::Mat& labels,
                               const cv::Mat& color) {

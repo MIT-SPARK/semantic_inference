@@ -13,16 +13,24 @@ find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_python REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(ianvs REQUIRED)
+find_package(image_geometry REQUIRED)
 find_package(message_filters REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_components REQUIRED)
 find_package(semantic_inference REQUIRED)
+find_package(tf2_eigen REQUIRED)
+find_package(tf2_ros REQUIRED)
 
 # SHARED is required for composable nodes
 add_library(
   ${PROJECT_NAME} SHARED
-  src/mask_nodelet.cpp src/rgbd_segmentation_nodelet.cpp src/segmentation_nodelet.cpp
-  src/output_publisher.cpp src/relabel_nodelet.cpp
+  src/backprojection_nodelet.cpp
+  src/mask_nodelet.cpp
+  src/rgbd_segmentation_nodelet.cpp
+  src/segmentation_nodelet.cpp
+  src/output_publisher.cpp
+  src/pointcloud_projection.cpp
+  src/relabel_nodelet.cpp
 )
 target_include_directories(
   ${PROJECT_NAME} PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
@@ -31,13 +39,21 @@ target_include_directories(
 target_link_libraries(
   ${PROJECT_NAME}
   PUBLIC rclcpp::rclcpp semantic_inference::semantic_inference
-  PRIVATE cv_bridge::cv_bridge ianvs::ianvs message_filters::message_filters
+  PRIVATE cv_bridge::cv_bridge
+          ianvs::ianvs
+          image_geometry::image_geometry
+          message_filters::message_filters
           rclcpp_components::component
+          tf2_eigen::tf2_eigen
+          tf2_ros::tf2_ros
 )
 
 rclcpp_components_register_node(
-  ${PROJECT_NAME} PLUGIN semantic_inference::SegmentationNode EXECUTABLE
-  closed_set_node
+  ${PROJECT_NAME} PLUGIN semantic_inference::BackprojectionNode EXECUTABLE backprojection_node
+)
+
+rclcpp_components_register_node(
+  ${PROJECT_NAME} PLUGIN semantic_inference::SegmentationNode EXECUTABLE closed_set_node
 )
 
 rclcpp_components_register_node(
@@ -49,8 +65,7 @@ rclcpp_components_register_node(
 )
 
 rclcpp_components_register_node(
-  ${PROJECT_NAME} PLUGIN semantic_inference::RGBDSegmentationNode EXECUTABLE
-  rgbd_closed_set_node
+  ${PROJECT_NAME} PLUGIN semantic_inference::RGBDSegmentationNode EXECUTABLE rgbd_closed_set_node
 )
 
 install(
@@ -67,8 +82,14 @@ install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
 install(DIRECTORY config DESTINATION share/${PROJECT_NAME})
 
 if(BUILD_TESTING)
-  find_package(ament_lint_auto REQUIRED)
-  ament_lint_auto_find_test_dependencies()
+  find_package(ament_cmake_gtest REQUIRED)
+  # NOTE(nathan) this is janky because pcl, pcl_conversions, and ament can't do cmake right
+  set(PCL_FIND_QUIETLY ON)
+  find_package(PCL REQUIRED COMPONENTS common)
+  find_package(pcl_ros REQUIRED)
+  ament_add_gtest(${PROJECT_NAME}_test test/main.cpp test/test_pointcloud_projection.cpp)
+  target_include_directories(${PROJECT_NAME}_test PRIVATE ${pcl_conversions_INCLUDE_DIRS})
+  target_link_libraries(${PROJECT_NAME}_test ${PROJECT_NAME} ${pcl_conversions_LIBRARIES})
 endif()
 
 ament_export_targets(${PROJECT_NAME}-targets)
