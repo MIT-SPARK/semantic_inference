@@ -19,6 +19,7 @@
   <depend>semantic_inference</depend>
   <depend>tf2_eigen</depend>
   <exec_depend>rclpy</exec_depend>
+  <exec_depend>image_transport_plugins</exec_depend>
 
   <test_depend>ament_cmake_gtest</test_depend>
 
