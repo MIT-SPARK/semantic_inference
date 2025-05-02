@@ -36,14 +36,15 @@ from detectron2.config import get_cfg
 from detectron2.modeling import build_model
 from detectron2.projects.deeplab import add_deeplab_config
 
+from semantic_inference_closed_set_zoo.third_party.mask2former import (
+    add_maskformer2_config,
+)
+
 
 class Mask2Former:
     """Wrapper around Mask2Former model."""
 
     def __init__(self, config):
-        # sys.path.insert(1, str(oneformer_path))
-        from mask2former import add_maskformer2_config
-
         cfg = get_cfg()
         add_deeplab_config(cfg)
         add_maskformer2_config(cfg)

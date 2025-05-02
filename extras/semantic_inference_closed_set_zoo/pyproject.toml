@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=61.0", "torch", "torchvision"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -18,6 +18,9 @@ classifiers = [
 dependencies = [
     "click",
     "ninja",  # NOTE(nathan) required to try and force detectron2 to build faster
+    "opencv_python",
+    "scipy",
+    "timm",
     "torch",
     "torchvision",
     "detectron2@git+https://github.com/facebookresearch/detectron2.git",
@@ -27,5 +30,5 @@ dependencies = [
 include-package-data = false
 
 [tool.setuptools.package-dir]
-"" = "src"
-"semantic_inference.third_party.mask2former" = "third_party/Mask2Former/mask2former"
+semantic_inference_closed_set_zoo = "src/semantic_inference_closed_set_zoo"
+"semantic_inference_closed_set_zoo.third_party.mask2former" = "third_party/Mask2Former/mask2former"
