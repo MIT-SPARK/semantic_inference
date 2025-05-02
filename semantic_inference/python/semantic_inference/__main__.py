@@ -34,6 +34,7 @@ import click
 import semantic_inference.commands.color as color
 import semantic_inference.commands.labelspace as labelspace
 import semantic_inference.commands.model as model
+import semantic_inference.commands.run as run
 
 
 @click.group()
@@ -45,6 +46,7 @@ def cli():
 cli.add_command(color.cli)
 cli.add_command(labelspace.cli)
 cli.add_command(model.cli)
+cli.add_command(run.cli)
 
 
 if __name__ == "__main__":

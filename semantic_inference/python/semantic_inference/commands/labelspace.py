@@ -33,7 +33,10 @@ import csv
 import pathlib
 
 import click
-import yaml
+from ruamel.yaml import YAML
+
+yaml = YAML(typ="safe", pure=True)
+yaml.default_flow_style = False
 
 
 def _load_catmap(filepath, cat_index=0, name_index=-1):

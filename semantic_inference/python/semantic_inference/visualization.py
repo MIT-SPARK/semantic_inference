@@ -33,10 +33,13 @@ import functools
 import logging
 import math
 import random
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
 
 import distinctipy
 import matplotlib.colors
 import matplotlib.pyplot as plt
+import spark_config as sc
 from matplotlib.patches import Rectangle
 
 # useful colornames
@@ -107,7 +110,8 @@ def _wrap(label, width=15):
     return "\n".join(lines)
 
 
-def make_color(color_type, color_info):
+@dataclass
+class ColorConfig(sc.Config):
     """
     Make an RGB color from provided information.
 
@@ -124,56 +128,72 @@ def make_color(color_type, color_info):
     Returns:
         List[float]: Three-channel RGB value between 0 and 1.
     """
-    if color_type == "raw":
-        return [float(x) for x in color_info[:3]]
 
-    if color_type == "raw_int":
-        return _float_color(color_info)
+    source: str
+    color: Any
 
-    if color_type == "expanded":
-        color = EXPANDED_COLORS.get(color_info)
-        if color is None:
-            logging.warning(f"failed to find '{color_info}' in EXPANDED_COLORS")
-            return None
+    def create(self):
+        """Construct an actual float color."""
+        if self.source == "raw":
+            return [float(x) for x in self.color[:3]]
 
-        return [x / 255.0 for x in color]
+        if self.source == "raw_int":
+            return _float_color(self.color)
 
-    if color_type == "mpl":
-        color = matplotlib.colors.CSS4_COLORS.get(color_info)
-        if color is not None:
-            logging.warning(f"failed to find {color_info} in CSS4_COLORS")
-            return None
+        if self.source == "expanded":
+            color = EXPANDED_COLORS.get(self.color)
+            if color is None:
+                logging.warning(f"failed to find '{self.color}' in EXPANDED_COLORS")
+                return None
 
-        return [x for x in matplotlib.colors.to_rgb(color)]
+            return [x / 255.0 for x in color]
 
-    logging.warning(f"invalid color type '{color_type}'")
-    return None
+        if self.source == "mpl":
+            color = matplotlib.colors.CSS4_COLORS.get(self.color)
+            if color is not None:
+                logging.warning(f"failed to find {self.color} in CSS4_COLORS")
+                return None
+
+            return [x for x in matplotlib.colors.to_rgb(color)]
+
+        logging.warning(f"invalid color type '{self.source}'")
+        return None
 
 
-def make_palette(label_config, base_colors=None, seed=None):
+@dataclass
+class PaletteConfig(sc.Config):
+    """Configuration for labelspace palette."""
+
+    groups: List[str]
+    palette: Optional[List[List[int]]] = None
+    specified_colors: Dict[str, ColorConfig] = None
+
+
+def make_palette(config, seed=None):
     """Make a color palette for the provided label space."""
     colors_by_group = {
-        group["name"]: make_color(group.get("source"), group.get("color"))
-        for group in label_config["specified_colors"]
+        group["name"]: group.create() for group in config.specified_colors
     }
     colors_by_group = {k: v for k, v in colors_by_group.items() if v is not None}
-    N_groups = len(label_config["groups"])
+    N_groups = len(config.group)
     N_new = N_groups - len(colors_by_group)
 
-    palette = [_float_color(c) for c in base_colors] if base_colors is not None else []
-    if len(base_colors) < N_new:
-        if base_colors is not None:
-            logging.warning("invalid palette size ({len(base_colors)} < {N_new}")
+    palette = (
+        [_float_color(c) for c in config.pallete] if config.pallete is not None else []
+    )
+    if len(palette) < N_new:
+        if palette is not None:
+            logging.warning("invalid palette size ({len(palette)} < {N_new}")
 
         group_colors = [v for _, v in colors_by_group.items()]
-        chosen_colors = base_colors + group_colors
+        chosen_colors = palette + group_colors
         num_to_find = N_groups - len(chosen_colors)
         # we also don't want white and black as colors
         new_colors = distinctipy.get_colors(
             num_to_find,
             exclude_colors=chosen_colors + [(0.0, 0.0, 0.0), (1.0, 1.0, 1.0)],
         )
-        base_colors += new_colors
+        palette += new_colors
 
     if seed is not None:
         random.seed(seed)
@@ -182,7 +202,7 @@ def make_palette(label_config, base_colors=None, seed=None):
     colors = [_int_color(x) for x in palette]
 
     color_index = 0
-    for group in label_config["groups"]:
+    for group in config.groups:
         group_name = group["name"]
 
         if group_name in colors_by_group:

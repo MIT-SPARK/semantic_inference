@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0", "ninja"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "semantic_inference"
+version = "0.0.1"
+authors = [
+ { name = "Nathan Hughes", email = "na26933@mit.edu" },
+]
+description = "Python package containing third-party closed set models"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "detector2@git+https://github.com/facebookresearch/detectron2.git",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
