@@ -27,13 +27,6 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-"""Module handling open-set segmentation."""
+"""Module containing various closed set model wrappers."""
 
-import pathlib
-
-from semantic_inference.misc import Logger
-
-
-def root_path():
-    """Get root path of package."""
-    return pathlib.Path(__file__).absolute().parent
+from semantic_inference_closed_set_zoo.mask2former_wrapper import *

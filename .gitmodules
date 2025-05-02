@@ -1,0 +1,3 @@
+[submodule "extras/semantic_inference_closed_set_zoo/third_party/Mask2Former"]
+	path = extras/semantic_inference_closed_set_zoo/third_party/Mask2Former
+	url = https://github.com/facebookresearch/Mask2Former.git

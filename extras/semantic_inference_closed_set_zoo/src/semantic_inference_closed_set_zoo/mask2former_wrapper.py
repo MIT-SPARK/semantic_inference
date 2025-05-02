@@ -37,8 +37,8 @@ from detectron2.modeling import build_model
 from detectron2.projects.deeplab import add_deeplab_config
 
 
-class MaskFormer2:
-    """Wrapper around MaskFormer2 model."""
+class Mask2Former:
+    """Wrapper around Mask2Former model."""
 
     def __init__(self, config):
         # sys.path.insert(1, str(oneformer_path))
@@ -72,9 +72,9 @@ class MaskFormer2:
         return self.model([inputs])[0]["sem_seg"].argmax(dim=0).cpu().numpy()
 
 
-@sc.register_config("closed_set_model", name="MaskFormer2", constructor=MaskFormer2())
-class MaskFormerConfig:
-    """Configuration for maskformer2."""
+@sc.register_config("closed_set_model", name="Mask2Former", constructor=Mask2Former)
+class Mask2FormerConfig:
+    """Configuration for Mask2Former."""
 
     config_file: str = ""
     weight_file: str = ""
