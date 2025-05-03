@@ -2,6 +2,7 @@ import pathlib
 import shutil
 import subprocess
 
+import torch
 from setuptools import setup
 from torch.utils import cpp_extension
 
@@ -15,6 +16,9 @@ if not mask2former_path.exists():
         raise RuntimeError("Missing git and submodule is not initialized")
 
     subprocess.run([git, "submodule", "update", "--init"])
+
+if not torch.cuda.is_available():
+    raise RuntimeError("torch.cuda.available() is required!")
 
 files = [
     str(x) for x in list(ops_path.glob("**/*.cpp")) + list(ops_path.glob("**/*.cu"))
@@ -30,10 +34,10 @@ setup(
                 "cxx": ["-Wno-deprecated-declarations"],
                 "nvcc": [
                     "-Wno-deprecated-declarations",
-                    "-DCUDA_HAS_FP16=1",
-                    "-D__CUDA_NO_HALF_OPERATORS__",
-                    "-D__CUDA_NO_HALF_CONVERSIONS__",
-                    "-D__CUDA_NO_HALF2_OPERATORS__",
+                    # "-DCUDA_HAS_FP16=1",
+                    # "-D__CUDA_NO_HALF_OPERATORS__",
+                    # "-D__CUDA_NO_HALF_CONVERSIONS__",
+                    # "-D__CUDA_NO_HALF2_OPERATORS__",
                 ],
             },
         )
