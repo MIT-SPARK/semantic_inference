@@ -30,7 +30,7 @@
 """Torch module preparing batch of images for CLIP."""
 
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Optional
 
 import torch
 import torch.nn.functional as F
@@ -48,7 +48,7 @@ class ToFloat(nn.Module):
 
     def __init__(self, dtype=torch.float32, should_scale=True):
         """Initialize the module."""
-        super(ToFloat, self).__init__()
+        super().__init__()
         self.dtype = dtype
         self.scale = 255.0 if should_scale else 1.0
 
@@ -162,8 +162,8 @@ class PatchExtractorConfig(Config):
     crop_padding: int = 0
     min_segment_area: int = 0
     min_mask_size: int = 0
-    mean: Optional[List[float]] = None
-    std: Optional[List[float]] = None
+    mean: Optional[list[float]] = None
+    std: Optional[list[float]] = None
     should_scale: bool = True
 
 
@@ -174,7 +174,7 @@ class PatchExtractor(nn.Module):
 
     def __init__(self, size, config, mask_function=None):
         """Make the segment refinement."""
-        super(PatchExtractor, self).__init__()
+        super().__init__()
         self.size = size
         self.config = config
 

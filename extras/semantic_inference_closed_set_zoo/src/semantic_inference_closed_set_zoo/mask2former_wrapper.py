@@ -21,7 +21,8 @@
 # IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 # DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
 # FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR # SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 # CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
@@ -43,21 +44,25 @@ from semantic_inference_closed_set_zoo.third_party.mask2former import (
 )
 
 
+def _get_config_path(dataset, model):
+    curr_path = pathlib.Path(__file__).absolute().parent
+    config_path = curr_path / "third_party" / "Mask2Former" / "config"
+    return config_path / dataset / "semantic_segmentation" / f"{model}.yaml"
+
+
 class Mask2Former:
     """Wrapper around Mask2Former model."""
 
     def __init__(self, config):
-        config_path = (
-            pathlib.Path(__file__).absolute().parent
-            / "third_party"
-            / "mask2former"
-            / "config"
-        )
-        config_path = config_path / f"{config.config_file}".yaml
+        model_config = _get_config_path(config.dataset, config.model)
+        if not model_config.exists():
+            raise ValueError(f"Model config does not exist at '{model_config}'")
+
         cfg = get_cfg()
         add_deeplab_config(cfg)
         add_maskformer2_config(cfg)
-        cfg.merge_from_file(config.config_file)
+
+        cfg.merge_from_file(model_config)
         defaults = ["MODEL.IS_TRAIN", "False", "MODEL.IS_DEMO", "True"]
         cfg.merge_from_list(defaults)
         cfg.freeze()
@@ -86,5 +91,6 @@ class Mask2Former:
 class Mask2FormerConfig:
     """Configuration for Mask2Former."""
 
-    config_file: str = "ade20k/semantic_segmentation/swin/maskformer2_swin_large_IN21k_384_bs16_160k_res640"
+    dataset: str = "ade20k"
+    model: str = "swin/maskformer2_swin_large_IN21k_384_bs16_160k_res640"
     weight_file: str = ""

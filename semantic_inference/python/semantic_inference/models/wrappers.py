@@ -50,7 +50,7 @@ class FastSAMSegmentation(nn.Module):
 
     def __init__(self, config, verbose=False):
         """Load Fast SAM."""
-        super(FastSAMSegmentation, self).__init__()
+        super().__init__()
         from ultralytics import FastSAM
 
         self.config = config
@@ -107,7 +107,7 @@ class SAMSegmentation(nn.Module):
 
     def __init__(self, config):
         """Load SAM."""
-        super(SAMSegmentation, self).__init__()
+        super().__init__()
         import segment_anything as sam
 
         self.config = config
@@ -176,7 +176,7 @@ class DenseFeatures(nn.Module):
 
     def __init__(self, model_name):
         """Load f3rm module."""
-        super(DenseFeatures, self).__init__()
+        super().__init__()
         from f3rm.features.clip import clip as f3rm_clip
 
         self.model_name = model_name
@@ -211,7 +211,7 @@ class ClipWrapper(nn.Module):
 
     def __init__(self, config):
         """Load the visual encoder for CLIP."""
-        super(ClipWrapper, self).__init__()
+        super().__init__()
         import clip
 
         self.config = config
@@ -276,7 +276,7 @@ class OpenClipWrapper(nn.Module):
 
     def __init__(self, config):
         """Load the visual encoder for OpenCLIP."""
-        super(OpenClipWrapper, self).__init__()
+        super().__init__()
         import open_clip
 
         self.config = config

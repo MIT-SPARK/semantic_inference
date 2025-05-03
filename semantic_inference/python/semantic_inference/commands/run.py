@@ -79,7 +79,7 @@ def _message_iter(bag, typestore, topics):
         logging.warning(f"Could not find {missing} in bag (available: {all_topics})")
         return None
 
-    for connection, timestamp, rawdata in bag.messages(connections=connections):
+    for connection, _, rawdata in bag.messages(connections=connections):
         msg = typestore.deserialize_ros1(rawdata, connection.msgtype)
         img = _parse_image(msg)
         if img is None:

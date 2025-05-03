@@ -159,7 +159,7 @@ def main(
     num_read = 0
     with rosbag.Bag(str(path_to_bag), "r") as bag:
         N_msgs = bag.get_message_count(topic)
-        for topic, msg, t in tqdm.tqdm(bag.read_messages(topics=[topic]), total=N_msgs):
+        for _, msg, t in tqdm.tqdm(bag.read_messages(topics=[topic]), total=N_msgs):
             if is_compressed:
                 img = bridge.compressed_imgmsg_to_cv2(
                     msg, desired_encoding="passthrough"

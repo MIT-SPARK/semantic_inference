@@ -14,7 +14,7 @@ if not mask2former_path.exists():
     if git is None:
         raise RuntimeError("Missing git and submodule is not initialized")
 
-    subprocess.run([git, "submodule", "--init", "update"])
+    subprocess.run([git, "submodule", "update", "--init"])
 
 files = [
     str(x) for x in list(ops_path.glob("**/*.cpp")) + list(ops_path.glob("**/*.cu"))
