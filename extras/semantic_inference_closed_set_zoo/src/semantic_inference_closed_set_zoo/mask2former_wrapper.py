@@ -46,8 +46,8 @@ from semantic_inference_closed_set_zoo.third_party.mask2former import (
 
 def _get_config_path(dataset, model):
     curr_path = pathlib.Path(__file__).absolute().parent
-    config_path = curr_path / "third_party" / "Mask2Former" / "config"
-    return config_path / dataset / "semantic_segmentation" / f"{model}.yaml"
+    config_path = curr_path / "third_party" / "mask2former" / "config"
+    return config_path / dataset / "semantic-segmentation" / f"{model}.yaml"
 
 
 class Mask2Former:
@@ -61,10 +61,15 @@ class Mask2Former:
         cfg = get_cfg()
         add_deeplab_config(cfg)
         add_maskformer2_config(cfg)
-
+        cfg.merge_from_list(
+            [
+                "MODEL.MASK_FORMER.TEST.INSTANCE_ON",
+                False,
+                "MODEL.MASK_FORMER.TEST.PANOPTIC_ON",
+                False,
+            ]
+        )
         cfg.merge_from_file(model_config)
-        defaults = ["MODEL.IS_TRAIN", "False", "MODEL.IS_DEMO", "True"]
-        cfg.merge_from_list(defaults)
         cfg.freeze()
 
         self.model = build_model(cfg)
@@ -82,8 +87,7 @@ class Mask2Former:
         image = self.aug.get_transform(img).apply_image(img)
         image = torch.as_tensor(image.astype("float32").transpose(2, 0, 1))
 
-        task = "The task is semantic"
-        inputs = {"image": image, "height": height, "width": width, "task": task}
+        inputs = {"image": image, "height": height, "width": width}
         return self.model([inputs])[0]["sem_seg"].argmax(dim=0).cpu().numpy()
 
 

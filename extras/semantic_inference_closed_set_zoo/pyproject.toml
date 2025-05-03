@@ -27,8 +27,12 @@ dependencies = [
 ]
 
 [tool.setuptools]
-include-package-data = false
+include-package-data = true
+
+[tool.setuptools.package-data]
+"semantic_inference_closed_set_zoo.third_party.mask2former.config" = ["*.yaml"]
 
 [tool.setuptools.package-dir]
 semantic_inference_closed_set_zoo = "src/semantic_inference_closed_set_zoo"
 "semantic_inference_closed_set_zoo.third_party.mask2former" = "third_party/Mask2Former/mask2former"
+"semantic_inference_closed_set_zoo.third_party.mask2former.config" = "third_party/Mask2Former/configs"

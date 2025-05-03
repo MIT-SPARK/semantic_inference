@@ -21,7 +21,9 @@ if not torch.cuda.is_available():
     raise RuntimeError("torch.cuda.available() is required!")
 
 files = [
-    str(x) for x in list(ops_path.glob("**/*.cpp")) + list(ops_path.glob("**/*.cu"))
+    "third_party/Mask2Former/mask2former/modeling/pixel_decoder/ops/src/vision.cpp",
+    "third_party/Mask2Former/mask2former/modeling/pixel_decoder/ops/src/cpu/ms_deform_attn_cpu.cpp",
+    "third_party/Mask2Former/mask2former/modeling/pixel_decoder/ops/src/cuda/ms_deform_attn_cuda.cu",
 ]
 
 setup(
@@ -34,10 +36,10 @@ setup(
                 "cxx": ["-Wno-deprecated-declarations"],
                 "nvcc": [
                     "-Wno-deprecated-declarations",
-                    # "-DCUDA_HAS_FP16=1",
-                    # "-D__CUDA_NO_HALF_OPERATORS__",
-                    # "-D__CUDA_NO_HALF_CONVERSIONS__",
-                    # "-D__CUDA_NO_HALF2_OPERATORS__",
+                    "-DCUDA_HAS_FP16=1",
+                    "-D__CUDA_NO_HALF_OPERATORS__",
+                    "-D__CUDA_NO_HALF_CONVERSIONS__",
+                    "-D__CUDA_NO_HALF2_OPERATORS__",
                 ],
             },
         )
