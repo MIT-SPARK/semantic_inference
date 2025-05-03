@@ -33,16 +33,21 @@ import pathlib
 from dataclasses import dataclass
 
 import detectron2.data.transforms as T
+import requests
 import spark_config as sc
 import torch
 from detectron2.checkpoint import DetectionCheckpointer
 from detectron2.config import get_cfg
 from detectron2.modeling import build_model
 from detectron2.projects.deeplab import add_deeplab_config
+from ruamel.yaml import YAML
+from tqdm import tqdm
 
 from semantic_inference_closed_set_zoo.third_party.mask2former import (
     add_maskformer2_config,
 )
+
+yaml = YAML(typ="safe", pure=True)
 
 
 def _get_config_path(dataset, model):
@@ -51,10 +56,36 @@ def _get_config_path(dataset, model):
     return config_path / dataset / "semantic-segmentation" / f"{model}.yaml"
 
 
+def _download(url, filepath, block_size=1024, verbose=True):
+    print(f"Downloading model from {url} to {filepath}...")
+
+    r = requests.get(url, stream=True)
+    bar_args = {
+        "total": int(r.headers.get("content-length", 0)),
+        "unit": "B",
+        "unit_scale": True,
+    }
+    with tqdm(**bar_args) as bar, filepath.open("wb") as fout:
+        for chunk in r.iter_content(chunk_size=block_size):
+            fout.write(chunk)
+            bar.update(len(chunk))
+
+    print("Finished download!")
+
+
 class Mask2Former:
     """Wrapper around Mask2Former model."""
 
     def __init__(self, config):
+        weight_dir = pathlib.Path("~/.semantic_inference/mask2former").expanduser()
+        weight_dir.mkdir(exist_ok=True, parents=True)
+        weight_path = weight_dir / config.weight_name
+        if not weight_path.exists():
+            url_path = pathlib.Path(__file__).absolute().parent / "model_weights.yaml"
+            urls = yaml.load(url_path)
+            model_url = urls[config.dataset][config.model]
+            _download(model_url, weight_path)
+
         model_config = _get_config_path(config.dataset, config.model)
         if not model_config.exists():
             raise ValueError(f"Model config does not exist at '{model_config}'")
@@ -67,7 +98,7 @@ class Mask2Former:
 
         self.model = build_model(cfg)
         self.model.eval()
-        DetectionCheckpointer(self.model).load(config.weight_file)
+        DetectionCheckpointer(self.model).load(str(weight_path))
         self.aug = T.ResizeShortestEdge(
             [cfg.INPUT.MIN_SIZE_TEST, cfg.INPUT.MIN_SIZE_TEST], cfg.INPUT.MAX_SIZE_TEST
         )
@@ -89,4 +120,7 @@ class Mask2FormerConfig:
 
     dataset: str = "ade20k"
     model: str = "swin/maskformer2_swin_large_IN21k_384_bs16_160k_res640"
-    weight_file: str = ""
+
+    @property
+    def weight_name(self):
+        return f"{self.dataset}-{self.model.replace('/', '-')}.pkl"

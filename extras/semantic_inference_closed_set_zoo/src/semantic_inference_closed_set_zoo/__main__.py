@@ -11,11 +11,10 @@ from semantic_inference_closed_set_zoo import Mask2Former, Mask2FormerConfig
 
 
 @click.command()
-@click.argument("weights_file", type=click.Path(exists=True))
 @click.argument("images", type=click.Path(exists=True), nargs=-1)
-def main(weights_file, images):
+def main(images):
     """Test maskformers2."""
-    config = Mask2FormerConfig(weight_file=weights_file)
+    config = Mask2FormerConfig()
     model = Mask2Former(config)
     images = [pathlib.Path(x).expanduser().absolute() for x in images]
 
