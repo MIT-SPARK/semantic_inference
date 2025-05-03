@@ -28,6 +28,8 @@
 #
 """Run inference with oneformer."""
 
+import pathlib
+
 import detectron2.data.transforms as T
 import spark_config as sc
 import torch
@@ -45,6 +47,13 @@ class Mask2Former:
     """Wrapper around Mask2Former model."""
 
     def __init__(self, config):
+        config_path = (
+            pathlib.Path(__file__).absolute().parent
+            / "third_party"
+            / "mask2former"
+            / "config"
+        )
+        config_path = config_path / f"{config.config_file}".yaml
         cfg = get_cfg()
         add_deeplab_config(cfg)
         add_maskformer2_config(cfg)
@@ -77,5 +86,5 @@ class Mask2Former:
 class Mask2FormerConfig:
     """Configuration for Mask2Former."""
 
-    config_file: str = ""
+    config_file: str = "ade20k/semantic_segmentation/swin/maskformer2_swin_large_IN21k_384_bs16_160k_res640"
     weight_file: str = ""
