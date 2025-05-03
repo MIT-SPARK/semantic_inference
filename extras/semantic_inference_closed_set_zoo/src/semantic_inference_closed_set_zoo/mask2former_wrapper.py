@@ -115,7 +115,7 @@ class Mask2Former:
 
 @dataclass
 @sc.register_config("closed_set_model", name="Mask2Former", constructor=Mask2Former)
-class Mask2FormerConfig:
+class Mask2FormerConfig(sc.Config):
     """Configuration for Mask2Former."""
 
     dataset: str = "ade20k"

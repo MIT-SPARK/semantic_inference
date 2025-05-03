@@ -34,7 +34,7 @@ import logging
 import math
 import random
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Any
 
 import distinctipy
 import matplotlib.colors
@@ -164,9 +164,9 @@ class ColorConfig(sc.Config):
 class PaletteConfig(sc.Config):
     """Configuration for labelspace palette."""
 
-    groups: list[str]
-    palette: Optional[list[list[int]]] = None
-    specified_colors: dict[str, ColorConfig] = None
+    groups: Any
+    palette: Any = None
+    specified_colors: Any = None
 
 
 def make_palette(config, seed=None):

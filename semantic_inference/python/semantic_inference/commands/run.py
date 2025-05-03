@@ -3,10 +3,15 @@ import pathlib
 from contextlib import contextmanager
 
 import click
-import imageio.v3
+import distinctipy
+import imageio.v3 as iio
 import numpy as np
+import spark_config as sc
 from rosbags.highlevel import AnyReader
 from rosbags.typesys import Stores, get_types_from_msg, get_typestore
+from ruamel.yaml import YAML
+
+yaml = YAML(typ="safe", pure=True)
 
 ENCODINGS = {
     "rgb8": (np.uint8, 3),
@@ -55,7 +60,7 @@ def _parse_image(msg):
         return None
 
     if "CompressedImage" in msg.__msgtype__:
-        return imageio.v3.imread(msg.data.tobytes())
+        return iio.imread(msg.data.tobytes())
 
     info = ENCODINGS.get(msg.encoding)
     if info is None:
@@ -117,11 +122,58 @@ def cli():
     pass
 
 
+def _load_configs(configs, config_files):
+    result = {}
+    for config in configs:
+        try:
+            result.update(yaml.load(config))
+        except Exception as e:
+            print(f"Invalid YAML: {e}")
+            continue
+
+    for config in config_files:
+        with open(config) as fin:
+            try:
+                result.update(yaml.load(fin))
+            except Exception as e:
+                print(f"Invalid YAML: {e}")
+                continue
+
+    return result
+
+
+def _load_model(category, model_config):
+    model_type = model_config.get("type")
+    if model_type is None:
+        raise ValueError("Missing model type from model config!")
+
+    config = sc.ConfigFactory.create(category, model_type)
+    config.update(model_config)
+    return sc.ConfigFactory.get_constructor(category, model_type)(config)
+
+
 @cli.command()
 @click.argument("bag_path", type=click.Path(exists=True))
 @click.option("--topic", "-t", multiple=True, type=str)
-def bag(bag_path, topic):
+@click.option("--config", "-c", multiple=True, type=str)
+@click.option("--config-file", "-f", multiple=True, type=click.Path(exists=True))
+def bag(bag_path, topic, config, config_file):
+    sc.discover_plugins("semantic_inference")
+    model_config = _load_configs(config, config_file)
+    model = _load_model("closed_set_model", model_config)
+
+    colors = distinctipy.get_colors(
+        150, exclude_colors=[(0.0, 0.0, 0.0), (1.0, 1.0, 1.0)]
+    )
+    colors = (255 * np.array(colors)).astype(np.uint8).T
+
     bag_path = _normalize_path(bag_path)
     with bag_image_store(bag_path, topic) as bag:
         for topic, img in bag:
+            labels = model.segment(img)
             print(f"img @ {topic} -> shape: {img.shape}")
+            labels = model.segment(img)
+            output = np.take(colors, labels, mode="raise", axis=1)
+            output = np.transpose(output, [1, 2, 0])
+            iio.imwrite("/tmp/labels.png", output)
+            break
