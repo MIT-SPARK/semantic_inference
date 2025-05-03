@@ -30,6 +30,7 @@
 """Run inference with oneformer."""
 
 import pathlib
+from dataclasses import dataclass
 
 import detectron2.data.transforms as T
 import spark_config as sc
@@ -61,20 +62,11 @@ class Mask2Former:
         cfg = get_cfg()
         add_deeplab_config(cfg)
         add_maskformer2_config(cfg)
-        cfg.merge_from_list(
-            [
-                "MODEL.MASK_FORMER.TEST.INSTANCE_ON",
-                False,
-                "MODEL.MASK_FORMER.TEST.PANOPTIC_ON",
-                False,
-            ]
-        )
         cfg.merge_from_file(model_config)
         cfg.freeze()
 
         self.model = build_model(cfg)
         self.model.eval()
-
         DetectionCheckpointer(self.model).load(config.weight_file)
         self.aug = T.ResizeShortestEdge(
             [cfg.INPUT.MIN_SIZE_TEST, cfg.INPUT.MIN_SIZE_TEST], cfg.INPUT.MAX_SIZE_TEST
@@ -86,11 +78,11 @@ class Mask2Former:
         height, width = img.shape[:2]
         image = self.aug.get_transform(img).apply_image(img)
         image = torch.as_tensor(image.astype("float32").transpose(2, 0, 1))
-
         inputs = {"image": image, "height": height, "width": width}
         return self.model([inputs])[0]["sem_seg"].argmax(dim=0).cpu().numpy()
 
 
+@dataclass
 @sc.register_config("closed_set_model", name="Mask2Former", constructor=Mask2Former)
 class Mask2FormerConfig:
     """Configuration for Mask2Former."""
