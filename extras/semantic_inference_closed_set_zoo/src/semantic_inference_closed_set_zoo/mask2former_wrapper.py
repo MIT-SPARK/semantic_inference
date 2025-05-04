@@ -33,6 +33,7 @@ import pathlib
 from dataclasses import dataclass
 
 import detectron2.data.transforms as T
+import numpy as np
 import requests
 import spark_config as sc
 import torch
@@ -110,7 +111,13 @@ class Mask2Former:
         image = self.aug.get_transform(img).apply_image(img)
         image = torch.as_tensor(image.astype("float32").transpose(2, 0, 1))
         inputs = {"image": image, "height": height, "width": width}
-        return self.model([inputs])[0]["sem_seg"].argmax(dim=0).cpu().numpy()
+        return (
+            self.model([inputs])[0]["sem_seg"]
+            .argmax(dim=0)
+            .cpu()
+            .numpy()
+            .astype(np.uint8)
+        )
 
 
 @dataclass
