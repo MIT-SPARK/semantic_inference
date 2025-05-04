@@ -163,7 +163,11 @@ class BagImageWriter:
     def write(self, header, timestamp, rgb_topic, img, name="semantic"):
         """Write image to output bag."""
         topic_path = pathlib.Path(rgb_topic)
-        topic = str(topic_path.parent.parent / name / "image_raw")
+        camera_ns = topic_path.parent.parent
+        if topic_path.stem == "compressed":
+            camera_ns = camera_ns.parent
+
+        topic = str(camera_ns / name / "image_raw")
         if topic not in self._conn:
             self._conn[topic] = self.writer.add_connection(
                 topic, self._msg_type, typestore=self.typestore
