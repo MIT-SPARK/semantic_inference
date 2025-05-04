@@ -26,7 +26,6 @@ def bag(bag_path, topic, config, config_file, rgb_topics, max_images):
 
     with bag_image_store(bag_path, topic, with_output=True) as bags:
         bag_in, bag_out = bags
-        assert bag_out is not None
 
         for idx, ret in enumerate(bag_in):
             if max_images is not None and idx >= max_images:

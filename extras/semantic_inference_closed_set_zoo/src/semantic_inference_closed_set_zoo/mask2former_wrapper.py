@@ -106,7 +106,7 @@ class Mask2Former:
 
     @torch.no_grad()
     def segment(self, img):
-        """Run inference."""
+        """Run inference. img should be in RGB order"""
         height, width = img.shape[:2]
         image = self.aug.get_transform(img).apply_image(img)
         image = torch.as_tensor(image.astype("float32").transpose(2, 0, 1))

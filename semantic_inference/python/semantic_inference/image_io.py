@@ -53,7 +53,7 @@ ENCODINGS = {
 }
 
 
-def _message_iter(bag, typestore, topics, with_progress):
+def _message_iter(bag, typestore, topics, with_progress, is_ros1):
     if len(topics) == 0:
         return None
 
@@ -71,7 +71,11 @@ def _message_iter(bag, typestore, topics, with_progress):
         msg_iter = tqdm.tqdm(msg_iter, total=N)
 
     for connection, timestamp, rawdata in msg_iter:
-        msg = typestore.deserialize_ros1(rawdata, connection.msgtype)
+        if is_ros1:
+            msg = typestore.deserialize_ros1(rawdata, connection.msgtype)
+        else:
+            msg = typestore.deserialize_cdr(rawdata, connection.msgtype)
+
         yield connection.topic, msg, timestamp
 
 
@@ -84,7 +88,7 @@ def parse_image_msg(msg):
         return None
 
     if "CompressedImage" in msg.__msgtype__:
-        return iio.imread(msg.data.tobytes())
+        return iio.imread(msg.data.tobytes())[:, :, ::-1]
 
     info = ENCODINGS.get(msg.encoding)
     if info is None:
@@ -93,6 +97,10 @@ def parse_image_msg(msg):
     img = np.frombuffer(msg.data, dtype=info[0]).reshape(
         (msg.height, msg.width, info[1])
     )
+
+    if "rgb" in msg.encoding:
+        img = img[:, :, ::-1]
+
     return np.squeeze(img).copy()
 
 
@@ -216,7 +224,8 @@ def bag_image_store(bag_path, topics, with_output=True, with_progress=True):
     else:
         bag_out = nullcontext()
 
+    is_ros1 = bag_path.suffix == ".bag"
     with bag_out as bag_out:
-        yield _message_iter(bag, typestore, topics, with_progress), bag_out
+        yield _message_iter(bag, typestore, topics, with_progress, is_ros1), bag_out
 
     bag.close()
