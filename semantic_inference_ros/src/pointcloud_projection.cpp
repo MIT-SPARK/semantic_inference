@@ -96,6 +96,7 @@ void declare_config(ProjectionConfig& config) {
   field(config.use_lidar_frame, "use_lidar_frame");
   field(config.discard_out_of_view, "discard_out_of_view");
   field(config.unknown_label, "unknown_label");
+  field(config.ground_label, "ground_label");
 }
 
 bool projectSemanticImage(const ProjectionConfig& config,
