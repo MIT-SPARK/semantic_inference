@@ -205,7 +205,7 @@ class BagImageWriter:
 
 
 @contextmanager
-def bag_image_store(bag_path, topics, with_output=True, with_progress=True):
+def bag_image_store(bag_path, topics, output_path=None, with_progress=True):
     bag_path = _normalize_path(bag_path)
     bag = AnyReader([bag_path])
     bag.open()
@@ -217,9 +217,7 @@ def bag_image_store(bag_path, topics, with_output=True, with_progress=True):
     typestore = get_typestore(Stores.EMPTY)
     typestore.register(msg_types)
 
-    if with_output:
-        output_path = bag_path.parent / f"{bag_path.stem}_semantics"
-        output_path = output_path.with_suffix(bag_path.suffix)
+    if output_path is not None:
         bag_out = BagImageWriter(output_path, typestore)
     else:
         bag_out = nullcontext()

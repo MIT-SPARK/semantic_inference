@@ -1,4 +1,5 @@
 import logging
+import pathlib
 
 import click
 import spark_config as sc
@@ -19,7 +20,15 @@ def cli():
 @click.option("--config-file", "-f", multiple=True, type=click.Path(exists=True))
 @click.option("--rgb-topics", multiple=True, type=str)
 @click.option("--max-images", "-m", type=int, default=None)
-def bag(bag_path, topic, config, config_file, rgb_topics, max_images):
+@click.option("--force", "-f", is_flag=True)
+def bag(bag_path, topic, config, config_file, rgb_topics, max_images, force):
+    bag_path = pathlib.Path(bag_path).expanduser().absolute()
+    output_path = bag_path.parent / f"{bag_path.stem}_semantics"
+    output_path = output_path.with_suffix(bag_path.suffix)
+    if output_path.exists() and not force:
+        click.secho(f"Labels exist already: {output_path}", fg="yellow")
+        return
+
     sc.discover_plugins("semantic_inference")
     model_config = sc.load_yaml(config, config_file)
     model = sc.construct("closed_set_model", model_config)
