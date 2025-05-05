@@ -143,7 +143,15 @@ bool projectSemanticImage(const ProjectionConfig& config,
 
   auto pos_in_iter = InputPosIter(cloud);
   auto pos_out_iter = OutputPosIter(output);
-  auto label_iter = sensor_msgs::PointCloud2Iterator<int32_t>(output, "label");
+  auto label_out_iter = sensor_msgs::PointCloud2Iterator<int32_t>(output, "label");
+
+  // Optional to label points outside the image FoV.
+  const bool has_label_field = hasLabelField(cloud);
+  std::optional<sensor_msgs::PointCloud2ConstIterator<int32_t>> label_in_iter;
+  if (has_label_field) {
+    label_in_iter.emplace(cloud, "label");
+  }
+
   const auto invalid_point =
       Eigen::Vector3f::Constant(std::numeric_limits<float>::quiet_NaN());
   while (pos_in_iter) {
@@ -160,7 +168,15 @@ bool projectSemanticImage(const ProjectionConfig& config,
     }
 
     const auto in_view = u >= 0 && u < image.cols && v >= 0 && v < image.rows;
-    *label_iter = in_view ? getter(v, u) : config.unknown_label;
+
+    if (in_view) {
+      *label_out_iter = getter(v, u);
+    } else if (has_label_field && **label_in_iter == config.ground_label) {
+      *label_out_iter = config.ground_label;
+    } else {
+      *label_out_iter = config.unknown_label;
+    }
+
     if (!in_view && config.discard_out_of_view) {
       pos_out_iter.set(invalid_point);
     } else {
@@ -169,7 +185,8 @@ bool projectSemanticImage(const ProjectionConfig& config,
 
     ++pos_in_iter;
     ++pos_out_iter;
-    ++label_iter;
+    ++label_out_iter;
+    if (has_label_field) ++(*label_in_iter);
   }
 
   if (!recolor) {

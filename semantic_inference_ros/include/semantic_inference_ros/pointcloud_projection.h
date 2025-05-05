@@ -1,6 +1,7 @@
 #include <semantic_inference/image_recolor.h>
 
 #include <cstdint>
+#include <optional>
 #include <string>
 
 #include <sensor_msgs/msg/camera_info.hpp>
