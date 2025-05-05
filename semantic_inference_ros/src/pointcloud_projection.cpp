@@ -99,6 +99,15 @@ void declare_config(ProjectionConfig& config) {
   field(config.ground_label, "ground_label");
 }
 
+bool hasLabelField(const PointCloud2& cloud) {
+  for (const auto& field : cloud.fields) {
+    if (field.name == "label") {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool projectSemanticImage(const ProjectionConfig& config,
                           const CameraInfo& intrinsics,
                           const cv::Mat& image,
