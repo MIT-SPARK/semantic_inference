@@ -108,13 +108,30 @@ void declare_config(ProjectionConfig& config) {
   field(config.passthrough_labels, "passthrough_labels");
 }
 
-bool hasLabelField(const PointCloud2& cloud) {
+std::optional<LabelIteratorVariant> getLabelIterIfExists(
+    const PointCloud2& cloud, const std::string& field_name) {
   for (const auto& field : cloud.fields) {
-    if (field.name == "label") {
-      return true;
+    if (field.name == field_name) {
+      switch (field.datatype) {
+        case PointField::INT8:
+          return sensor_msgs::PointCloud2ConstIterator<int8_t>(cloud, field_name);
+        case PointField::UINT8:
+          return sensor_msgs::PointCloud2ConstIterator<uint8_t>(cloud, field_name);
+        case PointField::INT16:
+          return sensor_msgs::PointCloud2ConstIterator<int16_t>(cloud, field_name);
+        case PointField::UINT16:
+          return sensor_msgs::PointCloud2ConstIterator<uint16_t>(cloud, field_name);
+        case PointField::INT32:
+          return sensor_msgs::PointCloud2ConstIterator<int32_t>(cloud, field_name);
+        case PointField::UINT32:
+          return sensor_msgs::PointCloud2ConstIterator<uint32_t>(cloud, field_name);
+        default:
+          throw std::runtime_error("Unsupported label field datatype: " +
+                                   std::to_string(field.datatype));
+      }
     }
   }
-  return false;
+  return std::nullopt;
 }
 
 bool projectSemanticImage(const ProjectionConfig& config,
@@ -155,11 +172,7 @@ bool projectSemanticImage(const ProjectionConfig& config,
   auto label_out_iter = sensor_msgs::PointCloud2Iterator<int32_t>(output, "label");
 
   // Optional to label points outside the image FoV.
-  const bool has_label_field = hasLabelField(cloud);
-  std::optional<sensor_msgs::PointCloud2ConstIterator<int32_t>> label_in_iter;
-  if (has_label_field) {
-    label_in_iter.emplace(cloud, "label");
-  }
+  auto label_in_iter = getLabelIterIfExists(cloud, config.input_label_fieldname);
 
   const auto invalid_point =
       Eigen::Vector3f::Constant(std::numeric_limits<float>::quiet_NaN());
@@ -180,8 +193,15 @@ bool projectSemanticImage(const ProjectionConfig& config,
 
     if (in_view) {
       *label_out_iter = getter(v, u);
-    } else if (has_label_field && **label_in_iter == config.ground_label) {
-      *label_out_iter = config.ground_label;
+    } else if (label_in_iter) {
+      int16_t input_label = std::visit(
+          [](auto& iter) { return static_cast<int16_t>(*iter); }, *label_in_iter);
+
+      if (config.passthrough_labels.count(input_label) > 0) {
+        *label_out_iter = input_label;
+      } else {
+        *label_out_iter = config.unknown_label;
+      }
     } else {
       *label_out_iter = config.unknown_label;
     }
@@ -195,7 +215,9 @@ bool projectSemanticImage(const ProjectionConfig& config,
     ++pos_in_iter;
     ++pos_out_iter;
     ++label_out_iter;
-    if (has_label_field) ++(*label_in_iter);
+    if (label_in_iter) {
+      std::visit([](auto& iter) { ++iter; }, *label_in_iter);
+    }
   }
 
   if (!recolor) {
