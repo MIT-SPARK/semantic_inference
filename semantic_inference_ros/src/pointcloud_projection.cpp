@@ -16,6 +16,14 @@ using sensor_msgs::msg::Image;
 using sensor_msgs::msg::PointCloud2;
 using sensor_msgs::msg::PointField;
 
+using LabelIteratorVariant =
+    std::variant<sensor_msgs::PointCloud2ConstIterator<int8_t>,
+                 sensor_msgs::PointCloud2ConstIterator<uint8_t>,
+                 sensor_msgs::PointCloud2ConstIterator<int16_t>,
+                 sensor_msgs::PointCloud2ConstIterator<uint16_t>,
+                 sensor_msgs::PointCloud2ConstIterator<int32_t>,
+                 sensor_msgs::PointCloud2ConstIterator<uint32_t>>;
+
 namespace {
 struct OutputPosIter {
  public:
