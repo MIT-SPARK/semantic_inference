@@ -96,7 +96,8 @@ void declare_config(ProjectionConfig& config) {
   field(config.use_lidar_frame, "use_lidar_frame");
   field(config.discard_out_of_view, "discard_out_of_view");
   field(config.unknown_label, "unknown_label");
-  field(config.ground_label, "ground_label");
+  field(config.input_label_fieldname, "input_label_fieldname");
+  field(config.passthrough_labels, "passthrough_labels");
 }
 
 bool hasLabelField(const PointCloud2& cloud) {
