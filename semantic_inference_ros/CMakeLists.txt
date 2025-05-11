@@ -86,7 +86,7 @@ if(BUILD_TESTING)
   # NOTE(nathan) this is janky because pcl, pcl_conversions, and ament can't do cmake right
   set(PCL_FIND_QUIETLY ON)
   find_package(PCL REQUIRED COMPONENTS common)
-  find_package(pcl_ros REQUIRED)
+  find_package(pcl_conversions REQUIRED)
   ament_add_gtest(${PROJECT_NAME}_test test/main.cpp test/test_pointcloud_projection.cpp)
   target_include_directories(${PROJECT_NAME}_test PRIVATE ${pcl_conversions_INCLUDE_DIRS})
   target_link_libraries(${PROJECT_NAME}_test ${PROJECT_NAME} ${pcl_conversions_LIBRARIES})
