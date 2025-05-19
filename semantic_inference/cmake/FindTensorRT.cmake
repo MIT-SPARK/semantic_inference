@@ -1,4 +1,4 @@
-# find_package file based on
+# cmake-lint: disable=C0103 find_package file based on
 # https://izzys.casa/2020/12/how-to-find-packages-with-cmake-the-basics/ and
 # https://cmake.org/cmake/help/latest/manual/cmake-developer.7.html#find-modules
 #
@@ -42,27 +42,11 @@ The following cache variables may also be set
 #]===============================================================================]
 include(FindPackageHandleStandardArgs)
 
+# find actual location of TensorRT
 find_path(TensorRT_INCLUDE_DIR NAMES NvInfer.h)
 find_library(TensorRT_LIBRARY NAMES nvinfer)
 
-set(TensorRT_COMPONENT_LIBRARIES "")
-foreach(component IN LISTS TensorRT_FIND_COMPONENTS)
-  find_library(TensorRT_${component}_LIBRARY NAMES "nv${component}")
-  if(TensorRT_${component}_LIBRARY)
-    set(TensorRT_${component}_FOUND TRUE)
-    add_library(TensorRT::${component} UNKNOWN IMPORTED)
-    set_target_properties(
-      TensorRT::${component}
-      PROPERTIES IMPORTED_LOCATION ${TensorRT_${component}_LIBRARY}
-                 INTERFACE_INCLUDE_DIRECTORIES ${TensorRT_INCLUDE_DIR}
-    )
-    list(APPEND TensorRT_COMPONENT_LIBRARIES TensorRT::${component})
-  endif()
-endforeach()
-
-find_library(TensorRT_onnx NAME nvonnxparser)
-find_library(TensorRT_plugin NAME nvinfer_plugin)
-
+# Get TensorRT version from header
 if(TensorRT_INCLUDE_DIR)
   file(READ "${TensorRT_INCLUDE_DIR}/NvInferVersion.h" version-file)
   if(NOT version-file)
@@ -81,6 +65,14 @@ if(TensorRT_INCLUDE_DIR)
   list(JOIN VERSION_ITEMS "." TensorRT_VERSION)
 endif()
 
+# Find all requested components
+foreach(component IN LISTS TensorRT_FIND_COMPONENTS)
+  find_library(TensorRT_${component}_LIBRARY NAMES "nv${component}")
+  if(TensorRT_${component}_LIBRARY)
+    set(TensorRT_${component}_FOUND TRUE)
+  endif()
+endforeach()
+
 find_package_handle_standard_args(
   TensorRT
   REQUIRED_VARS TensorRT_LIBRARY TensorRT_INCLUDE_DIR
@@ -94,13 +86,25 @@ if(TensorRT_FOUND)
   set(TensorRT_INCLUDE_DIRS ${TensorRT_INCLUDE_DIR})
 endif()
 
+set(TensorRT_COMPONENT_LIBRARIES "")
+foreach(component IN LISTS TensorRT_FIND_COMPONENTS)
+  if(TensorRT_${component}_FOUND AND NOT TARGET TensorRT::${component})
+    add_library(TensorRT::${component} UNKNOWN IMPORTED)
+    set_target_properties(
+      TensorRT::${component} PROPERTIES IMPORTED_LOCATION "${TensorRT_${component}_LIBRARY}"
+                                        INTERFACE_INCLUDE_DIRECTORIES "${TensorRT_INCLUDE_DIR}"
+    )
+    list(APPEND TensorRT_COMPONENT_LIBRARIES TensorRT::${component})
+  endif()
+endforeach()
+
 if(TensorRT_FOUND AND NOT TARGET TensorRT::TensorRT)
   add_library(TensorRT::TensorRT UNKNOWN IMPORTED)
   set_target_properties(
     TensorRT::TensorRT
-    PROPERTIES IMPORTED_LOCATION ${TensorRT_LIBRARY}
-               VERSION ${TensorRT_VERSION}
-               INTERFACE_INCLUDE_DIRECTORIES ${TensorRT_INCLUDE_DIR}
+    PROPERTIES IMPORTED_LOCATION "${TensorRT_LIBRARY}"
+               VERSION "${TensorRT_VERSION}"
+               INTERFACE_INCLUDE_DIRECTORIES "${TensorRT_INCLUDE_DIR}"
                INTERFACE_LINK_LIBRARIES "${TensorRT_COMPONENT_LIBRARIES}"
   )
 endif()
