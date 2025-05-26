@@ -191,19 +191,19 @@ bool projectSemanticImage(const ProjectionConfig& config,
 
     const auto in_view = u >= 0 && u < image.cols && v >= 0 && v < image.rows;
 
-    if (in_view) {
-      *label_out_iter = getter(v, u);
-    } else if (label_in_iter) {
-      int16_t input_label = std::visit(
-          [](auto& iter) { return static_cast<int16_t>(*iter); }, *label_in_iter);
+    std::optional<int32_t> label_in;
+    bool is_passthrough = false;
 
-      if (config.passthrough_labels.count(input_label) > 0) {
-        *label_out_iter = input_label;
-      } else {
-        *label_out_iter = config.unknown_label;
-      }
+    if (label_in_iter) {
+      label_in = std::visit([](auto& iter) { return static_cast<int32_t>(*iter); },
+                            *label_in_iter);
+      is_passthrough = config.passthrough_labels.count(*label_in);
+    }
+
+    if (in_view) {
+      *label_out_iter = is_passthrough ? *label_in : getter(v, u);
     } else {
-      *label_out_iter = config.unknown_label;
+      *label_out_iter = is_passthrough ? *label_in : config.unknown_label;
     }
 
     if (!in_view && config.discard_out_of_view) {
