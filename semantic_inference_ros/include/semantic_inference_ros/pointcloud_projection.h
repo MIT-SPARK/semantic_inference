@@ -1,7 +1,9 @@
 #include <semantic_inference/image_recolor.h>
 
 #include <cstdint>
+#include <optional>
 #include <string>
+#include <variant>
 
 #include <sensor_msgs/msg/camera_info.hpp>
 #include <sensor_msgs/msg/image.hpp>
@@ -15,6 +17,8 @@ struct ProjectionConfig {
   bool use_lidar_frame = true;
   bool discard_out_of_view = false;
   int16_t unknown_label = 0;
+  std::string input_label_fieldname = "";
+  std::set<int16_t> passthrough_labels;
 };
 
 void declare_config(ProjectionConfig& config);

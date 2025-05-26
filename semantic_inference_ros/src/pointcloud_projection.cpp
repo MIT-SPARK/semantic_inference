@@ -16,6 +16,14 @@ using sensor_msgs::msg::Image;
 using sensor_msgs::msg::PointCloud2;
 using sensor_msgs::msg::PointField;
 
+using LabelIteratorVariant =
+    std::variant<sensor_msgs::PointCloud2ConstIterator<int8_t>,
+                 sensor_msgs::PointCloud2ConstIterator<uint8_t>,
+                 sensor_msgs::PointCloud2ConstIterator<int16_t>,
+                 sensor_msgs::PointCloud2ConstIterator<uint16_t>,
+                 sensor_msgs::PointCloud2ConstIterator<int32_t>,
+                 sensor_msgs::PointCloud2ConstIterator<uint32_t>>;
+
 namespace {
 struct OutputPosIter {
  public:
@@ -96,6 +104,34 @@ void declare_config(ProjectionConfig& config) {
   field(config.use_lidar_frame, "use_lidar_frame");
   field(config.discard_out_of_view, "discard_out_of_view");
   field(config.unknown_label, "unknown_label");
+  field(config.input_label_fieldname, "input_label_fieldname");
+  field(config.passthrough_labels, "passthrough_labels");
+}
+
+std::optional<LabelIteratorVariant> getLabelIterIfExists(
+    const PointCloud2& cloud, const std::string& field_name) {
+  for (const auto& field : cloud.fields) {
+    if (field.name == field_name) {
+      switch (field.datatype) {
+        case PointField::INT8:
+          return sensor_msgs::PointCloud2ConstIterator<int8_t>(cloud, field_name);
+        case PointField::UINT8:
+          return sensor_msgs::PointCloud2ConstIterator<uint8_t>(cloud, field_name);
+        case PointField::INT16:
+          return sensor_msgs::PointCloud2ConstIterator<int16_t>(cloud, field_name);
+        case PointField::UINT16:
+          return sensor_msgs::PointCloud2ConstIterator<uint16_t>(cloud, field_name);
+        case PointField::INT32:
+          return sensor_msgs::PointCloud2ConstIterator<int32_t>(cloud, field_name);
+        case PointField::UINT32:
+          return sensor_msgs::PointCloud2ConstIterator<uint32_t>(cloud, field_name);
+        default:
+          throw std::runtime_error("Unsupported label field datatype: " +
+                                   std::to_string(field.datatype));
+      }
+    }
+  }
+  return std::nullopt;
 }
 
 bool projectSemanticImage(const ProjectionConfig& config,
@@ -133,7 +169,11 @@ bool projectSemanticImage(const ProjectionConfig& config,
 
   auto pos_in_iter = InputPosIter(cloud);
   auto pos_out_iter = OutputPosIter(output);
-  auto label_iter = sensor_msgs::PointCloud2Iterator<int32_t>(output, "label");
+  auto label_out_iter = sensor_msgs::PointCloud2Iterator<int32_t>(output, "label");
+
+  // Optional to label points outside the image FoV.
+  auto label_in_iter = getLabelIterIfExists(cloud, config.input_label_fieldname);
+
   const auto invalid_point =
       Eigen::Vector3f::Constant(std::numeric_limits<float>::quiet_NaN());
   while (pos_in_iter) {
@@ -150,7 +190,22 @@ bool projectSemanticImage(const ProjectionConfig& config,
     }
 
     const auto in_view = u >= 0 && u < image.cols && v >= 0 && v < image.rows;
-    *label_iter = in_view ? getter(v, u) : config.unknown_label;
+
+    std::optional<int32_t> label_in;
+    bool is_passthrough = false;
+
+    if (label_in_iter) {
+      label_in = std::visit([](auto& iter) { return static_cast<int32_t>(*iter); },
+                            *label_in_iter);
+      is_passthrough = config.passthrough_labels.count(*label_in);
+    }
+
+    if (in_view) {
+      *label_out_iter = is_passthrough ? *label_in : getter(v, u);
+    } else {
+      *label_out_iter = is_passthrough ? *label_in : config.unknown_label;
+    }
+
     if (!in_view && config.discard_out_of_view) {
       pos_out_iter.set(invalid_point);
     } else {
@@ -159,7 +214,10 @@ bool projectSemanticImage(const ProjectionConfig& config,
 
     ++pos_in_iter;
     ++pos_out_iter;
-    ++label_iter;
+    ++label_out_iter;
+    if (label_in_iter) {
+      std::visit([](auto& iter) { ++iter; }, *label_in_iter);
+    }
   }
 
   if (!recolor) {
