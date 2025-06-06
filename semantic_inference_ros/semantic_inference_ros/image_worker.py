@@ -33,6 +33,7 @@ from semantic_inference import Config
 from semantic_inference_ros.ros_conversions import Conversions
 from dataclasses import dataclass
 
+import rclpy
 import sensor_msgs.msg
 
 import queue
@@ -113,12 +114,13 @@ class ImageWorker:
             except queue.Empty:
                 continue
 
+            curr_stamp = rclpy.time.Time.from_msg(msg.header.stamp)
             if self._last_stamp is not None:
-                diff_s = (msg.header.stamp - self._last_stamp).to_sec()
+                diff_s = 1.0e-9 * (curr_stamp - self._last_stamp).nanoseconds
                 if diff_s < self._config.min_separation_s:
                     continue
 
-            self._last_stamp = msg.header.stamp
+            self._last_stamp = curr_stamp
 
             # try:
             img = Conversions.to_image(msg, encoding=self._config.encoding)
