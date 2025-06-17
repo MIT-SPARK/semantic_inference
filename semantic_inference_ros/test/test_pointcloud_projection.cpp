@@ -67,8 +67,11 @@ TEST(PointcloudProjection, ProjectionCorrect) {
 
   const auto image_T_cloud = Eigen::Isometry3f::Identity();
 
+  ProjectionConfig config;
+  config.unknown_label = 1;
+
   PointCloud2 labeled;
-  projectSemanticImage({true, false, 1}, info, img, cloud, image_T_cloud, labeled);
+  projectSemanticImage(config, info, img, cloud, image_T_cloud, labeled);
 
   pcl::PointCloud<pcl::PointXYZL> expected;
   expected.push_back(pcl::PointXYZL{1.0, 2.0, 3.0, 5});
@@ -109,9 +112,11 @@ TEST(PointcloudProjection, ColorCorrect) {
 
   const auto image_T_cloud = Eigen::Isometry3f::Identity();
 
+  ProjectionConfig config;
+  config.unknown_label = 5;
+
   PointCloud2 labeled;
-  projectSemanticImage(
-      {true, false, 5}, info, img, cloud, image_T_cloud, labeled, &recolor);
+  projectSemanticImage(config, info, img, cloud, image_T_cloud, labeled, &recolor);
 
   pcl::PointCloud<pcl::PointXYZRGBL> expected;
   expected.push_back(makePoint(1.0, 2.0, 1.0, 0, 255, 0, 2));
