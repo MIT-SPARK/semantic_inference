@@ -126,6 +126,19 @@ std::unique_ptr<InputLabelIterBase> iterFromFields(const PointCloud2& cloud,
     }
   }
 
+  std::stringstream ss;
+  ss << "[";
+  auto iter = cloud.fields.begin();
+  while (iter != cloud.fields.end()) {
+    ss << "'" << iter->name << "'";
+    ++iter;
+    if (iter != cloud.fields.end()) {
+      ss << ", ";
+    }
+  }
+  ss << "]";
+
+  SLOG(ERROR) << "Missing field '" << field_name << "' (available: " << ss.str() << ")";
   return nullptr;
 }
 
