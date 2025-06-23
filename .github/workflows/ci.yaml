@@ -24,10 +24,12 @@ jobs:
           vcs import src < src/semantic_inference/install/packages.yaml
           rosdep update --rosdistro jazzy && rosdep install --rosdistro jazzy --from-paths src --ignore-src -r -y
       - name: Build
+        shell: bash
         run: |
           source /opt/ros/jazzy/setup.bash
           colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release
       - name: Test
+        shell: bash
         run: |-
           source /opt/ros/jazzy/setup.bash
           colcon test
