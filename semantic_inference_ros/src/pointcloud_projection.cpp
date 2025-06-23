@@ -248,6 +248,18 @@ void declare_config(ProjectionConfig& config) {
   field(config.input_label_fieldname, "input_label_fieldname");
   field(config.override_labels, "override_labels");
   field(config.allowed_labels, "allowed_labels");
+  field(config.input_remapping, "input_remapping");
+}
+
+std::optional<uint32_t> ProjectionConfig::remapInput(
+    std::optional<uint32_t> orig) const {
+  if (!orig) {
+    return std::nullopt;
+  }
+
+  const auto label = orig.value();
+  const auto iter = input_remapping.find(label);
+  return iter == input_remapping.end() ? label : iter->second;
 }
 
 bool projectSemanticImage(const ProjectionConfig& config,
@@ -283,7 +295,8 @@ bool projectSemanticImage(const ProjectionConfig& config,
     }
 
     const auto in_view = u >= 0 && u < image.cols && v >= 0 && v < image.rows;
-    const uint32_t label_in = (*label_in_iter).value_or(config.unknown_label);
+    const uint32_t label_in =
+        config.remapInput(*label_in_iter).value_or(config.unknown_label);
     if (in_view) {
       *label_out_iter = config.isOverride(label_in) ? label_in : img_wrapper(v, u);
     } else {

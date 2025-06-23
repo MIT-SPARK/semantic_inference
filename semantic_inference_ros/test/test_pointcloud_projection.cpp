@@ -154,7 +154,7 @@ TEST(PointcloudProjection, ColorCorrect) {
 TEST(PointcloudProjection, InputLabelsCorrect) {
   PointCloud2 cloud;
   std::vector<Eigen::Vector3f> points{{1, 2, 3}, {4, 5, 6}, {4, 5, 2}, {0, 0, -1}};
-  std::vector<uint32_t> labels{3, 4, 2, 5};
+  std::vector<uint32_t> labels{3, 4, 6, 5};
   fillCloud(points, labels, cloud);
 
   const cv::Mat img = 5 * cv::Mat::ones(3, 4, CV_8UC1);
@@ -172,6 +172,7 @@ TEST(PointcloudProjection, InputLabelsCorrect) {
   config.input_label_fieldname = "label";
   config.override_labels = {3};
   config.allowed_labels = {2};
+  config.input_remapping = {{6, 2}};
 
   PointCloud2 labeled;
   projectSemanticImage(config, info, img, cloud, image_T_cloud, labeled);

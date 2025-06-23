@@ -2,7 +2,9 @@
 
 #include <cstdint>
 #include <set>
+#include <unordered_map>
 #include <string>
+#include <optional>
 
 #include <sensor_msgs/msg/camera_info.hpp>
 #include <sensor_msgs/msg/image.hpp>
@@ -25,9 +27,12 @@ struct ProjectionConfig {
   std::set<uint32_t> override_labels;
   //! Set of input pointcloud labels that can be forwarded to the output
   std::set<uint32_t> allowed_labels;
+  //! Input label remapping for input pointcloud
+  std::unordered_map<uint32_t, uint32_t> input_remapping;
 
   bool isOverride(uint32_t label) const { return override_labels.count(label); }
   bool isAllowed(uint32_t label) const { return allowed_labels.count(label); }
+  std::optional<uint32_t> remapInput(std::optional<uint32_t> orig) const;
 };
 
 void declare_config(ProjectionConfig& config);
