@@ -29,18 +29,18 @@
 #
 """Torch module preparing batch of images for CLIP."""
 
-from semantic_inference.config import Config
-from semantic_inference.models.mask_functions import ConstantMask
-from semantic_inference.misc import Logger
-
-from typing import Optional, List
 from dataclasses import dataclass
-import torch
+from typing import List, Optional
 
-from torch import nn
+import torch
 import torch.nn.functional as F
-from torchvision.transforms import v2
 import torchvision.ops
+from torch import nn
+from torchvision.transforms import v2
+
+from semantic_inference.config import Config
+from semantic_inference.misc import Logger
+from semantic_inference.models.mask_functions import ConstantMask
 
 
 class ToFloat(nn.Module):

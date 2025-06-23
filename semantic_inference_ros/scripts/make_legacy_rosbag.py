@@ -29,15 +29,17 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 """Script to make a new rosbag with semantics for a given color image topic."""
-from cv_bridge import CvBridge
-import numpy as np
+
 import pathlib
-import rosbag
+
 import click
-import yaml
-import tqdm
-import zmq
 import cv2
+import numpy as np
+import rosbag
+import tqdm
+import yaml
+import zmq
+from cv_bridge import CvBridge
 
 
 def _get_config_dir():

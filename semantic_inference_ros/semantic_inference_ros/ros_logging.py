@@ -29,8 +29,9 @@
 #
 """Module containing ROS logging shim."""
 
-from semantic_inference import Logger
 import logging
+
+from semantic_inference import Logger
 
 
 # adapted from https://gist.github.com/ablakey/4f57dca4ea75ed29c49ff00edf622b38

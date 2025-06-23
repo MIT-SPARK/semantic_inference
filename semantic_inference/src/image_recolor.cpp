@@ -265,9 +265,7 @@ const std::array<uint8_t, 3>& ImageRecolor::getColor(Label label) const {
   return default_color;
 }
 
-void ImageRecolor::fillColor(Label class_id,
-                             uint8_t* pixel,
-                             size_t pixel_size) const {
+void ImageRecolor::fillColor(Label class_id, uint8_t* pixel, size_t pixel_size) const {
   const auto& color = getColor(class_id);
   size_t to_copy = std::min(pixel_size, color.size());
   std::memcpy(pixel, color.data(), to_copy);

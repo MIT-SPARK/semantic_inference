@@ -35,6 +35,7 @@ import einops
 import torch
 import torch.nn as nn
 import torchvision
+
 from semantic_inference import root_path
 from semantic_inference.config import Config, register_config
 

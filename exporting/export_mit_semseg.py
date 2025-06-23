@@ -29,18 +29,18 @@
 #
 """Download and export pretrained models."""
 
-import click
+import importlib
 import pathlib
 import subprocess
-import tempfile
-import importlib
-import warnings
-import yaml
 import sys
+import tempfile
+import warnings
 
+import click
 import torch
 import torch.nn as nn
 import torch.onnx as onnx
+import yaml
 
 
 def _normalized_path(filepath):
@@ -84,8 +84,8 @@ class ExportableSegmentationModel(nn.Module):
         sys.modules["mit_semseg"] = mit_semseg
         spec.loader.exec_module(mit_semseg)
 
-        from mit_semseg.models import ModelBuilder
         from mit_semseg.config import cfg
+        from mit_semseg.models import ModelBuilder
 
         super(ExportableSegmentationModel, self).__init__()
 

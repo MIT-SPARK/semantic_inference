@@ -39,6 +39,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import yaml
+
 from semantic_inference.visualization import (
     make_colormap_legend,
     make_palette,

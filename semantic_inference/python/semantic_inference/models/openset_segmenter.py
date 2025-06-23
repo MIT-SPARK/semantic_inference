@@ -29,22 +29,24 @@
 #
 """Model to segment an image and encode segments with CLIP embeddings."""
 
-from semantic_inference.config import Config, config_field
-from semantic_inference.models.segment_refinement import SegmentRefinement
-from semantic_inference.models.mask_functions import ConstantMask
-from semantic_inference.models.patch_extractor import PatchExtractor
-from semantic_inference.models.patch_extractor import get_image_preprocessor
-from semantic_inference.models.patch_extractor import default_normalization_parameters
-from semantic_inference.models.patch_extractor import center_crop
+import dataclasses
+from dataclasses import dataclass, field
+from typing import Any
 
+import numpy as np
 import torch
 import torch.nn.functional as F
 from torch import nn
-import numpy as np
 
-from typing import Any
-import dataclasses
-from dataclasses import dataclass, field
+from semantic_inference.config import Config, config_field
+from semantic_inference.models.mask_functions import ConstantMask
+from semantic_inference.models.patch_extractor import (
+    PatchExtractor,
+    center_crop,
+    default_normalization_parameters,
+    get_image_preprocessor,
+)
+from semantic_inference.models.segment_refinement import SegmentRefinement
 
 
 def _default_extractor():

@@ -28,16 +28,18 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 """Run inference with oneformer."""
+
+import pathlib
+import random
+import sys
+
+import click
 import detectron2.data.transforms as T
+import numpy as np
+import torch
+import zmq
 from detectron2.checkpoint import DetectionCheckpointer
 from detectron2.modeling import build_model
-import numpy as np
-import pathlib
-import click
-import torch
-import random
-import zmq
-import sys
 
 
 def _setup_cfg(oneformer_path, config_file, weights_file):
@@ -45,11 +47,11 @@ def _setup_cfg(oneformer_path, config_file, weights_file):
     from detectron2.config import get_cfg
     from detectron2.projects.deeplab import add_deeplab_config
     from oneformer import (
-        add_oneformer_config,
         add_common_config,
-        add_swin_config,
-        add_dinat_config,
         add_convnext_config,
+        add_dinat_config,
+        add_oneformer_config,
+        add_swin_config,
     )
 
     cfg = get_cfg()

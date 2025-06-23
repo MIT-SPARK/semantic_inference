@@ -29,9 +29,10 @@
 #
 """Fixtures for unit tests."""
 
-import pytest
 import pathlib
+
 import imageio.v3 as iio
+import pytest
 
 
 @pytest.fixture()

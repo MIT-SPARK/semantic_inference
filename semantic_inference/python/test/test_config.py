@@ -29,9 +29,10 @@
 #
 """Test that configuration structs work as expected."""
 
-import semantic_inference
 from dataclasses import dataclass
 from typing import Any
+
+import semantic_inference
 
 
 @semantic_inference.register_config("test", name="foo")

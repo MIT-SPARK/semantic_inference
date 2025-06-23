@@ -1,10 +1,10 @@
 #include <semantic_inference/image_recolor.h>
 
 #include <cstdint>
-#include <set>
-#include <unordered_map>
-#include <string>
 #include <optional>
+#include <set>
+#include <string>
+#include <unordered_map>
 
 #include <sensor_msgs/msg/camera_info.hpp>
 #include <sensor_msgs/msg/image.hpp>

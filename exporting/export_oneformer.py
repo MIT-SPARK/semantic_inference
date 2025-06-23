@@ -29,21 +29,20 @@
 #
 """Script to export oneformer to onnx."""
 
+import functools
+import pathlib
+
 import click
 import cv2
-import pathlib
-import functools
-import numpy as np
-import onnxruntime as ort
-
-import torch
-from torch import nn
-import torch.onnx as onnx
-from torch.nn import functional as F
-
 import detectron2
 import detectron2.checkpoint
 import detectron2.projects.deeplab
+import numpy as np
+import onnxruntime as ort
+import torch
+import torch.onnx as onnx
+from torch import nn
+from torch.nn import functional as F
 
 
 def _get_oneformer(path_to_repo):
