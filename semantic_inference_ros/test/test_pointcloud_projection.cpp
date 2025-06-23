@@ -22,6 +22,24 @@ void fillCloud(const std::vector<Eigen::Vector3f>& points, PointCloud2& cloud) {
   pcl::toROSMsg(pcl_cloud, cloud);
 }
 
+void fillCloud(const std::vector<Eigen::Vector3f>& points, const std::vector<uint32_t>& labels, PointCloud2& cloud) {
+  if (points.size() != labels.size()) {
+    throw std::runtime_error("points and labels sizes do not match!");
+  }
+
+  pcl::PointCloud<pcl::PointXYZL> pcl_cloud;
+  for (size_t i = 0; i < points.size(); ++i) {
+    auto& p_out = pcl_cloud.emplace_back();
+    p_out.x = points[i].x();
+    p_out.y = points[i].y();
+    p_out.z = points[i].z();
+    p_out.label = labels[i];
+  }
+
+  pcl::toROSMsg(pcl_cloud, cloud);
+}
+
+
 void checkPoint(const pcl::PointXYZL& expected, const pcl::PointXYZL& result) {
   EXPECT_NEAR(expected.x, result.x, 1.0e-4f);
   EXPECT_NEAR(expected.y, result.y, 1.0e-4f);
@@ -67,8 +85,11 @@ TEST(PointcloudProjection, ProjectionCorrect) {
 
   const auto image_T_cloud = Eigen::Isometry3f::Identity();
 
+  ProjectionConfig config;
+  config.unknown_label = 1;
+
   PointCloud2 labeled;
-  projectSemanticImage({true, false, 1}, info, img, cloud, image_T_cloud, labeled);
+  projectSemanticImage(config, info, img, cloud, image_T_cloud, labeled);
 
   pcl::PointCloud<pcl::PointXYZL> expected;
   expected.push_back(pcl::PointXYZL{1.0, 2.0, 3.0, 5});
@@ -109,9 +130,11 @@ TEST(PointcloudProjection, ColorCorrect) {
 
   const auto image_T_cloud = Eigen::Isometry3f::Identity();
 
+  ProjectionConfig config;
+  config.unknown_label = 5;
+
   PointCloud2 labeled;
-  projectSemanticImage(
-      {true, false, 5}, info, img, cloud, image_T_cloud, labeled, &recolor);
+  projectSemanticImage(config, info, img, cloud, image_T_cloud, labeled, &recolor);
 
   pcl::PointCloud<pcl::PointXYZRGBL> expected;
   expected.push_back(makePoint(1.0, 2.0, 1.0, 0, 255, 0, 2));
@@ -120,6 +143,47 @@ TEST(PointcloudProjection, ColorCorrect) {
   expected.push_back(makePoint(-1.0, -1.0, 1.0, 0, 0, 0, 5));
 
   pcl::PointCloud<pcl::PointXYZRGBL> result;
+  pcl::fromROSMsg(labeled, result);
+  ASSERT_EQ(expected.size(), result.size());
+  for (size_t i = 0; i < expected.size(); ++i) {
+    SCOPED_TRACE("RESULT_CORRECT: " + std::to_string(i));
+    checkPoint(expected.at(i), result.at(i));
+  }
+}
+
+TEST(PointcloudProjection, InputLabelsCorrect) {
+  PointCloud2 cloud;
+  std::vector<Eigen::Vector3f> points{{1, 2, 3}, {4, 5, 6}, {4, 5, 2}, {0, 0, -1}};
+  std::vector<uint32_t> labels{3, 4, 6, 5};
+  fillCloud(points, labels, cloud);
+
+  const cv::Mat img = 5 * cv::Mat::ones(3, 4, CV_8UC1);
+
+  CameraInfo info;
+  info.k = {1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0};
+  info.p = {1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0};
+  info.width = 4;
+  info.height = 3;
+
+  const auto image_T_cloud = Eigen::Isometry3f::Identity();
+
+  ProjectionConfig config;
+  config.unknown_label = 1;
+  config.input_label_fieldname = "label";
+  config.override_labels = {3};
+  config.allowed_labels = {2};
+  config.input_remapping = {{6, 2}};
+
+  PointCloud2 labeled;
+  projectSemanticImage(config, info, img, cloud, image_T_cloud, labeled);
+
+  pcl::PointCloud<pcl::PointXYZL> expected;
+  expected.push_back(pcl::PointXYZL{1.0, 2.0, 3.0, 3});
+  expected.push_back(pcl::PointXYZL{4.0, 5.0, 6.0, 5});
+  expected.push_back(pcl::PointXYZL{4.0, 5.0, 2.0, 2});
+  expected.push_back(pcl::PointXYZL{0.0, 0.0, -1.0, 1});
+
+  pcl::PointCloud<pcl::PointXYZL> result;
   pcl::fromROSMsg(labeled, result);
   ASSERT_EQ(expected.size(), result.size());
   for (size_t i = 0; i < expected.size(); ++i) {
