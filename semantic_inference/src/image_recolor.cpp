@@ -34,7 +34,6 @@
 #include <config_utilities/config.h>
 #include <config_utilities/types/path.h>
 #include <config_utilities/validation.h>
-#include <glog/logging.h>
 
 #include <fstream>
 
@@ -142,7 +141,10 @@ Colormap loadColormap(const fs::path& filepath,
 }
 
 std::array<uint8_t, 3> colorFromVec(const std::vector<uint8_t>& vec) {
-  CHECK_GE(vec.size(), 3u);
+  if (vec.size() != 3u) {
+    throw std::runtime_error("Invalid color input!");
+  }
+
   return {vec[0], vec[1], vec[2]};
 }
 
