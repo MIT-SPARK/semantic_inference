@@ -34,6 +34,7 @@
 #include <semantic_inference/logging.h>
 
 #include <atomic>
+#include <condition_variable>
 #include <list>
 #include <memory>
 #include <mutex>
@@ -41,8 +42,6 @@
 #include <thread>
 
 #include <rclcpp/time.hpp>
-
-#include <condition_variable>
 
 namespace semantic_inference {
 

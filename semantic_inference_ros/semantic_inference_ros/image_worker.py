@@ -29,16 +29,16 @@
 #
 """Module containing queue-based image processor."""
 
-from semantic_inference import Config
-from semantic_inference_ros.ros_conversions import Conversions
+import queue
+import threading
+import time
 from dataclasses import dataclass
 
 import rclpy
 import sensor_msgs.msg
 
-import queue
-import threading
-import time
+from semantic_inference import Config
+from semantic_inference_ros.ros_conversions import Conversions
 
 
 @dataclass

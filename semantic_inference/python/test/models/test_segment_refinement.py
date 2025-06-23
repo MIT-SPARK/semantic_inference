@@ -29,9 +29,10 @@
 #
 """Unit tests for mask refinement code."""
 
-from semantic_inference.models import SegmentRefinement
 import helpers
 import torch
+
+from semantic_inference.models import SegmentRefinement
 
 
 @helpers.parametrize_device

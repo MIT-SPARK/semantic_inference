@@ -29,10 +29,11 @@
 #
 """Unit tests for mask refinement code."""
 
-from semantic_inference.models import PatchExtractor, crop_to_bbox, center_crop
-import torch
 import helpers
 import pytest
+import torch
+
+from semantic_inference.models import PatchExtractor, center_crop, crop_to_bbox
 
 
 def _tile(img, stride):

@@ -51,8 +51,7 @@ groups:
   - {name: bicycle, labels: [128]}
   - {name: food, labels: [99, 121]}
   - {name: clothes, labels: [82, 93, 132]}
-  - {name: thing, labels: [68, 75, 90, 109, 120, 131, 133, 138, 142, 144, 126, 136,
-      140, 143, 148]}
+  - {name: thing, labels: [68, 75, 90, 109, 120, 131, 133, 138, 142, 144, 126, 136, 140, 143, 148]}
   - {name: animal, labels: [127]}
   - {name: human, labels: [13]}
 specified_colors:

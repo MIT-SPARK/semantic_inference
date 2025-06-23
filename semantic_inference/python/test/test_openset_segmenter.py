@@ -29,12 +29,12 @@
 #
 """Unit tests for openset segmenter."""
 
-import semantic_inference.models as models
-import torch
 import helpers
-import pytest
-
 import numpy as np
+import pytest
+import torch
+
+import semantic_inference.models as models
 
 
 @helpers.parametrize_device

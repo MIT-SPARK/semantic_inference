@@ -22,7 +22,9 @@ void fillCloud(const std::vector<Eigen::Vector3f>& points, PointCloud2& cloud) {
   pcl::toROSMsg(pcl_cloud, cloud);
 }
 
-void fillCloud(const std::vector<Eigen::Vector3f>& points, const std::vector<uint32_t>& labels, PointCloud2& cloud) {
+void fillCloud(const std::vector<Eigen::Vector3f>& points,
+               const std::vector<uint32_t>& labels,
+               PointCloud2& cloud) {
   if (points.size() != labels.size()) {
     throw std::runtime_error("points and labels sizes do not match!");
   }
@@ -38,7 +40,6 @@ void fillCloud(const std::vector<Eigen::Vector3f>& points, const std::vector<uin
 
   pcl::toROSMsg(pcl_cloud, cloud);
 }
-
 
 void checkPoint(const pcl::PointXYZL& expected, const pcl::PointXYZL& result) {
   EXPECT_NEAR(expected.x, result.x, 1.0e-4f);

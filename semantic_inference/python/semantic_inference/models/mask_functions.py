@@ -30,7 +30,6 @@
 """Torch module preparing batch of images for CLIP."""
 
 import torch
-
 from torch import nn
 
 

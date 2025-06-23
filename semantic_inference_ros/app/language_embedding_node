@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Node to encode language prompts as embeddings."""
+
 from dataclasses import dataclass
 from typing import Any
 
 import rospy
+
 import semantic_inference_ros
 from semantic_inference import Config, config_field
 from semantic_inference.models import default_device

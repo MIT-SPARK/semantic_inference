@@ -29,10 +29,11 @@
 #
 """Unit tests for mask application."""
 
-from semantic_inference.models import ConstantMask, GaussianMask
 import helpers
 import pytest
 import torch
+
+from semantic_inference.models import ConstantMask, GaussianMask
 
 
 def _compare_masked(masks, expected, result):

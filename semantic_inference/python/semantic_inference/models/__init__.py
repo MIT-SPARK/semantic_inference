@@ -27,12 +27,13 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-from semantic_inference.models.segment_refinement import *
-from semantic_inference.models.patch_extractor import *
+import torch
+
 from semantic_inference.models.mask_functions import *
 from semantic_inference.models.openset_segmenter import *
+from semantic_inference.models.patch_extractor import *
+from semantic_inference.models.segment_refinement import *
 from semantic_inference.models.wrappers import *
-import torch
 
 
 def default_device(use_cuda=True):

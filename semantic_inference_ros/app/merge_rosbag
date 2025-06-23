@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Add the contents of one bag to another."""
-import rosbag
-import click
+
 import pathlib
+
+import click
+import rosbag
 import tqdm
 
 

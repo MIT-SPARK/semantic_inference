@@ -29,9 +29,10 @@
 #
 """Test various wrappers."""
 
-import semantic_inference.models as models
 import helpers
 import pytest
+
+import semantic_inference.models as models
 
 
 @pytest.mark.skipif(not helpers.validate_modules("clip"), reason="tbd")

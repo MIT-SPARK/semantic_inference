@@ -29,10 +29,10 @@
 #
 """Module handling open-set segmentation."""
 
+import pathlib
+
 from semantic_inference.config import *
 from semantic_inference.misc import Logger
-
-import pathlib
 
 
 def root_path():

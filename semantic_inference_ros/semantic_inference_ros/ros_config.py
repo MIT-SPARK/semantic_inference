@@ -28,8 +28,10 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 """Module containing ros config parsing infrastructure."""
-from semantic_inference import Config
+
 import pathlib
+
+from semantic_inference import Config
 
 
 # TODO(nathan) test this to make sure list and dictionary behavior is correct

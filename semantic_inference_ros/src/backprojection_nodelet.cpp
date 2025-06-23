@@ -1,7 +1,6 @@
 #include <config_utilities/config_utilities.h>
 #include <config_utilities/parsing/commandline.h>
 #include <config_utilities/types/path.h>
-#include <glog/logging.h>
 #include <ianvs/image_subscription.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/sync_policies/approximate_time.h>

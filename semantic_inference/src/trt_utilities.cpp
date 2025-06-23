@@ -272,8 +272,7 @@ inline nvinfer1::Dims replaceDynamic(const nvinfer1::Dims& dims, int64_t new_val
   return new_dims;
 }
 
-EnginePtr buildEngineFromOnnx(const ModelConfig& model_config,
-                              IRuntime& runtime) {
+EnginePtr buildEngineFromOnnx(const ModelConfig& model_config, IRuntime& runtime) {
   using nvinfer1::Dims3;
   using nvinfer1::OptProfileSelector;
 

@@ -29,19 +29,18 @@
 #
 """Export efficientvit models."""
 
+import pathlib
+
+import click
 import efficientvit
 import efficientvit.seg_model_zoo
-
+import imageio.v3
 import matplotlib.pyplot as plt
 import numpy as np
-import pathlib
-import click
-import imageio.v3
-
 import torch
 import torch.nn as nn
-import torch.onnx as onnx
 import torch.nn.functional as F
+import torch.onnx as onnx
 
 
 class ExportModel(nn.Module):

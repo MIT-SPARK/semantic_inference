@@ -29,12 +29,13 @@
 #
 """Torch module for refining SAM masks."""
 
-from semantic_inference.config import Config
 from dataclasses import dataclass
 
 import torch
 import torchvision
 from torch import nn
+
+from semantic_inference.config import Config
 
 
 @dataclass
