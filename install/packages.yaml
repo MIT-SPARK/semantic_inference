@@ -1,0 +1,9 @@
+repositories:
+  config_utilities:
+    type: git
+    url: git@github.com:MIT-SPARK/config_utilities.git
+    version: main
+  ianvs:
+    type: git
+    url: git@github.com:MIT-SPARK/Ianvs.git
+    version: main

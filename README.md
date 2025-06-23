@@ -30,11 +30,12 @@ We welcome additional contributions!
 
 The recommended use-case for the repository is with ROS.
 We assume some familiarity with ROS in these instructions.
-To start, clone this repository into your catkin workspace and run rosdep to get any missing dependencies.
+To start, clone this repository into your colcon workspace and run rosdep to get any missing dependencies.
 This usually looks like the following:
 ```bash
-cd /path/to/catkin_ws/src
+cd /path/to/colcon_ws/src
 git clone git@github.com:MIT-SPARK/semantic_inference.git
+vcs import . < semantic_inference/install/packages.yaml
 rosdep install --from-paths . --ignore-src -r -y
 ```
 
@@ -46,8 +47,8 @@ An (optional) quick primer for setting up a minimal workspace is below for those
 
 First, make sure rosdep is setup:
 ```bash
-# Initialize necessary tools for working with ROS and catkin
-sudo apt install python3-catkin-tools python3-rosdep
+# Initialize necessary tools for working with ROS
+sudo apt install python3-vcstool python3-rosdep
 sudo rosdep init
 rosdep update
 ```
@@ -55,10 +56,9 @@ rosdep update
 Then, make the workspace and initialize it:
 ```bash
 # Setup the workspace
-mkdir -p path/to/catkin_ws/src
-cd catkin_ws
-catkin init
-catkin config -DCMAKE_BUILD_TYPE=Release
+mkdir -p path/to/colcon_ws/src
+cd colcon_ws
+echo "build: {cmake-args: [--no-warn-unused-cli, -DCMAKE_BUILD_TYPE=Release, -DCONFIG_UTILS_ENABLE_ROS=OFF]}" > colcon_defaults.yaml
 ```
 
 </details>
