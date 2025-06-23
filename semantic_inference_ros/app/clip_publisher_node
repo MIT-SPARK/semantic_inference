@@ -27,7 +27,7 @@ class ClipPublisherNode(Node):
 
     def __init__(self):
         """Start subscriber and publisher."""
-        super(ClipPublisherNode, self).__init__("clip_publisher_node")
+        super().__init__("clip_publisher_node")
         config = semantic_inference_ros.load_from_ros(ClipPublisherConfig, "~")
 
         self.get_logger().info(f"Initializing with {config}")

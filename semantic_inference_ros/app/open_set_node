@@ -29,7 +29,7 @@ class OpenSetNode(Node):
 
     def __init__(self):
         """Start subscriber and publisher."""
-        super(OpenSetNode, self).__init__("open_set_node")
+        super().__init__("open_set_node")
         self.config = semantic_inference_ros.load_from_ros(OpenSetNodeConfig, ns="~")
 
         self.get_logger().info(f"Initializing with {self.config.show()}")

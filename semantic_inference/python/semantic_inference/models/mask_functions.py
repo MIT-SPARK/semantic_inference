@@ -38,7 +38,7 @@ class NoMask(nn.Module):
 
     def __init__(self):
         """Make the module."""
-        super(NoMask, self).__init__()
+        super().__init__()
 
     def forward(self, img, mask):
         """Return the same img as supplied."""
@@ -55,7 +55,7 @@ class ConstantMask(nn.Module):
         Args:
             value (Optional[torch.Tensor]): color to apply of shape (3)
         """
-        super(ConstantMask, self).__init__()
+        super().__init__()
         if value is None:
             value = torch.zeros((3, 1), dtype=torch.float32)
         else:
@@ -100,7 +100,7 @@ class GaussianMask(nn.Module):
 
     def __init__(self, mean=None, std=None, generator=None):
         """Make the segment refinement."""
-        super(GaussianMask, self).__init__()
+        super().__init__()
         self.mean = (
             torch.tensor(mean)
             if mean is not None

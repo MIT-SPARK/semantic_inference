@@ -145,7 +145,7 @@ class OpensetSegmenter(nn.Module):
 
     def __init__(self, config):
         """Construct an openset segmenter."""
-        super(OpensetSegmenter, self).__init__()
+        super().__init__()
         # for detecting model device
         self._canary_param = nn.Parameter(torch.empty(0))
 

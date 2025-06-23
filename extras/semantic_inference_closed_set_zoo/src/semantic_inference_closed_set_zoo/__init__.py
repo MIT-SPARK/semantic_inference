@@ -27,27 +27,6 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
-"""Entry points for semantic inference."""
+"""Module containing various closed set model wrappers."""
 
-import click
-
-import semantic_inference.commands.color as color
-import semantic_inference.commands.labelspace as labelspace
-import semantic_inference.commands.model as model
-import semantic_inference.commands.run as run
-
-
-@click.group()
-def cli():
-    """Toolkit for manipulating and examining labelspaces and models."""
-    pass
-
-
-cli.add_command(color.cli)
-cli.add_command(labelspace.cli)
-cli.add_command(model.cli)
-cli.add_command(run.cli)
-
-
-if __name__ == "__main__":
-    cli()
+from semantic_inference_closed_set_zoo.mask2former_wrapper import *

@@ -38,13 +38,17 @@ import click
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import yaml
+from ruamel.yaml import YAML
 
 from semantic_inference.visualization import (
+    PaletteConfig,
     make_colormap_legend,
     make_palette,
     verify_palette,
 )
+
+yaml = YAML(typ="safe", pure=True)
+yaml.default_flow_style = False
 
 
 def _normalize_path(path):
@@ -67,16 +71,8 @@ def create(categories, output, seed):
     categories = _normalize_path(categories)
     output = _normalize_path(output)
 
-    with categories.open("r") as fin:
-        config = yaml.load(fin.read(), Loader=yaml.SafeLoader)
-
-    base_colors = []
-    if "palette" in config:
-        for color in config["palette"]:
-            base_colors.append([int(x) for x in color])
-
-    # TODO(nathan) convert label config to a better input to make_palette
-    colors = make_palette(config, base_palette=base_colors, seed=seed)
+    config = PaletteConfig.load(categories)
+    colors = make_palette(config, seed=seed)
     if not verify_palette(colors):
         click.secho("[FATAL]: color collision in color palette", fg="red")
         sys.exit(1)

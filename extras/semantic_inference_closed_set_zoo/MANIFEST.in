@@ -1,0 +1,2 @@
+graft third_party/Mask2Former/mask2former/modeling/pixel_decoder/ops/src
+graft third_party/Mask2Former/configs

@@ -31,7 +31,6 @@
 
 import pathlib
 
-from semantic_inference.config import *
 from semantic_inference.misc import Logger
 
 

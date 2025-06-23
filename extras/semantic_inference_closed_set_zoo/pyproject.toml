@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=61.0", "torch"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "semantic_inference_closed_set_zoo"
+version = "0.0.1"
+authors = [
+ { name = "Nathan Hughes", email = "na26933@mit.edu" },
+]
+description = "Python package containing third-party closed set models"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "click",
+    "ninja",  # NOTE(nathan) required to try and force detectron2 to build faster
+    "opencv_python",
+    "requests",
+    "scipy",
+    "timm",
+    "torch",
+    "torchvision",
+    "tqdm",
+    "detectron2@git+https://github.com/facebookresearch/detectron2.git",
+]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.package-data]
+"semantic_inference_closed_set_zoo" = ["*.yaml"]
+"semantic_inference_closed_set_zoo.third_party.mask2former.config" = ["*.yaml"]
+
+[tool.setuptools.package-dir]
+semantic_inference_closed_set_zoo = "src/semantic_inference_closed_set_zoo"
+"semantic_inference_closed_set_zoo.third_party.mask2former" = "third_party/Mask2Former/mask2former"
+"semantic_inference_closed_set_zoo.third_party.mask2former.config" = "third_party/Mask2Former/configs"

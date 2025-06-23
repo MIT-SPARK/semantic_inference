@@ -87,7 +87,7 @@ class ExportableSegmentationModel(nn.Module):
         from mit_semseg.config import cfg
         from mit_semseg.models import ModelBuilder
 
-        super(ExportableSegmentationModel, self).__init__()
+        super().__init__()
 
         weights_path = _normalized_path(weights_path)
 

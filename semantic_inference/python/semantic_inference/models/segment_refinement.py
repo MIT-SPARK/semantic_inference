@@ -55,7 +55,7 @@ class SegmentRefinement(nn.Module):
 
     def __init__(self, config):
         """Initialize the module with the provided config."""
-        super(SegmentRefinement, self).__init__()
+        super().__init__()
         self.config = config
 
     @classmethod

@@ -1,0 +1,9 @@
+---
+ade20k:
+  maskformer2_R50_bs16_160k: https://dl.fbaipublicfiles.com/maskformer/mask2former/ade20k/semantic/maskformer2_R50_bs16_160k/model_final_500878.pkl
+  maskformer2_R101_bs16_90k: https://dl.fbaipublicfiles.com/maskformer/mask2former/ade20k/semantic/maskformer2_R101_bs16_90k/model_final_0d68be.pkl
+  swin/maskformer2_swin_tiny_bs16_160k: https://dl.fbaipublicfiles.com/maskformer/mask2former/ade20k/semantic/maskformer2_swin_tiny_bs16_160k/model_final_5274a6.pkl
+  swin/maskformer2_swin_small_bs16_160k: https://dl.fbaipublicfiles.com/maskformer/mask2former/ade20k/semantic/maskformer2_swin_small_bs16_160k/model_final_011c6d.pkl
+  swin/maskformer2_swin_base_384_bs16_160k_res640: https://dl.fbaipublicfiles.com/maskformer/mask2former/ade20k/semantic/maskformer2_swin_base_384_bs16_160k_res640/model_final_503e96.pkl
+  swin/maskformer2_swin_base_IN21k_384_bs16_160k_res640: https://dl.fbaipublicfiles.com/maskformer/mask2former/ade20k/semantic/maskformer2_swin_base_IN21k_384_bs16_160k_res640/model_final_7e47bf.pkl
+  swin/maskformer2_swin_large_IN21k_384_bs16_160k_res640: https://dl.fbaipublicfiles.com/maskformer/mask2former/ade20k/semantic/maskformer2_swin_large_IN21k_384_bs16_160k_res640/model_final_6b4a3a.pkl

@@ -40,7 +40,7 @@ class RosForwarder(logging.Handler):
 
     def __init__(self, node, **kwargs):
         """Construct a logging Handler that forwards log messages to ROS."""
-        super(RosForwarder, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self._level_map = {
             logging.DEBUG: node.get_logger().debug,
             logging.INFO: node.get_logger().info,

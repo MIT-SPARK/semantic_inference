@@ -22,10 +22,12 @@ dependencies = [
     "imageio",
     "onnx",
     "pandas",
-    "pyyaml",
+    "rosbags",
+    "ruamel.yaml",
     "seaborn",
     "torch",
     "torchvision",
+    "spark_config@git+https://github.com/MIT-SPARK/Spark-Config.git",
 ]
 
 [tool.setuptools.packages.find]
