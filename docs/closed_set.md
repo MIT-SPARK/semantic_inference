@@ -43,12 +43,12 @@ sudo apt install libnvinfer-dev libnvonnxparsers-dev libnvinfer-plugin-dev cuda-
 
 Once the necessary dependencies are installed and this repository has been placed in a workspace, run the following:
 ```
-catkin build
+colcon build
 ```
 
-You can run the following to make sure everything is working:
+You can run the following to validate that `semantic_inference` built correctly:
 ```
-catkin test semantic_inference
+colcon test --packages-select semantic_inference
 ```
 
 ### Models
@@ -81,16 +81,13 @@ pip install ./semantic_inference
 
 ## Using closed-set segmentation online
 
-To use the open-set segmentation as part of a larger system, include [semantic_inference.launch](../semantic_inference_ros/launch/semantic_inference.launch) in your launch file. Often this will look like this:
-```xml
-<launch>
+To use the open-set segmentation as part of a larger system, include [closed_set.launch.yaml](../semantic_inference_ros/launch/closed_set.launch.yaml) in your launch file. Often this will look like this:
+```yaml
+launch:
+  # ... rest of launch file ... -->
 
-    <!-- ... rest of launch file ... -->
-
-    <remap from="semantic_inference/color/image_raw" to="YOUR_INPUT_TOPIC_HERE"/>
-    <include file="$(find semantic_inference_ros)/launch/semantic_inference.launch"/>
-
-</launch>
+  - set_remap: {from: "color/image_raw", to: "YOUR_INPUT_TOPIC_HERE"}
+  - include: {file: "$(find-pkg-share semantic_inference_ros)/launch/closed_set.launch.yaml"}
 ```
 
 ## Adding New Datasets
