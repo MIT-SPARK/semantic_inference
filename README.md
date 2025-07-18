@@ -58,7 +58,7 @@ Then, make the workspace and initialize it:
 # Setup the workspace
 mkdir -p path/to/colcon_ws/src
 cd colcon_ws
-echo "build: {cmake-args: [--no-warn-unused-cli, -DCMAKE_BUILD_TYPE=Release, -DCONFIG_UTILS_ENABLE_ROS=OFF]}" > colcon_defaults.yaml
+echo "build: {cmake-args: [--no-warn-unused-cli, -DCMAKE_BUILD_TYPE=Release]}" > colcon_defaults.yaml
 ```
 
 </details>
@@ -77,13 +77,16 @@ Instead, the intention is for the launch files in `semantic_inference` to be use
 More details about including them can be found in the [closed-set](docs/closed_set.md#using-closed-set-segmentation-online) and [open-set](docs/open_set.md#using-open-set-segmentation-online) documentation.
 However, it is possible to do something like
 ```
-roslaunch semantic_inference_ros semantic_inference.launch
+ros2 launch semantic_inference_ros closed_set.launch.yaml
 ```
 and then
 ```
-rosbag play path/to/rosbag /some/color/image/topic:=/semantic_inference/color/image_raw
+ros2 bag play path/to/rosbag --remap /some/color/image/topic:=/color/image_raw
 ```
-in a separate terminal to quickly test a particular segmentation model.
+in a separate terminal to quickly test a particular segmentation model. The result can be visualized via
+```
+ros2 run image_view image_view --ros-args -r image:=/semantic_overlay/image_raw
+```
 
 > **Note** </br>
 > This usage (remapping the rosbag output topic) is a little bit backwards from how remappings from ROS are normally specified and is because launch files are unable to take remappings from the command line.
