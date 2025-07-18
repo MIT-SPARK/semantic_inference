@@ -7,7 +7,7 @@ The open-set segmentation interface works with and without ROS. For working with
 > **Note </br>**
 > If you intend only to use the open-set segmentation interface, you may want to turn off building against TensorRT, which you can do by the following:
 > ```
-> catkin config -a -DSEMANTIC_INFERENCE_USE_TRT=OFF
+> colcon build --cmake-args --no-warn-unused-cli -DSEMANTIC_INFERENCE_USE_TRT=OFF
 > ```
 
 ### Installing
@@ -21,9 +21,6 @@ Otherwise, omit the ``--system-site-packages`` option:
 ```
 python3 -m virtualenv -p /usr/bin/python3 --download /desired/path/to/environment
 ```
-
-> :warning: **Warning** <br>
-> Note that newer versions of `setuptools` are incompatible with `--system-site-packages` on Ubuntu 20.04. Do not use `--download` and `--system-site-packages` and expect the installation to work (specifically with external packages specified by git url).
 
 Then, install `semantic_inference`
 ```bash
@@ -42,12 +39,10 @@ Running with the original SAM may require downloading the model weights. See the
 
 ## Using open-set segmentation online
 
-To use the open-set segmentation as part of a larger system, include [openset_segmentation.launch](../semantic_inference_ros/launch/openset_segmentation.launch) in your launch file. Often this will look like this:
+To use the open-set segmentation as part of a larger system, include [open_set.launch.yaml](../semantic_inference_ros/launch/openset.launch.yaml) in your launch file. Often this will look like this:
 ```xml
 <launch>
-
     <!-- ... rest of launch file ... -->
-
     <remap from="semantic_inference/color/image_raw" to="YOUR_INPUT_TOPIC_HERE"/>
     <include file="$(find semantic_inference_ros)/launch/openset_segmentation.launch"/>
 

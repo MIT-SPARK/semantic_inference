@@ -29,15 +29,11 @@
 #
 """Module containing ROS message conversions."""
 
-import cv_bridge
-
 import semantic_inference_msgs.msg
 
 
 class Conversions:
     """Conversion namespace."""
-
-    bridge = cv_bridge.CvBridge()
 
     @classmethod
     def to_image(cls, msg, encoding="passthrough", msg_type=None):

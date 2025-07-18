@@ -36,9 +36,9 @@ from typing import Any
 import numpy as np
 import torch
 import torch.nn.functional as F
+from spark_config import Config, config_field
 from torch import nn
 
-from semantic_inference.config import Config, config_field
 from semantic_inference.models.mask_functions import ConstantMask
 from semantic_inference.models.patch_extractor import (
     PatchExtractor,

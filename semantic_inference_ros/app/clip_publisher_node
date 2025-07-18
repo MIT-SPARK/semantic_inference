@@ -4,18 +4,18 @@
 from dataclasses import dataclass, field
 
 import rclpy
+import spark_config as sc
 import torch
 from rclpy.node import Node
 
 import semantic_inference.models as models
 import semantic_inference_ros
-from semantic_inference import Config
 from semantic_inference_msgs.msg import FeatureVectorStamped
 from semantic_inference_ros import Conversions, ImageWorkerConfig
 
 
 @dataclass
-class ClipPublisherConfig(Config):
+class ClipPublisherConfig(sc.Config):
     """Configuration for ClipPublisherNode."""
 
     worker: ImageWorkerConfig = field(default_factory=ImageWorkerConfig)
@@ -28,7 +28,10 @@ class ClipPublisherNode(Node):
     def __init__(self):
         """Start subscriber and publisher."""
         super().__init__("clip_publisher_node")
-        config = semantic_inference_ros.load_from_ros(ClipPublisherConfig, "~")
+        config = sc.Config.loads(
+            ClipPublisherConfig,
+            self.declare_parameter("config", "").get_parameter_value().string_value,
+        )
 
         self.get_logger().info(f"Initializing with {config}")
         self._device = models.default_device()
@@ -38,9 +41,9 @@ class ClipPublisherNode(Node):
         self._transform = self._transform.to(self._device)
         self.get_logger().info("Finished initializing!")
 
-        self._pub = self.create_publisher(FeatureVectorStamped, "~/feature", 1)
+        self._pub = self.create_publisher(FeatureVectorStamped, "feature", 1)
         self._worker = semantic_inference_ros.ImageWorker(
-            self, config.worker, "~/image", self._spin_once
+            self, config.worker, "color/image_raw", self._spin_once
         )
 
     def _spin_once(self, header, img):

@@ -8,8 +8,13 @@ launch:
       pkg: image_transport
       exec: republish
       name: decompress_rgb
-      args: compressed in:=semantic_inference/color/image_raw raw out:=semantic_inference/color/image_raw
-  - configured_node:
+      param:
+        - {name: in_transport, value: compressed}
+        - {name: out_transport, value: raw}
+      remap:
+        - {from: in/compressed, to: color/image_raw/compressed}
+        - {from: out, to: color/image_raw}
+  - node:
       pkg: semantic_inference_ros
       exec: open_set_node
       name: semantic_inference

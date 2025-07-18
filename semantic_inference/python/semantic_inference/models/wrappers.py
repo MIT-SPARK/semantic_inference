@@ -35,9 +35,9 @@ import einops
 import torch
 import torch.nn as nn
 import torchvision
+from spark_config import Config, register_config
 
 from semantic_inference import root_path
-from semantic_inference.config import Config, register_config
 
 
 def models_path():
