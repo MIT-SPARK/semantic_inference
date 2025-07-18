@@ -84,11 +84,13 @@ pip install ./semantic_inference
 To use the open-set segmentation as part of a larger system, include [closed_set.launch.yaml](../semantic_inference_ros/launch/closed_set.launch.yaml) in your launch file. Often this will look like this:
 ```yaml
 launch:
-  # ... rest of launch file ... -->
-
+  # ... rest of launch file ...
   - set_remap: {from: "color/image_raw", to: "YOUR_INPUT_TOPIC_HERE"}
   - include: {file: "$(find-pkg-share semantic_inference_ros)/launch/closed_set.launch.yaml"}
 ```
+
+> **Note** </br>
+> You'll probably also want to namespace the included launch file and corresponding remap via a `group` tag and `push_ros_namespace` with the camera name as the namespace.
 
 ## Adding New Datasets
 
