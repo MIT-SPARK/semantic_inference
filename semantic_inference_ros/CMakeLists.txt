@@ -74,8 +74,8 @@ install(
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
-install(PROGRAMS app/clip_publisher_node app/language_embedding_node app/make_rosbag
-                 app/merge_rosbag app/open_set_node DESTINATION lib/${PROJECT_NAME}
+install(PROGRAMS app/image_embedding_node app/open_set_node app/text_embedding_node
+        DESTINATION lib/${PROJECT_NAME}
 )
 install(DIRECTORY include/${PROJECT_NAME}/ DESTINATION include/${PROJECT_NAME}/)
 install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
