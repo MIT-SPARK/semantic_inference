@@ -61,7 +61,7 @@ By default, the code uses [this](https://drive.google.com/file/d/1XRcsyLSvqqhqNI
 > We recommend using models within the [dense2d](https://drive.google.com/drive/folders/17p_ZZIxI9jI_3GjjtbMijC2WFnc9Bz-a?usp=sharing) folder, which are named corresponding to the labelspace they output to.
 > The top-level models are deprecated as they do not follow this naming scheme (they all output to the ade20k label space).
 
-By default, the closed set node looks under the directory `$HOME/.semantic_inference$` for models (this works on Linux or as long as `HOME` is set).
+By default, the closed set node looks under the directory `$HOME/.semantic_inference` for models (this works on Linux or as long as `HOME` is set).
 It is possible to change this directory by specifying the `SEMANTIC_INFERENCE_MODEL_DIR` environment variable.
 To use a specific downloaded model, use the argument `model_file:=MODEL_FILE` when running the appropriate launch file (where `MODEL_NAME` is the filename of the model relative to the configured model directory).
 Specifying an absolute filepath will override the default model directory.

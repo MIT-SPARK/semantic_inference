@@ -41,7 +41,7 @@ class ClipPublisherNode(Node):
         self._transform = self._transform.to(self._device)
         self.get_logger().info("Finished initializing!")
 
-        self._pub = self.create_publisher(FeatureVectorStamped, "feature", 1)
+        self._pub = self.create_publisher(FeatureVectorStamped, "semantic/feature", 1)
         self._worker = semantic_inference_ros.ImageWorker(
             self, config.worker, "color/image_raw", self._spin_once
         )
