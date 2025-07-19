@@ -3,11 +3,13 @@
 
 import pathlib
 from dataclasses import dataclass, field
+from typing import Any
 
 import rclpy
 import spark_config as sc
 import torch
 from rclpy.node import Node
+from sensor_msgs.msg import Image
 
 import semantic_inference.models as models
 import semantic_inference_ros
@@ -22,6 +24,9 @@ class OpenSetNodeConfig(sc.Config):
     worker: ImageWorkerConfig = field(default_factory=ImageWorkerConfig)
     model: models.OpensetSegmenterConfig = field(
         default_factory=models.OpensetSegmenterConfig
+    )
+    visualizer: Any = sc.config_field(
+        "feature_visualizer", default="component", required=False
     )
 
 
@@ -55,6 +60,11 @@ class OpenSetNode(Node):
             self, self.config.worker, "color/image_raw", self._spin_once
         )
         self._embedder = semantic_inference_ros.PromptEncoder(self, self._model.encoder)
+        self._visualizer = self.config.visualizer.create()
+        if self._visualizer is not None:
+            self._color_pub = self.create_publisher(
+                Image, "semantic_color/image_raw", 1
+            )
 
     def _spin_once(self, header, img):
         with torch.no_grad():
@@ -65,6 +75,12 @@ class OpenSetNode(Node):
         self._clip_pub.publish(
             Conversions.to_stamped_feature(header, ret.image_embedding)
         )
+
+        if self._visualizer is not None:
+            color_img = self._visualizer.call(ret)
+            self._color_pub.publish(
+                Conversions.to_image_msg(header, color_img, encoding="rgb8")
+            )
 
     def stop(self):
         """Stop the underlying image worker."""

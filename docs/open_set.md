@@ -25,7 +25,7 @@ python3 -m virtualenv -p /usr/bin/python3 --download /desired/path/to/environmen
 Then, install `semantic_inference`
 ```bash
 cd /path/to/repo
-source /path/to/environment
+source PATH_TO_ENVIRONMENT/bin/activate
 pip install ./semantic_inference[openset]  # note that the openset extra is required for open-set semantic segmentation
 ```
 You may see dependency version errors from pip if installing into an environment created with `--system-site-packages`. This is expected.
@@ -37,18 +37,32 @@ It is also possible to install via an editable install (i.e., by using `-e` when
 Note that both CLIP and FastSAM automatically download the relevant model weights when they are first run.
 Running with the original SAM may require downloading the model weights. See the official SAM repository [here](https://github.com/facebookresearch/segment-anything) for more details.
 
+## Trying out open-set segmentation nodes
+
+Similar to the example [here](../README.md#using-closed-set-segmentation-online), you can run any of the open-set launch files:
+
+```shell
+activate PATH_TO_ENVIRONMENT/bin/activate
+## this example just produces an embedding vector per image
+# ros2 launch semantic_inference_ros image_embedding_node.launch.yaml
+ros2 launch semantic_inference_ros open_set.launch.yaml
+```
+and then run
+```shell
+ros2 bag play PATH_TO_BAG --remap INPUT_TOPIC:=/color/image_raw
+```
+
+You should see a single embedding vector published under `/semantic/feature` and (if running the full open-set segmenter), the segmentation results under `/semantic/image_raw` and a visualization of the results under `/semantic_color/image_raw` and `/semantic_overlay/image_raw`.
+
 ## Using open-set segmentation online
 
 To use the open-set segmentation as part of a larger system, include [open_set.launch.yaml](../semantic_inference_ros/launch/openset.launch.yaml) in your launch file. Often this will look like this:
-```xml
-<launch>
-    <!-- ... rest of launch file ... -->
-    <remap from="semantic_inference/color/image_raw" to="YOUR_INPUT_TOPIC_HERE"/>
-    <include file="$(find semantic_inference_ros)/launch/openset_segmentation.launch"/>
-
-</launch>
+```yaml
+launch:
+    # ... rest of launch file ...
+    - set_remap: {from: "color/image_raw", to: "YOUR_INPUT_TOPIC_HERE"}
+    - include:  {file: "$(find-pkg-share semantic_inference_ros)/launch/opsen_set.launch.yaml"}
 ```
-Note there are some arguments you may want to specify when including `openset_segmentation.launch` that are not shown here, specifically the configuration for the model to use.
 
 ## Pre-generating semantics
 
