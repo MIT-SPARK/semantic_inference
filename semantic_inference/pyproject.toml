@@ -28,6 +28,7 @@ dependencies = [
     "torch",
     "torchvision",
     "spark_config@git+https://github.com/MIT-SPARK/Spark-Config.git",
+    "numpy<2",
 ]
 
 [tool.setuptools.packages.find]
