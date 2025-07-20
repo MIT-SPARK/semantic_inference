@@ -74,8 +74,8 @@ See [here](exporting.md) for details on exporting a new model.
 
 You may find it useful to set up some of the included model utilities. From the top-level of this repository, run:
 ```
-python3 -m virtualenv /path/to/new/environment
-source /path/to/new/environment/bin/activate
+python3 -m virtualenv <DESIRED_PATH_TO_ENVIRONMENT>
+source <DESIRED_PATH_TO_ENVIRONMENT>/bin/activate
 pip install ./semantic_inference
 ```
 
@@ -99,10 +99,10 @@ To adapt to a new dataset (or to make a new grouping of labels), you will have t
   - Make a new grouping config (see [this](../semantic_inference_ros/config/label_groupings/ade20k_outdoor.yaml) or [this](../semantic_inference_ros/config/label_groupings/ade20k_indoor.yaml) for examples)
   - Pass in the appropriate arguments to the launch file (`labelspace_name`)
 
-You can view the groupings for a particular labelspace by running `semantic_inference labelspace compare`.
+You can view the groupings for a particular labelspace by running `semantic-inference labelspace compare`.
 For a grouping of the ade20k labelspace:
 ```bash
-source ~/path/to/environment/bin/activate
-cd path/to/semantic_inference
-semantic_inference labelspace compare resources/ade20k_categories.csv config/label_groupings/ade20k_indoor.yaml
+source <DESIRED_PATH_TO_ENVIRONMENT>/bin/activate
+cd <PATH_TO_REPO>
+semantic-inference labelspace compare semantic_inference/resources/ade20k_categories.csv semantic_inference_ros/config/label_groupings/ade20k_indoor.yaml
 ```

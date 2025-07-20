@@ -15,17 +15,17 @@ The open-set segmentation interface works with and without ROS. For working with
 We assume you are using a virtual environment. You may want to install `virtualenv` (usually `sudo apt install python3-virtualenv`) if you haven't already.
 To set up a virtual environment for use with ROS:
 ```
-python3 -m virtualenv -p /usr/bin/python3 --system-site-packages DESIRED_PATH_TO_ENVIRONMENT
+python3 -m virtualenv -p /usr/bin/python3 --system-site-packages <DESIRED_PATH_TO_ENVIRONMENT>
 ```
 Otherwise, omit the ``--system-site-packages`` option:
 ```
-python3 -m virtualenv -p /usr/bin/python3 --download DESIRED_PATH_TO_ENVIRONMENT
+python3 -m virtualenv -p /usr/bin/python3 --download <DESIRED_PATH_TO_ENVIRONMENT>
 ```
 
 Then, install `semantic_inference`
 ```bash
-cd PATH_TO_REPO
-source PATH_TO_ENVIRONMENT/bin/activate
+cd <PATH_TO_REPO>
+source <PATH_TO_ENVIRONMENT>/bin/activate
 pip install ./semantic_inference[openset]  # note that the openset extra is required for open-set semantic segmentation
 ```
 You may see dependency version errors from pip if installing into an environment created with `--system-site-packages`. This is expected.
@@ -42,7 +42,7 @@ Running with the original SAM may require downloading the model weights. See the
 Similar to the example [here](../README.md#using-closed-set-segmentation-online), you can run any of the open-set launch files:
 
 ```shell
-activate PATH_TO_ENVIRONMENT/bin/activate
+activate <PATH_TO_ENVIRONMENT>/bin/activate
 ## this example just produces an embedding vector per image
 # ros2 launch semantic_inference_ros image_embedding_node.launch.yaml
 ros2 launch semantic_inference_ros open_set.launch.yaml
