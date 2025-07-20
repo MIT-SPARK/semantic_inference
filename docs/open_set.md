@@ -6,7 +6,7 @@ The open-set segmentation interface works with and without ROS. For working with
 
 > **Note </br>**
 > If you intend only to use the open-set segmentation interface, you may want to turn off building against TensorRT, which you can do by the following:
-> ```
+> ```shell
 > colcon build --cmake-args --no-warn-unused-cli -DSEMANTIC_INFERENCE_USE_TRT=OFF
 > ```
 
@@ -14,16 +14,16 @@ The open-set segmentation interface works with and without ROS. For working with
 
 We assume you are using a virtual environment. You may want to install `virtualenv` (usually `sudo apt install python3-virtualenv`) if you haven't already.
 To set up a virtual environment for use with ROS:
-```
+```shell
 python3 -m virtualenv -p /usr/bin/python3 --system-site-packages <DESIRED_PATH_TO_ENVIRONMENT>
 ```
 Otherwise, omit the ``--system-site-packages`` option:
-```
+```shell
 python3 -m virtualenv -p /usr/bin/python3 --download <DESIRED_PATH_TO_ENVIRONMENT>
 ```
 
 Then, install `semantic_inference`
-```bash
+```shell
 cd <PATH_TO_REPO>
 source <PATH_TO_ENVIRONMENT>/bin/activate
 pip install ./semantic_inference[openset]  # note that the openset extra is required for open-set semantic segmentation

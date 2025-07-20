@@ -16,7 +16,7 @@ In some cases, a more minimal installation is desirable (e.g., containers).  The
 
   1. Add the CUDA repositories [here](https://developer.nvidia.com/cuda-downloads) by installing the `deb (network)` package or
 
-```bash
+```shell
 # make sure you pick the correct ubuntu version!
 wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb
 sudo dpkg -i cuda-keyring_1.1-1_all.deb
@@ -34,7 +34,7 @@ libnvinfer-dev/unknown,now 10.4.0.26-1+cuda12.6 amd64
 
   3.  Install TensorRT and CUDA if necessary:
 
-```bash
+```shell
 # use the corresponding version number from the previous step or omit nvcc if already installed
 sudo apt install libnvinfer-dev libnvonnxparsers-dev libnvinfer-plugin-dev cuda-nvcc-12-6
 ```
@@ -42,12 +42,12 @@ sudo apt install libnvinfer-dev libnvonnxparsers-dev libnvinfer-plugin-dev cuda-
 ### Building
 
 Once the necessary dependencies are installed and this repository has been placed in a workspace, run the following:
-```
+```shell
 colcon build
 ```
 
 You can run the following to validate that `semantic_inference` built correctly:
-```
+```shell
 colcon test --packages-select semantic_inference
 ```
 
@@ -73,7 +73,7 @@ See [here](exporting.md) for details on exporting a new model.
 ### Python utilities
 
 You may find it useful to set up some of the included model utilities. From the top-level of this repository, run:
-```
+```shell
 python3 -m virtualenv <DESIRED_PATH_TO_ENVIRONMENT>
 source <DESIRED_PATH_TO_ENVIRONMENT>/bin/activate
 pip install ./semantic_inference
@@ -101,7 +101,7 @@ To adapt to a new dataset (or to make a new grouping of labels), you will have t
 
 You can view the groupings for a particular labelspace by running `semantic-inference labelspace compare`.
 For a grouping of the ade20k labelspace:
-```bash
+```shell
 source <DESIRED_PATH_TO_ENVIRONMENT>/bin/activate
 cd <PATH_TO_REPO>
 semantic-inference labelspace compare semantic_inference/resources/ade20k_categories.csv semantic_inference_ros/config/label_groupings/ade20k_indoor.yaml
