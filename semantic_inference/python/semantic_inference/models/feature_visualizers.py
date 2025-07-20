@@ -20,11 +20,8 @@ class ComponentVisualizer:
 
     def call(self, results: Results) -> np.ndarray:
         colors = results.features[:, self._indices].numpy()
-        c_min = np.min(colors, axis=0)
-        c_max = np.max(colors, axis=0)
-        c_range = c_max - c_min
-        c_range[c_range <= 1.0e-3] = 1.0
-        colors = 255 * ((colors - c_min) / c_range)
+        colors = self.config.scale * (colors + self.config.offset)
+        colors = 255 * np.clip(colors, 0.0, 1.0)
         colors = np.vstack(([0, 0, 0], colors))
         colors = colors.astype(np.uint8)
         return colors[results.instances]
@@ -35,4 +32,6 @@ class ComponentVisualizer:
 class ComponentVisualizerConfig(sc.Config):
     """Configuration for component visualizer."""
 
-    components: list[int] = field(default_factory=lambda: [0, 1, 2])
+    components: list[int] = field(default_factory=lambda: [-1, -2, -3])
+    offset: float = 0.5
+    scale: float = 0.5
