@@ -39,7 +39,7 @@ Running with the original SAM may require downloading the model weights. See the
 
 ## Trying out open-set segmentation nodes
 
-Similar to the example [here](../README.md#using-closed-set-segmentation-online), you can run any of the open-set launch files:
+Similar to the example [here](../README.md#usage), you can run any of the open-set launch files:
 
 ```shell
 activate <PATH_TO_ENVIRONMENT>/bin/activate
