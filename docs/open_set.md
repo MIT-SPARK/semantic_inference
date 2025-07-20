@@ -2,7 +2,7 @@
 
 ## Setting Up
 
-The open-set segmentation interface works with and without ROS. For working with ROS, we assume you have already built your catkin workspace with this repository in it beforehand (i.e., by running `catkin build`).
+The open-set segmentation interface works with and without ROS. For working with ROS, we assume you have already built your workspace with this repository in it beforehand (i.e., by running `colcon build`).
 
 > **Note </br>**
 > If you intend only to use the open-set segmentation interface, you may want to turn off building against TensorRT, which you can do by the following:
@@ -15,16 +15,16 @@ The open-set segmentation interface works with and without ROS. For working with
 We assume you are using a virtual environment. You may want to install `virtualenv` (usually `sudo apt install python3-virtualenv`) if you haven't already.
 To set up a virtual environment for use with ROS:
 ```
-python3 -m virtualenv -p /usr/bin/python3 --system-site-packages /desired/path/to/environment
+python3 -m virtualenv -p /usr/bin/python3 --system-site-packages DESIRED_PATH_TO_ENVIRONMENT
 ```
 Otherwise, omit the ``--system-site-packages`` option:
 ```
-python3 -m virtualenv -p /usr/bin/python3 --download /desired/path/to/environment
+python3 -m virtualenv -p /usr/bin/python3 --download DESIRED_PATH_TO_ENVIRONMENT
 ```
 
 Then, install `semantic_inference`
 ```bash
-cd /path/to/repo
+cd PATH_TO_REPO
 source PATH_TO_ENVIRONMENT/bin/activate
 pip install ./semantic_inference[openset]  # note that the openset extra is required for open-set semantic segmentation
 ```
@@ -63,19 +63,3 @@ launch:
     - set_remap: {from: "color/image_raw", to: "YOUR_INPUT_TOPIC_HERE"}
     - include:  {file: "$(find-pkg-share semantic_inference_ros)/launch/opsen_set.launch.yaml"}
 ```
-
-## Pre-generating semantics
-
-It is also possible to pre-generate semantics when working with recorded data.
-To create a rosbag containing the original bag contents *plus* the resulting open-set segmentation, run the following
-```
-rosrun semantic_inference_ros make_rosbag --copy /path/to/input_bag      \
-                                          /color_topic:/output_topic     \
-                                          -o /path/to/desired/output_bag
-```
-replacing `/color_topic` and `/output_topic` with appropriate topic names (usually `/camera_name/color/image_raw` and `/camera_name/semantic/image_raw`).
-
-Additional options exist.
-Running without `--copy` will output just the open-set segmentation at the path specified by `-o`.
-If no output path is specified, the semantics will be added in-place to the bag after a confirmation prompt (you can disable the prompt with `-y`).
-Additional information and documentation is available via `--help`.
