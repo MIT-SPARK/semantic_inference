@@ -56,7 +56,7 @@ You should see a single embedding vector published under `/semantic/feature` and
 
 ## Using open-set segmentation online
 
-To use the open-set segmentation as part of a larger system, include [open_set.launch.yaml](../semantic_inference_ros/launch/openset.launch.yaml) in your launch file. Often this will look like this:
+To use the open-set segmentation as part of a larger system, include [open_set.launch.yaml](../semantic_inference_ros/launch/open_set.launch.yaml) in your launch file. Often this will look like this:
 ```yaml
 launch:
     # ... rest of launch file ...
