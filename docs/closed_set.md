@@ -96,7 +96,7 @@ launch:
 
 To adapt to a new dataset (or to make a new grouping of labels), you will have to:
 
-  - Make a new grouping config (see [this](../semantic_inference_ros/config/label_groupings/ade150_outdoor.yaml) or [this](../semantic_inference_ros/config/label_groupings/ade150_indoor.yaml) for examples)
+  - Make a new grouping config (see [this](../semantic_inference_ros/config/label_groupings/ade20k_outdoor.yaml) or [this](../semantic_inference_ros/config/label_groupings/ade20k_indoor.yaml) for examples)
   - Pass in the appropriate arguments to the launch file (`labelspace_name`)
 
 You can view the groupings for a particular labelspace by running `semantic_inference labelspace compare`.
@@ -104,5 +104,5 @@ For a grouping of the ade20k labelspace:
 ```bash
 source ~/path/to/environment/bin/activate
 cd path/to/semantic_inference
-semantic_inference labelspace compare resources/ade20k_categories.csv config/label_groupings/ade150_indoor.yaml
+semantic_inference labelspace compare resources/ade20k_categories.csv config/label_groupings/ade20k_indoor.yaml
 ```
