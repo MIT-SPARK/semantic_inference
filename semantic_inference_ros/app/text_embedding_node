@@ -4,49 +4,51 @@
 from dataclasses import dataclass
 from typing import Any
 
-import rospy
+import rclpy
+import spark_config as sc
+from rclpy.node import Node
 
 import semantic_inference_ros
-from semantic_inference import Config, config_field
 from semantic_inference.models import default_device
 
 
 @dataclass
-class LanguageEmbeddingNodeConfig(Config):
-    """Configuration for LanguageEmbeddingNode."""
+class TextEmbeddingNodeConfig(sc.Config):
+    """Configuration for TextEmbeddingNode."""
 
-    model: Any = config_field("clip", default="clip")
+    model: Any = sc.config_field("clip", default="clip")
     use_cuda: bool = True
 
 
-class LanguageEmbeddingNode:
+class TextEmbeddingNode(Node):
     """Node implementation."""
 
     def __init__(self):
         """Construct a feature encoder node."""
-        self.config = semantic_inference_ros.load_from_ros(
-            LanguageEmbeddingNodeConfig, ns="~"
+        super().__init__("text_embedding_node")
+        self.config = sc.Config.loads(
+            TextEmbeddingNodeConfig,
+            self.declare_parameter("config", "").get_parameter_value().string_value,
         )
 
-        rospy.loginfo(f"'{rospy.get_name()}': Initializing with {self.config.show()}")
+        self.get_logger().info(f"Initializing with {self.config.show()}")
         self._model = self.config.model.create().to(
             default_device(self.config.use_cuda)
         )
-        rospy.loginfo(f"'{rospy.get_name()}': finished initializing!")
-        self._embedder = semantic_inference_ros.PromptEncoder(self._model)
-
-    def spin(self):
-        """Wait until ROS shuts down."""
-        rospy.spin()
+        self.get_logger().info("finished initializing!")
+        self._embedder = semantic_inference_ros.PromptEncoder(self, self._model)
 
 
 def main():
     """Start the node."""
-    rospy.init_node("language_embedding_node")
-    semantic_inference_ros.setup_ros_log_forwarding()
+    rclpy.init()
 
-    node = LanguageEmbeddingNode()
-    node.spin()
+    try:
+        node = TextEmbeddingNode()
+        semantic_inference_ros.setup_ros_log_forwarding(node)
+        rclpy.spin(node)
+    finally:
+        rclpy.try_shutdown()
 
 
 if __name__ == "__main__":
