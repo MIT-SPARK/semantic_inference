@@ -1,0 +1,12 @@
+---
+launch:
+  - arg: {name: model_name, default: ViT-L/14, description: Language encoder to use}
+  - arg: {name: use_cuda, default: 'true', description: use GPU}
+  - node:
+      pkg: semantic_inference_ros
+      exec: text_embedding_node
+      name: text_embedding_node
+      param:
+        - name: config
+          value: '{model: {model_name: $(var model_name)}, use_cuda: $(var use_cuda)}'
+          type: str

@@ -36,8 +36,8 @@ from dataclasses import dataclass
 
 import rclpy
 import sensor_msgs.msg
+from spark_config import Config
 
-from semantic_inference import Config
 from semantic_inference_ros.ros_conversions import Conversions
 
 

@@ -35,10 +35,10 @@ from typing import Optional
 import torch
 import torch.nn.functional as F
 import torchvision.ops
+from spark_config import Config
 from torch import nn
 from torchvision.transforms import v2
 
-from semantic_inference.config import Config
 from semantic_inference.misc import Logger
 from semantic_inference.models.mask_functions import ConstantMask
 

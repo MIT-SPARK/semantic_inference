@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+"""Node to encode language prompts as embeddings."""
+
+from dataclasses import dataclass
+from typing import Any
+
+import rclpy
+import spark_config as sc
+from rclpy.node import Node
+
+import semantic_inference_ros
+from semantic_inference.models import default_device
+
+
+@dataclass
+class TextEmbeddingNodeConfig(sc.Config):
+    """Configuration for TextEmbeddingNode."""
+
+    model: Any = sc.config_field("clip", default="clip")
+    use_cuda: bool = True
+
+
+class TextEmbeddingNode(Node):
+    """Node implementation."""
+
+    def __init__(self):
+        """Construct a feature encoder node."""
+        super().__init__("text_embedding_node")
+        self.config = sc.Config.loads(
+            TextEmbeddingNodeConfig,
+            self.declare_parameter("config", "").get_parameter_value().string_value,
+        )
+
+        self.get_logger().info(f"Initializing with {self.config.show()}")
+        self._model = self.config.model.create().to(
+            default_device(self.config.use_cuda)
+        )
+        self.get_logger().info("finished initializing!")
+        self._embedder = semantic_inference_ros.PromptEncoder(self, self._model)
+
+
+def main():
+    """Start the node."""
+    rclpy.init()
+
+    try:
+        node = TextEmbeddingNode()
+        semantic_inference_ros.setup_ros_log_forwarding(node)
+        rclpy.spin(node)
+    finally:
+        rclpy.try_shutdown()
+
+
+if __name__ == "__main__":
+    main()

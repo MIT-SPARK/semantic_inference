@@ -72,6 +72,12 @@ class Conversions:
         return msg
 
     @classmethod
+    def to_image_msg(cls, header, img, encoding="passthrough"):
+        msg = cls.bridge.cv2_to_imgmsg(img, encoding=encoding)
+        msg.header = header
+        return msg
+
+    @classmethod
     def to_feature_image(cls, header, results):
         """
         Create a FeatureImage from segmentation results.

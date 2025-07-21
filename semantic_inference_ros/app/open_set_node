@@ -1,26 +1,32 @@
 #!/usr/bin/env python3
 """Node that runs openset segmentation."""
 
+import pathlib
 from dataclasses import dataclass, field
+from typing import Any
 
 import rclpy
+import spark_config as sc
 import torch
 from rclpy.node import Node
+from sensor_msgs.msg import Image
 
 import semantic_inference.models as models
 import semantic_inference_ros
-from semantic_inference import Config
 from semantic_inference_msgs.msg import FeatureImage, FeatureVectorStamped
 from semantic_inference_ros import Conversions, ImageWorkerConfig
 
 
 @dataclass
-class OpenSetNodeConfig(Config):
+class OpenSetNodeConfig(sc.Config):
     """Configuration for ClipPublisherNode."""
 
     worker: ImageWorkerConfig = field(default_factory=ImageWorkerConfig)
     model: models.OpensetSegmenterConfig = field(
         default_factory=models.OpensetSegmenterConfig
+    )
+    visualizer: Any = sc.config_field(
+        "feature_visualizer", default="component", required=False
     )
 
 
@@ -30,7 +36,15 @@ class OpenSetNode(Node):
     def __init__(self):
         """Start subscriber and publisher."""
         super().__init__("open_set_node")
-        self.config = semantic_inference_ros.load_from_ros(OpenSetNodeConfig, ns="~")
+        config_path = (
+            self.declare_parameter("config_path", "").get_parameter_value().string_value
+        )
+        config_path = pathlib.Path(config_path).expanduser().absolute()
+        if not config_path.exists() and config_path != "":
+            self.get_logger().warn(f"config path '{config_path}' does not exist!")
+            self.config = OpenSetNodeConfig()
+        else:
+            self.config = sc.Config.load(OpenSetNodeConfig, config_path)
 
         self.get_logger().info(f"Initializing with {self.config.show()}")
         device = models.default_device()
@@ -38,14 +52,19 @@ class OpenSetNode(Node):
         self._model.eval()
         self.get_logger().info("Finished initializing!")
 
-        self._pub = self.create_publisher(FeatureImage, "~/semantic/image_raw", 1)
+        self._pub = self.create_publisher(FeatureImage, "semantic/image_raw", 1)
         self._clip_pub = self.create_publisher(
-            FeatureVectorStamped, "~/semantic/feature", 1
+            FeatureVectorStamped, "semantic/feature", 1
         )
         self._worker = semantic_inference_ros.ImageWorker(
-            self, self.config.worker, "~/color/image_raw", self._spin_once
+            self, self.config.worker, "color/image_raw", self._spin_once
         )
         self._embedder = semantic_inference_ros.PromptEncoder(self, self._model.encoder)
+        self._visualizer = self.config.visualizer.create()
+        if self._visualizer is not None:
+            self._color_pub = self.create_publisher(
+                Image, "semantic_color/image_raw", 1
+            )
 
     def _spin_once(self, header, img):
         with torch.no_grad():
@@ -56,6 +75,12 @@ class OpenSetNode(Node):
         self._clip_pub.publish(
             Conversions.to_stamped_feature(header, ret.image_embedding)
         )
+
+        if self._visualizer is not None:
+            color_img = self._visualizer.call(ret)
+            self._color_pub.publish(
+                Conversions.to_image_msg(header, color_img, encoding="rgb8")
+            )
 
     def stop(self):
         """Stop the underlying image worker."""

@@ -1,6 +1,7 @@
 ---
 launch:
-  - arg: {name: config_path, default: $(find-pkg-share semantic_inference_ros)/config/openset/fastsam-clip_vit14l.yaml, description: Configuration file for object detector}
+  - arg: {name: model_name, default: ViT-L/14, description: Model to use for segmentation}
+  - arg: {name: min_period_s, default: '0.0', description: Minimum time between inputs}
   - arg: {name: compressed_rgb, default: 'false', description: Triggers decompression for RGB stream}
   - node:
       if: $(var compressed_rgb)
@@ -15,8 +16,9 @@ launch:
         - {from: out, to: color/image_raw}
   - node:
       pkg: semantic_inference_ros
-      exec: open_set_node
-      name: semantic_inference
-      on_exit: shutdown
+      exec: image_embedding_node
+      name: image_embedding_node
       param:
-        - {name: config_path, value: $(var config_path), type: str}
+        - name: config
+          value: '{model: {model_name: $(var model_name)}, worker: {min_separation_s: $(var min_period_s)}}'
+          type: str

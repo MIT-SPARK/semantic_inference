@@ -51,8 +51,8 @@ class RosForwarder(logging.Handler):
 
     def emit(self, record):
         """Send message to ROS."""
-        level = record.levelno if record.levelno in self.level_map else logging.CRITICAL
-        self._level_map[level](f"{record.name}: {record.msg}")
+        lno = record.levelno if record.levelno in self._level_map else logging.CRITICAL
+        self._level_map[lno](f"{record.name}: {record.msg}")
 
 
 def setup_ros_log_forwarding(node, level=logging.INFO):

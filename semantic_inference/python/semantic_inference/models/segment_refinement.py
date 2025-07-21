@@ -33,9 +33,8 @@ from dataclasses import dataclass
 
 import torch
 import torchvision
+from spark_config import Config
 from torch import nn
-
-from semantic_inference.config import Config
 
 
 @dataclass
