@@ -10,11 +10,13 @@ Closed-set and open-set segmentation are implemented as follows:
   - Inference using open-set segmentation models and language features is implemented in python
 
 Both kinds of semantic segmentation have a ROS interface associated with them, split between c++ and python as appropriate.
-
+> Note </br>
+> We have archived our ROS1 interface [here](https://github.com/MIT-SPARK/semantic_inference/tree/archive/ros_noetic) and do not plan on any additional ROS1 development.
 
 ## Table of Contents
 
 - [Credits](#credits)
+- [Filing Issues](#filing-issues)
 - [Getting started](#getting-started)
   - [Closed-set](docs/closed_set.md#setting-up)
   - [Open-set](docs/open_set.md#setting-up)
@@ -25,6 +27,18 @@ Both kinds of semantic segmentation have a ROS interface associated with them, s
 `semantic_inference` was primarily developed by [Nathan Hughes](https://mit.edu/sparklab/people.html) at the [MIT-SPARK Lab](https://mit.edu/sparklab), assisted by [Yun Chang](https://mit.edu/sparklab/people.html), [Jared Strader](https://mit.edu/sparklab/people.html), [Aaron Ray](https://mit.edu/sparklab/people.html), and [Dominic Maggio](https://mit.edu/sparklab/people.html).
 A full list of contributors is maintaned [here](contributors.md).
 We welcome additional contributions!
+
+## Filing Issues
+
+Please understand that this is research code maintained by busy graduate students, **which comes with some caveats**:
+  1. We do our best to maintain and keep the code up-to-date, but things may break or change occasionally
+  2. We do not have bandwidth to help adapt the code to new applications
+  3. The documentation, code-base and installation instructions are geared towards practitioners familiar with ROS
+
+> **:warning: Warning**<br>
+> We don't support other platforms. Issues requesting support on other platforms (e.g., Ubuntu 18.04, Windows) will be summarily closed.
+
+Thank you in advance for your understanding!
 
 ## Getting started
 
