@@ -10,7 +10,7 @@ Closed-set and open-set segmentation are implemented as follows:
   - Inference using open-set segmentation models and language features is implemented in python
 
 Both kinds of semantic segmentation have a ROS interface associated with them, split between c++ and python as appropriate.
-> Note </br>
+> **Note** </br>
 > We have archived our ROS1 interface [here](https://github.com/MIT-SPARK/semantic_inference/tree/archive/ros_noetic) and do not plan on any additional ROS1 development.
 
 ## Table of Contents
