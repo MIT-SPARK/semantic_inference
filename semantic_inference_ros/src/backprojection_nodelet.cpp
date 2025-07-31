@@ -37,6 +37,8 @@ struct BackprojectionNode : public rclcpp::Node {
     size_t input_queue_size = 1;
     size_t output_queue_size = 1;
     bool show_config = true;
+    std::string camera_frame;
+    std::string lidar_frame;
   } const config;
 
   explicit BackprojectionNode(const rclcpp::NodeOptions& options);
@@ -69,6 +71,8 @@ void declare_config(BackprojectionNode::Config& config) {
   field(config.input_queue_size, "input_queue_size");
   field(config.output_queue_size, "output_queue_size");
   field(config.show_config, "show_config");
+  field(config.camera_frame, "camera_frame");
+  field(config.lidar_frame, "lidar_frame");
   check(config.input_queue_size, GT, 0, "input_queue_size");
   check(config.output_queue_size, GT, 0, "output_queue_size");
 }
@@ -125,8 +129,10 @@ void BackprojectionNode::callback(const Image::ConstSharedPtr& image_msg,
                                   const PointCloud2::ConstSharedPtr& cloud_msg) {
   // Find transform from cloud to image frame
   const rclcpp::Time stamp(cloud_msg->header.stamp);
-  const auto image_T_cloud =
-      getTransform(image_msg->header.frame_id, cloud_msg->header.frame_id, stamp);
+  const auto image_T_cloud = getTransform(
+      !config.camera_frame.empty() ? config.camera_frame : image_msg->header.frame_id,
+      !config.lidar_frame.empty() ? config.lidar_frame : cloud_msg->header.frame_id,
+      stamp);
   if (!image_T_cloud) {
     return;
   }
