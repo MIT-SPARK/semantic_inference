@@ -1,7 +1,7 @@
 ---
 # based on https://github.com/actions/starter-workflows/blob/main/ci/cmake-single-platform.yml
 name: Semantic Inference Build and Test
-on: [pull_request]
+on: {push: {branches: [main]}, pull_request: {branches: [main]}}
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -26,15 +26,9 @@ jobs:
         shell: bash
         run: |
           source /opt/ros/jazzy/setup.bash
-          colcon build --cmake-args --no-warn-unused-cli \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCONFIG_UTILS_BUILD_TESTS=OFF \
-            -DCONFIG_UTILS_BUILD_DEMOS=OFF \
-            -DCONFIG_UTILS_ENABLE_GLOG=OFF \
-            -DCONFIG_UTILS_ENABLE_ROS=OFF \
-            -DSEMANTIC_INFERENCE_USE_TRT=OFF
+          colcon build --cmake-args --no-warn-unused-cli -DCMAKE_BUILD_TYPE=Release -DSEMANTIC_INFERENCE_USE_TRT=OFF
       - name: Test
         shell: bash
         run: |-
           source /opt/ros/jazzy/setup.bash
-          colcon test
+          colcon test --packages-select
