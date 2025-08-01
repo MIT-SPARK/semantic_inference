@@ -31,4 +31,4 @@ jobs:
         shell: bash
         run: |-
           source /opt/ros/jazzy/setup.bash
-          colcon test --packages-select
+          colcon test --packages-select semantic_inference semantic_inference_ros
