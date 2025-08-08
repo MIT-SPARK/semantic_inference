@@ -47,6 +47,8 @@ def main():
         node = TextEmbeddingNode()
         semantic_inference_ros.setup_ros_log_forwarding(node)
         rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
     finally:
         rclpy.try_shutdown()
 
