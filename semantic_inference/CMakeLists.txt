@@ -21,10 +21,7 @@ find_package(CUDAToolkit)
 find_package(TensorRT COMPONENTS onnxparser infer_plugin)
 
 set(ENABLE_TENSORRT_CXX_VALUE 1)
-if(SEMANTIC_INFERENCE_USE_TRT
-   AND NOT CUDAToolkit_FOUND
-   AND NOT TensorRT_FOUND
-)
+if(SEMANTIC_INFERENCE_USE_TRT AND (NOT CUDAToolkit_FOUND OR NOT TensorRT_FOUND))
   message(WARNING "TensorRT is required for inference to run!"
                   " Follow the install instructions (if possible) to enable inference"
   )
