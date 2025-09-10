@@ -101,7 +101,10 @@ SegmentationNode::SegmentationNode(const rclcpp::NodeOptions& options)
       sub_(*this) {
   logging::Logger::addSink("ros", std::make_shared<RosLogSink>(get_logger()));
   logging::setConfigUtilitiesLogger();
-  SLOG(INFO) << "\n" << config::toString(config);
+  if (config.show_config) {
+    SLOG(INFO) << "\n" << config::toString(config);
+  }
+
   if (config.show_output_config) {
     SLOG(INFO) << "\n" << config::toString(output_config);
   }

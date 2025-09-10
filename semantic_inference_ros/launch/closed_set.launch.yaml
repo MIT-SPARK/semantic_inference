@@ -16,6 +16,7 @@ launch:
   # Run options
   - arg: {name: debug, default: 'false', description: Run with GDB}
   - arg: {name: verbose, default: 'true', description: Disable console logging if false}
+  - arg: {name: show_configs, default: 'true', description: Control logging config structs to stdout}
   # Input configuration
   - arg: {name: max_image_queue_size, default: '1', description: Max number of images to store}
   - arg: {name: min_separation_s, default: '0.0', description: Time separation between inputs}
@@ -50,6 +51,7 @@ launch:
         --config-utilities-yaml {output: {recolor: {colormap_path: $(var colormap_path)}}}
         --config-utilities-yaml {worker: {max_queue_size: $(var max_image_queue_size), image_separation_s: $(var min_separation_s)}}
         --config-utilities-yaml {image_rotator: {rotation: $(var rotation_type)}}
+        --config-utilities-yaml {show_config: $(var show_configs)}
   - node:  # Remapping pre-recorded labels
       if: $(var use_prerecorded)
       pkg: semantic_inference_ros
@@ -68,5 +70,6 @@ launch:
       name: semantic_projector
       args: |
         --config-utilities-yaml {recolor: {colormap_path: $(var colormap_path)}}
+        --config-utilities-yaml {show_config: $(var show_configs)}
         --config-utilities-yaml $(var backprojection_config)
       if: $(var run_backprojection)
