@@ -239,12 +239,23 @@ void recolorCloud(PointCloud2& output,
 
 }  // namespace
 
+
+struct LabelConverter {
+  static int32_t toIntermediate(uint32_t orig, std::string&) {
+    return orig;
+  }
+
+  static void fromIntermediate(const int32_t& intermediate, uint32_t& value, std::string&) {
+    value = intermediate;
+  }
+};
+
 void declare_config(ProjectionConfig& config) {
   using namespace config;
   name("ProjectionConfig::Config");
   field(config.use_lidar_frame, "use_lidar_frame");
   field(config.discard_out_of_view, "discard_out_of_view");
-  field(config.unknown_label, "unknown_label");
+  field<LabelConverter>(config.unknown_label, "unknown_label");
   field(config.input_label_fieldname, "input_label_fieldname");
   field(config.override_labels, "override_labels");
   field(config.allowed_labels, "allowed_labels");
