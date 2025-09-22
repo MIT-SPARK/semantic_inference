@@ -239,13 +239,12 @@ void recolorCloud(PointCloud2& output,
 
 }  // namespace
 
-
 struct LabelConverter {
-  static int32_t toIntermediate(uint32_t orig, std::string&) {
-    return orig;
-  }
+  static int32_t toIntermediate(uint32_t orig, std::string&) { return orig; }
 
-  static void fromIntermediate(const int32_t& intermediate, uint32_t& value, std::string&) {
+  static void fromIntermediate(const int32_t& intermediate,
+                               uint32_t& value,
+                               std::string&) {
     value = intermediate;
   }
 };
