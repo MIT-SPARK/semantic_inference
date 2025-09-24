@@ -37,6 +37,7 @@
 #include <semantic_inference/segmenter.h>
 
 #include <atomic>
+#include <chrono>
 #include <mutex>
 #include <optional>
 #include <thread>
@@ -44,6 +45,7 @@
 #include <cv_bridge/cv_bridge.hpp>
 #include <opencv2/core.hpp>
 #include <rclcpp/node.hpp>
+#include <std_msgs/msg/string.hpp>
 
 #include "semantic_inference_ros/output_publisher.h"
 #include "semantic_inference_ros/ros_log_sink.h"
@@ -63,6 +65,9 @@ class SegmentationNode : public rclcpp::Node {
     ImageRotator::Config image_rotator;
     bool show_config = true;
     bool show_output_config = false;
+    size_t rate_window_size = 10;
+    size_t status_period_s = 0.5;
+    double max_heartbeat_s = 10.0;
   } const config;
 
   explicit SegmentationNode(const rclcpp::NodeOptions& options);
@@ -73,8 +78,15 @@ class SegmentationNode : public rclcpp::Node {
  private:
   void runSegmentation(const Image::ConstSharedPtr& msg);
 
+  void publishStatus();
+
   std::unique_ptr<Segmenter> segmenter_;
   std::unique_ptr<ImageWorker> worker_;
+
+  rclcpp::TimerBase::SharedPtr timer_;
+  std::optional<rclcpp::Time> last_call_;
+  std::list<uint64_t> period_samples_ns_;
+  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr status_pub_;
 
   OutputPublisher output_pub_;
   ImageRotator image_rotator_;
@@ -89,6 +101,7 @@ void declare_config(SegmentationNode::Config& config) {
   field(config.image_rotator, "image_rotator");
   field(config.show_config, "show_config");
   field(config.show_output_config, "show_output_config");
+  field(config.rate_window_size, "rate_window_size");
 }
 
 SegmentationNode::SegmentationNode(const rclcpp::NodeOptions& options)
@@ -126,6 +139,12 @@ SegmentationNode::SegmentationNode(const rclcpp::NodeOptions& options)
 
   sub_.registerCallback(&ImageWorker::addMessage, worker_.get());
   sub_.subscribe("color/image_raw");
+
+  const auto period_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+      std::chrono::duration<double>(config.status_period_s));
+  status_pub_ = create_publisher<std_msgs::msg::String>("~/status", rclcpp::QoS(1));
+  timer_ =
+      create_wall_timer(period_ms, std::bind(&SegmentationNode::publishStatus, this));
 }
 
 SegmentationNode::~SegmentationNode() {
@@ -157,6 +176,33 @@ void SegmentationNode::runSegmentation(const Image::ConstSharedPtr& msg) {
 
   const auto derotated = image_rotator_.derotate(result.labels);
   output_pub_.publish(img_ptr->header, derotated, img_ptr->image);
+}
+
+void SegmentationNode::publishStatus() {
+  std::chrono::nanoseconds curr_time_ns(now().nanoseconds());
+
+  std::stringstream ss;
+  ss << R"""({"nickname": "semantic_inference", "node_name": )"""
+     << get_fully_qualified_name() << ",";
+
+  if (!last_call_) {
+    ss << R"""("status": "WARNING", "note": "waiting for input")""";
+  } else {
+    const auto diff = now() - *last_call_;
+    if (diff.seconds() > config.max_heartbeat_s) {
+      ss << R"""("status": "ERROR", "note": "No input processed in )"""
+         << diff.seconds() << R"""( [s]")""";
+    } else {
+      double average_elapsed_s = 0.0;
+      ss << R"""("status": "NOMINAL", "note": "Average elapsed time: ")"""
+         << average_elapsed_s << R"""( [s]")""";
+    }
+  }
+  ss << "}";
+
+  auto msg = std::make_unique<std_msgs::msg::String>();
+  msg->data = ss.str();
+  status_pub_->publish(std::move(msg));
 }
 
 }  // namespace semantic_inference
