@@ -46,6 +46,8 @@
 
 namespace semantic_inference {
 
+using cv_bridge::CvImage;
+using sensor_msgs::msg::CompressedImage;
 using sensor_msgs::msg::Image;
 
 struct MessageInfo {
@@ -146,7 +148,7 @@ class ClosedSetRosbagWriter {
   void processBag(const BagConfig& bag_info) const;
 
  private:
-  cv::Mat runSegmentation(const cv::Mat& img) const;
+  cv_bridge::CvImage::Ptr runSegmentation(const cv_bridge::CvImage& img) const;
 
   std::unique_ptr<Segmenter> segmenter_;
   ImageRotator image_rotator_;
@@ -182,43 +184,39 @@ std::string msg_type_name() {
 }
 
 struct ImageDeserializer {
-  static cv::Mat deserialize(const MessageInfo& msg, const std::string& encoding) {
+  static cv_bridge::CvImageConstPtr deserialize(const MessageInfo& msg,
+                                                const std::string& encoding) {
     cv_bridge::CvImageConstPtr img_ptr;
 
     const auto serialized = msg.serialized();
-    if (msg.type() == msg_type_name<sensor_msgs::msg::Image>()) {
-      auto deserialized = std::make_shared<sensor_msgs::msg::Image>();
+    if (msg.type() == msg_type_name<Image>()) {
+      auto deserialized = std::make_shared<Image>();
       uncompressed.deserialize_message(&serialized, deserialized.get());
       try {
         img_ptr = cv_bridge::toCvCopy(deserialized, encoding);
       } catch (const cv_bridge::Exception& e) {
         SLOG(ERROR) << "cv_bridge exception: " << e.what();
-        return cv::Mat();
+        return nullptr;
       }
-    } else if (msg.type() == msg_type_name<sensor_msgs::msg::CompressedImage>()) {
-      auto deserialized = std::make_shared<sensor_msgs::msg::CompressedImage>();
+    } else if (msg.type() == msg_type_name<CompressedImage>()) {
+      auto deserialized = std::make_shared<CompressedImage>();
       compressed.deserialize_message(&serialized, deserialized.get());
       try {
         img_ptr = cv_bridge::toCvCopy(deserialized, encoding);
       } catch (const cv_bridge::Exception& e) {
         SLOG(ERROR) << "cv_bridge exception: " << e.what();
-        return cv::Mat();
+        return nullptr;
       }
     } else {
       SLOG(ERROR) << "Unknown message type '" << msg.type() << "'";
-      return cv::Mat();
+      return nullptr;
     }
 
-    SLOG(DEBUG) << "Encoding: " << img_ptr->encoding << " size: " << img_ptr->image.cols
-                << " x " << img_ptr->image.rows << " x " << img_ptr->image.channels()
-                << " is right type? "
-                << (img_ptr->image.type() == CV_8UC3 ? "yes" : "no");
-
-    return img_ptr->image;
+    return img_ptr;
   }
 
-  static const rclcpp::Serialization<sensor_msgs::msg::Image> uncompressed;
-  static const rclcpp::Serialization<sensor_msgs::msg::CompressedImage> compressed;
+  inline static const rclcpp::Serialization<Image> uncompressed = {};
+  inline static const rclcpp::Serialization<CompressedImage> compressed = {};
 };
 
 void ClosedSetRosbagWriter::processBag(const BagConfig& bag) const {
@@ -227,10 +225,8 @@ void ClosedSetRosbagWriter::processBag(const BagConfig& bag) const {
     return;
   }
 
-  rosbag2_storage::StorageOptions opts_out;
-  opts_out.uri = bag.output_path();
-  rosbag2_cpp::writers::SequentialWriter writer;
-  writer.open(opts_out, rosbag2_cpp::ConverterOptions{});
+  rosbag2_cpp::Writer writer;
+  writer.open(bag.output_path());
 
   BagReader reader(bag.path);
   if (!reader) {
@@ -260,29 +256,41 @@ void ClosedSetRosbagWriter::processBag(const BagConfig& bag) const {
     }
 
     const auto img = ImageDeserializer::deserialize(msg, "rgb8");
-    if (img.empty()) {
+    if (!img) {
       SLOG(ERROR) << "Failed to deserialize image!";
       continue;
     }
 
-    const auto labels = runSegmentation(img);
-    if (labels.empty()) {
+    const auto labels = runSegmentation(*img);
+    if (!labels) {
       continue;
     }
 
-    // TODO(nathan) write image to bag
+    // NOTE(nathan) no need to create topic if we're writing a known type
+    const auto topic_out = bag.topic;
+    const auto msg_out = labels->toImageMsg();
+    const rclcpp::Time msg_time = msg_out->header.stamp;
+    writer.write(*msg_out, topic_out, msg_time);
   } while (msg);
 }
 
-cv::Mat ClosedSetRosbagWriter::runSegmentation(const cv::Mat& image) const {
-  const auto rotated = image_rotator_.rotate(image);
+CvImage::Ptr ClosedSetRosbagWriter::runSegmentation(const CvImage& image) const {
+  SLOG(DEBUG) << "Encoding: " << image.encoding << " size: " << image.image.cols
+              << " x " << image.image.rows << " x " << image.image.channels()
+              << " is right type? " << (image.image.type() == CV_8UC3 ? "yes" : "no");
+
+  const auto rotated = image_rotator_.rotate(image.image);
   const auto result = segmenter_->infer(rotated);
   if (!result) {
     SLOG(ERROR) << "failed to run inference!";
-    return cv::Mat();
+    return nullptr;
   }
 
-  return image_rotator_.derotate(result.labels);
+  const auto derotated = image_rotator_.derotate(result.labels);
+  auto labels = std::make_shared<cv_bridge::CvImage>();
+  labels->header = image.header;
+  derotated.convertTo(labels->image, CV_16S);
+  return labels;
 }
 
 }  // namespace semantic_inference
@@ -296,5 +304,7 @@ auto main(int argc, char* argv[]) -> int {
       config::fromCLI<semantic_inference::ClosedSetRosbagWriter::Config>(argc, argv);
   semantic_inference::ClosedSetRosbagWriter writer(config);
 
+  const auto bag = config::fromCLI<semantic_inference::BagConfig>(argc, argv);
+  writer.processBag(bag);
   return 0;
 }
