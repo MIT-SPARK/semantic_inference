@@ -17,6 +17,7 @@ find_package(image_geometry REQUIRED)
 find_package(message_filters REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_components REQUIRED)
+find_package(rosbag2_transport REQUIRED)
 find_package(semantic_inference REQUIRED)
 find_package(tf2_eigen REQUIRED)
 find_package(tf2_ros REQUIRED)
@@ -68,6 +69,9 @@ rclcpp_components_register_node(
   ${PROJECT_NAME} PLUGIN semantic_inference::RGBDSegmentationNode EXECUTABLE rgbd_closed_set_node
 )
 
+add_executable(closed_set_rosbag_writer app/closed_set_rosbag_writer.cpp)
+target_link_libraries(closed_set_rosbag_writer PUBLIC ${PROJECT_NAME} cv_bridge::cv_bridge rosbag2_transport::rosbag2_transport)
+
 install(
   TARGETS ${PROJECT_NAME}
   EXPORT ${PROJECT_NAME}-targets
@@ -77,6 +81,7 @@ install(
 install(PROGRAMS app/image_embedding_node app/open_set_node app/text_embedding_node
         DESTINATION lib/${PROJECT_NAME}
 )
+install(TARGETS closed_set_rosbag_writer RUNTIME DESTINATION lib/${PROJECT_NAME})
 install(DIRECTORY include/${PROJECT_NAME}/ DESTINATION include/${PROJECT_NAME}/)
 install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
 install(DIRECTORY config DESTINATION share/${PROJECT_NAME})
