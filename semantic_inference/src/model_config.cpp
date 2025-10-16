@@ -72,6 +72,7 @@ void declare_config(ModelConfig& config) {
   field(config.color, "color");
   field(config.depth, "depth");
   // checks
+  checkCondition(!config.model_file.empty(), "model_file required");
   check<Path::Exists>(config.model_path(), "model_file");
   checkIsOneOf(config.log_severity,
                {"INTERNAL_ERROR", "ERROR", "WARNING", "INFO", "VERBOSE"},
