@@ -165,10 +165,12 @@ void declare_config(ClosedSetRosbagWriter::Config& config) {
 ClosedSetRosbagWriter::ClosedSetRosbagWriter(const Config& config)
     : config(config), image_rotator_(config.image_rotator) {
   if (config.show_config) {
-    SLOG(INFO) << "\n" << config::toString(config);
+    SLOG(INFO) << config::toString(config);
   }
 
-  config::checkValid(config);
+  if (!config::isValid(config, true)) {
+    throw std::runtime_error("Invalid config!");
+  }
 
   try {
     segmenter_ = std::make_unique<Segmenter>(config.segmenter);
@@ -295,16 +297,40 @@ CvImage::Ptr ClosedSetRosbagWriter::runSegmentation(const CvImage& image) const 
 
 }  // namespace semantic_inference
 
+struct SimpleSink : logging::LogSink {
+  SimpleSink(logging::Level level = logging::Level::INFO, bool with_prefix = false)
+      : level(level), with_prefix(with_prefix) {}
+  virtual ~SimpleSink() = default;
+  void dispatch(const logging::LogEntry& entry) const override {
+    if (entry.level < level) {
+      // skip ignored entries
+      return;
+    }
+
+    std::stringstream ss;
+    if (with_prefix) {
+      ss << entry.prefix();
+    }
+
+    ss << entry.message();
+    std::cout << ss.str() << std::endl;
+  }
+
+  const logging::Level level;
+  const bool with_prefix;
+};
+
+using semantic_inference::BagConfig;
+using semantic_inference::ClosedSetRosbagWriter;
+
 auto main(int argc, char* argv[]) -> int {
-  logging::Logger::addSink("cout",
-                           std::make_shared<logging::CoutSink>(logging::Level::INFO));
+  logging::Logger::addSink("cout", std::make_shared<SimpleSink>());
   logging::setConfigUtilitiesLogger();
 
-  const auto config =
-      config::fromCLI<semantic_inference::ClosedSetRosbagWriter::Config>(argc, argv);
-  semantic_inference::ClosedSetRosbagWriter writer(config);
+  const auto config = config::fromCLI<ClosedSetRosbagWriter::Config>(argc, argv);
+  ClosedSetRosbagWriter writer(config);
 
-  const auto bag = config::fromCLI<semantic_inference::BagConfig>(argc, argv);
+  const auto bag = config::fromCLI<BagConfig>(argc, argv);
   writer.processBag(bag);
   return 0;
 }
