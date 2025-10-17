@@ -36,6 +36,7 @@
 #include <semantic_inference/logging.h>
 #include <semantic_inference/model_config.h>
 #include <semantic_inference/segmenter.h>
+#include <ianvs/bag_reader.h>
 
 #include <CLI/CLI.hpp>
 #include <ament_index_cpp/get_package_share_directory.hpp>
@@ -51,61 +52,6 @@ namespace semantic_inference {
 using cv_bridge::CvImage;
 using sensor_msgs::msg::CompressedImage;
 using sensor_msgs::msg::Image;
-
-struct MessageInfo {
-  std::shared_ptr<rosbag2_storage::SerializedBagMessage> contents;
-  const rosbag2_storage::TopicMetadata* metadata = nullptr;
-  std::string topic() const { return contents ? contents->topic_name : ""; }
-  std::string type() const { return metadata ? metadata->type : ""; }
-  operator bool() const { return contents != nullptr && metadata != nullptr; }
-  rclcpp::SerializedMessage serialized() const {
-    return rclcpp::SerializedMessage(*contents->serialized_data);
-  }
-};
-
-struct BagReader {
-  BagReader(const std::filesystem::path& bagpath);
-  MessageInfo next() const;
-  operator bool() const { return reader != nullptr; }
-
-  std::unique_ptr<rosbag2_cpp::Reader> reader;
-  std::map<std::string, rosbag2_storage::TopicMetadata> lookup;
-};
-
-BagReader::BagReader(const std::filesystem::path& bagpath) {
-  rosbag2_storage::StorageOptions opts;
-  opts.uri = bagpath;
-  reader = rosbag2_transport::ReaderWriterFactory::make_reader(opts);
-  if (!reader) {
-    return;
-  }
-
-  reader->open(opts);
-
-  const auto metadata = reader->get_all_topics_and_types();
-  for (const auto& data : metadata) {
-    lookup[data.name] = data;
-  }
-}
-
-MessageInfo BagReader::next() const {
-  while (reader->has_next()) {
-    auto msg = reader->read_next();
-    if (!msg) {
-      continue;
-    }
-
-    auto iter = lookup.find(msg->topic_name);
-    if (iter == lookup.end()) {
-      SLOG(ERROR) << "no find metadata for topic '" << msg->topic_name << "'";
-      continue;
-    }
-
-    return {msg, &iter->second};
-  }
-
-  return {};
-}
 
 struct BagConfig {
   std::filesystem::path path;
@@ -185,7 +131,7 @@ std::string msg_type_name() {
 }
 
 struct ImageDeserializer {
-  static cv_bridge::CvImageConstPtr deserialize(const MessageInfo& msg,
+  static cv_bridge::CvImageConstPtr deserialize(const ianvs::BagMessage& msg,
                                                 const std::string& encoding) {
     cv_bridge::CvImageConstPtr img_ptr;
 
@@ -231,7 +177,7 @@ void ClosedSetRosbagWriter::processBag(const BagConfig& bag) const {
     SLOG(INFO) << "(copying all topics)";
   }
 
-  BagReader reader(bag.path);
+  ianvs::BagReader reader(bag.path);
   if (!reader) {
     return;
   }
@@ -248,21 +194,21 @@ void ClosedSetRosbagWriter::processBag(const BagConfig& bag) const {
   }
 
   std::set<std::string> seen;
-  MessageInfo msg;
+  ianvs::BagMessage::Ptr msg;
   do {
     msg = reader.next();
     if (!msg) {
       continue;
     }
 
-    const auto topic = msg.topic();
+    const auto topic = msg->topic();
     if (bag.write_all_topics) {
       if (!seen.count(topic)) {
-        writer.create_topic(*msg.metadata);
+        writer.create_topic(msg->metadata);
         seen.insert(topic);
       }
 
-      writer.write(msg.contents);
+      writer.write(msg->contents);
     }
 
     auto iter = topic_remapping.find(topic);
@@ -270,7 +216,7 @@ void ClosedSetRosbagWriter::processBag(const BagConfig& bag) const {
       continue;
     }
 
-    const auto img = ImageDeserializer::deserialize(msg, "rgb8");
+    const auto img = ImageDeserializer::deserialize(*msg, "rgb8");
     if (!img) {
       SLOG(ERROR) << "Failed to deserialize image!";
       continue;

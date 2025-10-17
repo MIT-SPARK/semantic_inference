@@ -73,7 +73,7 @@ rclcpp_components_register_node(
 
 add_executable(closed_set_rosbag_writer app/closed_set_rosbag_writer.cpp)
 target_link_libraries(
-  closed_set_rosbag_writer PUBLIC ${PROJECT_NAME} cv_bridge::cv_bridge
+  closed_set_rosbag_writer PUBLIC ${PROJECT_NAME} cv_bridge::cv_bridge ianvs::ianvs_rosbag
                                   rosbag2_transport::rosbag2_transport CLI11::CLI11
 )
 
