@@ -212,7 +212,7 @@ Model::Model(const ModelConfig& config)
     engine_ = buildEngineFromOnnx(model, *runtime_);
     SLOG(INFO) << "Finished building engine";
   } else {
-    SLOG(INFO) << "Loaded engine file";
+    SLOG(DEBUG) << "Loaded engine file";
   }
 
   if (!engine_) {
@@ -226,19 +226,19 @@ Model::Model(const ModelConfig& config)
     throw std::runtime_error("failed to set up trt context");
   }
 
-  SLOG(INFO) << "Execution context started";
+  SLOG(DEBUG) << "Execution context started";
 
   if (cudaStreamCreate(&stream_) != cudaSuccess) {
     SLOG(ERROR) << "Creating cuda stream failed!";
     throw std::runtime_error("failed to set up cuda stream");
   } else {
-    SLOG(INFO) << "CUDA stream started";
+    SLOG(DEBUG) << "CUDA stream started";
   }
 
   initialized_ = true;
 
   info_ = ModelInfo(*engine_);
-  SLOG(INFO) << info_;
+  SLOG(DEBUG) << info_;
   if (!info_) {
     SLOG(ERROR) << "Invalid engine for segmentation!";
     throw std::runtime_error("invalid model");

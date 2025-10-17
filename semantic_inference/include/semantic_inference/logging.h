@@ -86,13 +86,28 @@ class LogEntry {
   std::stringstream ss_;
 };
 
-struct CoutSink : logging::LogSink {
+/**
+ * @brief Log messages to cout/cerr as appropriate
+ */
+struct CoutSink : LogSink {
   CoutSink(Level level = Level::INFO);
   virtual ~CoutSink() = default;
 
-  void dispatch(const logging::LogEntry& entry) const override;
+  void dispatch(const LogEntry& entry) const override;
 
   Level level;
+};
+
+/**
+ * @brief Forward everything to cout without log-levels or optionally prefix
+ */
+struct SimpleSink : LogSink {
+  SimpleSink(Level level = Level::INFO, bool with_prefix = false);
+  virtual ~SimpleSink() = default;
+  void dispatch(const LogEntry& entry) const override;
+
+  const Level level;
+  const bool with_prefix;
 };
 
 void setConfigUtilitiesLogger();

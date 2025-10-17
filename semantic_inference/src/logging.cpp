@@ -117,6 +117,24 @@ void CoutSink::dispatch(const logging::LogEntry& entry) const {
   }
 }
 
+SimpleSink::SimpleSink(Level level, bool with_prefix)
+    : level(level), with_prefix(with_prefix) {}
+
+void SimpleSink::dispatch(const LogEntry& entry) const {
+  if (entry.level < level) {
+    // skip ignored entries
+    return;
+  }
+
+  std::stringstream ss;
+  if (with_prefix) {
+    ss << entry.prefix();
+  }
+
+  ss << entry.message();
+  std::cout << ss.str() << std::endl;
+}
+
 struct SlogLogger : config::internal::Logger {
   void logImpl(const config::internal::Severity severity,
                const std::string& message) override {
