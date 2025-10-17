@@ -11,6 +11,8 @@ endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_python REQUIRED)
+find_package(ament_index_cpp REQUIRED)
+find_package(CLI11 REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(ianvs REQUIRED)
 find_package(image_geometry REQUIRED)
@@ -70,7 +72,10 @@ rclcpp_components_register_node(
 )
 
 add_executable(closed_set_rosbag_writer app/closed_set_rosbag_writer.cpp)
-target_link_libraries(closed_set_rosbag_writer PUBLIC ${PROJECT_NAME} cv_bridge::cv_bridge rosbag2_transport::rosbag2_transport)
+target_link_libraries(
+  closed_set_rosbag_writer PUBLIC ${PROJECT_NAME} cv_bridge::cv_bridge
+                                  rosbag2_transport::rosbag2_transport CLI11::CLI11
+)
 
 install(
   TARGETS ${PROJECT_NAME}

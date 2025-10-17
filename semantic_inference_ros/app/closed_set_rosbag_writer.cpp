@@ -30,13 +30,15 @@
  * * -------------------------------------------------------------------------- */
 
 #include <config_utilities/config_utilities.h>
-#include <config_utilities/parsing/commandline.h>
+#include <config_utilities/parsing/yaml.h>
 #include <config_utilities/types/path.h>
 #include <semantic_inference/image_rotator.h>
 #include <semantic_inference/logging.h>
 #include <semantic_inference/model_config.h>
 #include <semantic_inference/segmenter.h>
 
+#include <CLI/CLI.hpp>
+#include <ament_index_cpp/get_package_share_directory.hpp>
 #include <cv_bridge/cv_bridge.hpp>
 #include <opencv2/core.hpp>
 #include <rclcpp/serialization.hpp>
@@ -107,7 +109,7 @@ MessageInfo BagReader::next() const {
 
 struct BagConfig {
   std::filesystem::path path;
-  std::string topic;
+  std::vector<std::string> topics;
   bool write_all_topics = true;
   std::string suffix = "_semantics";
   std::filesystem::path output;
@@ -124,6 +126,23 @@ struct BagConfig {
 
     return actual_path.parent_path() / (path.stem().string() + suffix);
   }
+
+  std::map<std::string, std::string> topic_map() const {
+    std::map<std::string, std::string> remapping;
+    for (const auto& topic : topics) {
+      SLOG(ERROR) << "Got topic: " << topic;
+      auto pos = topic.find(':');
+      if (pos == std::string::npos) {
+        remapping[topic] = topic + "/labels";
+      } else {
+        const auto new_name = topic.substr(pos + 1);
+        const auto old_name = topic.substr(0, pos - 1);
+        remapping[old_name] = new_name;
+      }
+    }
+
+    return remapping;
+  }
 };
 
 void declare_config(BagConfig& config) {
@@ -132,18 +151,11 @@ void declare_config(BagConfig& config) {
   field<Path::Absolute>(config.path, "bag_path");
   field(config.write_all_topics, "write_all_topics");
   check<Path::Exists>(config.path, "bag_path");
-  checkCondition(!config.topic.empty(), "topic non-empty");
 }
 
 class ClosedSetRosbagWriter {
  public:
-  struct Config {
-    bool show_config = true;
-    Segmenter::Config segmenter;
-    ImageRotator::Config image_rotator;
-  } const config;
-
-  explicit ClosedSetRosbagWriter(const Config& config);
+  explicit ClosedSetRosbagWriter(const Segmenter::Config& config);
 
   void processBag(const BagConfig& bag_info) const;
 
@@ -151,29 +163,16 @@ class ClosedSetRosbagWriter {
   cv_bridge::CvImage::Ptr runSegmentation(const cv_bridge::CvImage& img) const;
 
   std::unique_ptr<Segmenter> segmenter_;
-  ImageRotator image_rotator_;
 };
 
-void declare_config(ClosedSetRosbagWriter::Config& config) {
-  using namespace config;
-  name("ClosedSetRosbagWriter::Config");
-  field(config.segmenter, "segmenter");
-  field(config.image_rotator, "image_rotator");
-  field(config.show_config, "show_config");
-}
-
-ClosedSetRosbagWriter::ClosedSetRosbagWriter(const Config& config)
-    : config(config), image_rotator_(config.image_rotator) {
-  if (config.show_config) {
-    SLOG(INFO) << config::toString(config);
-  }
-
+ClosedSetRosbagWriter::ClosedSetRosbagWriter(const Segmenter::Config& config) {
+  SLOG(INFO) << config::toString(config);
   if (!config::isValid(config, true)) {
     throw std::runtime_error("Invalid config!");
   }
 
   try {
-    segmenter_ = std::make_unique<Segmenter>(config.segmenter);
+    segmenter_ = std::make_unique<Segmenter>(config);
   } catch (const std::exception& e) {
     SLOG(ERROR) << "Exception: " << e.what();
     throw e;
@@ -182,7 +181,7 @@ ClosedSetRosbagWriter::ClosedSetRosbagWriter(const Config& config)
 
 template <typename T>
 std::string msg_type_name() {
-  return rosidl_generator_traits::data_type<T>();
+  return rosidl_generator_traits::name<T>();
 }
 
 struct ImageDeserializer {
@@ -227,12 +226,25 @@ void ClosedSetRosbagWriter::processBag(const BagConfig& bag) const {
     return;
   }
 
-  rosbag2_cpp::Writer writer;
-  writer.open(bag.output_path());
+  SLOG(INFO) << "Opening bag " << bag.path;
+  if (bag.write_all_topics) {
+    SLOG(INFO) << "(copying all topics)";
+  }
 
   BagReader reader(bag.path);
   if (!reader) {
     return;
+  }
+
+  rosbag2_cpp::Writer writer;
+  writer.open(bag.output_path());
+
+  SLOG(INFO) << "Processing bag!";
+  const auto topic_remapping = bag.topic_map();
+
+  SLOG(INFO) << "Segmentation topics:";
+  for (const auto& [old_topic, new_topic] : topic_remapping) {
+    SLOG(INFO) << " - " << old_topic << " -> " << new_topic;
   }
 
   std::set<std::string> seen;
@@ -253,7 +265,8 @@ void ClosedSetRosbagWriter::processBag(const BagConfig& bag) const {
       writer.write(msg.contents);
     }
 
-    if (topic != bag.topic) {
+    auto iter = topic_remapping.find(topic);
+    if (iter == topic_remapping.end()) {
       continue;
     }
 
@@ -269,11 +282,18 @@ void ClosedSetRosbagWriter::processBag(const BagConfig& bag) const {
     }
 
     // NOTE(nathan) no need to create topic if we're writing a known type
-    const auto topic_out = bag.topic;
     const auto msg_out = labels->toImageMsg();
     const rclcpp::Time msg_time = msg_out->header.stamp;
-    writer.write(*msg_out, topic_out, msg_time);
+    writer.write(*msg_out, iter->second, msg_time);
   } while (msg);
+
+  for (const auto& seen_topic : seen) {
+    const auto segment = topic_remapping.count(seen_topic);
+    SLOG(ERROR) << "Saw " << seen_topic << " (segment: " << std::boolalpha << segment
+                << ")";
+  }
+
+  SLOG(INFO) << "Finished processing bag " << bag.path;
 }
 
 CvImage::Ptr ClosedSetRosbagWriter::runSegmentation(const CvImage& image) const {
@@ -281,17 +301,19 @@ CvImage::Ptr ClosedSetRosbagWriter::runSegmentation(const CvImage& image) const 
               << " x " << image.image.rows << " x " << image.image.channels()
               << " is right type? " << (image.image.type() == CV_8UC3 ? "yes" : "no");
 
-  const auto rotated = image_rotator_.rotate(image.image);
-  const auto result = segmenter_->infer(rotated);
+  // TODO(nathan) handle rotation per topic
+  // const auto rotated = image_rotator_.rotate(image.image);
+  const auto result = segmenter_->infer(image.image);
   if (!result) {
     SLOG(ERROR) << "failed to run inference!";
     return nullptr;
   }
 
-  const auto derotated = image_rotator_.derotate(result.labels);
+  // const auto derotated = image_rotator_.derotate(result.labels);
+
   auto labels = std::make_shared<cv_bridge::CvImage>();
   labels->header = image.header;
-  derotated.convertTo(labels->image, CV_16S);
+  result.labels.convertTo(labels->image, CV_16S);
   return labels;
 }
 
@@ -322,15 +344,54 @@ struct SimpleSink : logging::LogSink {
 
 using semantic_inference::BagConfig;
 using semantic_inference::ClosedSetRosbagWriter;
+using semantic_inference::Segmenter;
+
+struct AppArgs {
+  void add_to_app(CLI::App& app) {
+    app.add_option("bag_path", bag.path)->required()->description("Bag to open");
+    app.add_option("-o,--outpt", bag.output)->description("Optional output path");
+    app.add_flag("--write-all-topics,!--no-write-all-topics",
+                 bag.write_all_topics,
+                 "write all other topics to bag");
+    app.add_option("-t,--topics", bag.topics)
+        ->description("Topics to run inference on");
+    app.add_option("-m,--model", model_name)->description("Model to use");
+  }
+
+  std::string model_name = "ade20k-efficientvit_seg_l2";
+  BagConfig bag;
+};
 
 auto main(int argc, char* argv[]) -> int {
   logging::Logger::addSink("cout", std::make_shared<SimpleSink>());
   logging::setConfigUtilitiesLogger();
 
-  const auto config = config::fromCLI<ClosedSetRosbagWriter::Config>(argc, argv);
+  CLI::App app("Utility to play a rosbag after modfying and publishing transforms");
+  app.allow_extras();
+  app.get_formatter()->column_width(50);
+
+  AppArgs args;
+  args.add_to_app(app);
+  try {
+    app.parse(argc, argv);
+  } catch (const CLI::ParseError& e) {
+    return app.exit(e);
+  }
+
+  const std::filesystem::path this_path(
+      ament_index_cpp::get_package_share_directory("semantic_inference_ros"));
+  const auto model_dir = this_path / "config" / "models";
+
+  const auto model_config = model_dir / (args.model_name + ".yaml");
+  if (!std::filesystem::exists(model_config)) {
+    throw std::runtime_error("Invalid model config '" + model_config.string() + "'");
+  }
+
+  auto config = config::fromYamlFile<Segmenter::Config>(model_config, "segmenter");
+  config.model.model_file = args.model_name + ".onnx";
+
   ClosedSetRosbagWriter writer(config);
 
-  const auto bag = config::fromCLI<BagConfig>(argc, argv);
-  writer.processBag(bag);
+  writer.processBag(args.bag);
   return 0;
 }
