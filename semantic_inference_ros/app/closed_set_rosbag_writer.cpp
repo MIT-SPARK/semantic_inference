@@ -53,6 +53,13 @@ using cv_bridge::CvImage;
 using sensor_msgs::msg::CompressedImage;
 using sensor_msgs::msg::Image;
 
+std::filesystem::path get_model_config(const std::string& model_name) {
+  using ament_index_cpp::get_package_share_directory;
+  const auto package_dir = get_package_share_directory("semantic_inference_ros");
+  const auto model_dir = std::filesystem::path(package_dir) / "config" / "models";
+  return model_dir / (model_name + ".yaml");
+}
+
 struct BagConfig {
   std::filesystem::path path;
   std::vector<std::string> topics;
@@ -337,7 +344,6 @@ auto main(int argc, char* argv[]) -> int {
   config.model.model_file = args.model_name + ".onnx";
 
   ClosedSetRosbagWriter writer(config);
-
   writer.processBag(args.bag);
   return 0;
 }
