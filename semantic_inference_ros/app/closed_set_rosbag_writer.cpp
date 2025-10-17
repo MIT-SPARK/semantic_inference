@@ -136,7 +136,7 @@ struct BagConfig {
         remapping[topic] = topic + "/labels";
       } else {
         const auto new_name = topic.substr(pos + 1);
-        const auto old_name = topic.substr(0, pos - 1);
+        const auto old_name = topic.substr(0, pos);
         remapping[old_name] = new_name;
       }
     }
