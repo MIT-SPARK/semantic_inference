@@ -215,6 +215,53 @@ class ClosedSetRosbagWriter {
   std::unique_ptr<Segmenter> segmenter_;
 };
 
+struct ProgressBar {
+  ProgressBar(size_t total, const std::string& prefix = "")
+      : total(total), prefix(prefix) {}
+
+  void next() {
+    ++count;
+    const auto percent = static_cast<double>(count) / total;
+    if (percent - last_percent < min_diff) {
+      return;
+    }
+
+    print(percent, false);
+    last_percent = percent;
+  }
+
+  void finish() { print(1.0, true); }
+
+  void print(double percent, bool clear) {
+    if (!prefix.empty()) {
+      std::cout << prefix << ": ";
+    }
+
+    const auto bars = static_cast<size_t>(std::floor(percent * width));
+    std::cout << "[" << std::string(bars, '#');
+    if (bars <= width) {
+      std::cout << std::string(width - bars, ' ');
+    }
+
+    std::cout << "] " << std::fixed << std::setw(5) << std::setprecision(1)
+              << 100 * percent << "%";
+
+    if (clear) {
+      std::cout << std::endl;
+    } else {
+      std::cout << "\r";
+      std::cout.flush();
+    }
+  }
+
+  const size_t total;
+  std::string prefix;
+  double last_percent = 0.0;
+  double min_diff = 0.001;
+  size_t width = 60;
+  size_t count = 0;
+};
+
 ClosedSetRosbagWriter::ClosedSetRosbagWriter(const AppArgs& args) : args(args) {
   const auto config = loadSegmentationConfig(args.model_name, args.model_verbosity);
   if (args.show_config) {
@@ -262,8 +309,7 @@ void ClosedSetRosbagWriter::run() const {
   rosbag2_cpp::Writer writer;
   writer.open(args.output_path());
 
-  SLOG(INFO) << "Processing bag!";
-
+  ProgressBar bar(reader.message_count(), "Processing bag");
   std::set<std::string> seen;
   ianvs::BagMessage::Ptr msg;
   do {
@@ -272,6 +318,7 @@ void ClosedSetRosbagWriter::run() const {
       continue;
     }
 
+    bar.next();
     const auto topic = msg->topic();
     if (!args.segmentation_only) {
       if (!seen.count(topic)) {
@@ -304,7 +351,7 @@ void ClosedSetRosbagWriter::run() const {
     writer.write(*msg_out, iter->second.output, msg_time);
   } while (msg);
 
-  SLOG(INFO) << "Finished processing bag " << args.path;
+  bar.finish();
 }
 
 CvImage::Ptr ClosedSetRosbagWriter::runSegmentation(const CvImage& image,
