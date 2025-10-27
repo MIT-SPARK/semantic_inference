@@ -16,6 +16,7 @@
   <depend>ianvs</depend>
   <depend>image_geometry</depend>
   <depend>message_filters</depend>
+  <depend>nlohmann-json-dev</depend>
   <depend>rclcpp</depend>
   <depend>rclcpp_components</depend>
   <depend>rosbag2_transport</depend>

@@ -17,6 +17,7 @@ find_package(cv_bridge REQUIRED)
 find_package(ianvs REQUIRED)
 find_package(image_geometry REQUIRED)
 find_package(message_filters REQUIRED)
+find_package(nlohmann_json REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_components REQUIRED)
 find_package(rosbag2_transport REQUIRED)
@@ -46,6 +47,7 @@ target_link_libraries(
           ianvs::ianvs
           image_geometry::image_geometry
           message_filters::message_filters
+          nlohmann_json::nlohmann_json
           rclcpp_components::component
           tf2_eigen::tf2_eigen
           tf2_ros::tf2_ros

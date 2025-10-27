@@ -43,6 +43,7 @@
 #include <thread>
 
 #include <cv_bridge/cv_bridge.hpp>
+#include <nlohmann/json.hpp>
 #include <opencv2/core.hpp>
 #include <rclcpp/node.hpp>
 #include <std_msgs/msg/string.hpp>
@@ -65,9 +66,12 @@ class SegmentationNode : public rclcpp::Node {
     ImageRotator::Config image_rotator;
     bool show_config = true;
     bool show_output_config = false;
-    size_t rate_window_size = 10;
-    size_t status_period_s = 0.5;
-    double max_heartbeat_s = 10.0;
+    struct Status {
+      std::string nickname = "semantic_inference";
+      size_t rate_window_size = 10;
+      double period_s = 0.5;
+      double max_heartbeat_s = 10.0;
+    } status;
   } const config;
 
   explicit SegmentationNode(const rclcpp::NodeOptions& options);
@@ -93,6 +97,20 @@ class SegmentationNode : public rclcpp::Node {
   ianvs::ImageSubscription sub_;
 };
 
+void declare_config(SegmentationNode::Config::Status& config) {
+  using namespace config;
+  name("SegmentationNode::Config");
+  field(config.nickname, "nickname");
+  field(config.rate_window_size, "rate_window_size");
+  field(config.period_s, "period_s");
+  field(config.max_heartbeat_s, "max_heartbeat_s");
+
+  checkCondition(!config.nickname.empty(), "nickname is empty");
+  check(config.rate_window_size, GT, 0, "rate_window_size");
+  check(config.period_s, GT, 0.0, "period_s");
+  check(config.max_heartbeat_s, GT, 0.0, "max_heartbeat_s");
+}
+
 void declare_config(SegmentationNode::Config& config) {
   using namespace config;
   name("SegmentationNode::Config");
@@ -101,7 +119,7 @@ void declare_config(SegmentationNode::Config& config) {
   field(config.image_rotator, "image_rotator");
   field(config.show_config, "show_config");
   field(config.show_output_config, "show_output_config");
-  field(config.rate_window_size, "rate_window_size");
+  field(config.status, "status");
 }
 
 SegmentationNode::SegmentationNode(const rclcpp::NodeOptions& options)
@@ -141,7 +159,7 @@ SegmentationNode::SegmentationNode(const rclcpp::NodeOptions& options)
   sub_.subscribe("color/image_raw");
 
   const auto period_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-      std::chrono::duration<double>(config.status_period_s));
+      std::chrono::duration<double>(config.status.period_s));
   status_pub_ = create_publisher<std_msgs::msg::String>("~/status", rclcpp::QoS(1));
   timer_ =
       create_wall_timer(period_ms, std::bind(&SegmentationNode::publishStatus, this));
@@ -181,24 +199,30 @@ void SegmentationNode::runSegmentation(const Image::ConstSharedPtr& msg) {
 void SegmentationNode::publishStatus() {
   std::chrono::nanoseconds curr_time_ns(now().nanoseconds());
 
-  std::stringstream ss;
-  ss << R"""({"nickname": "semantic_inference", "node_name": )"""
-     << get_fully_qualified_name() << ",";
-
+  nlohmann::json record;
+  record["nickname"] = config.status.nickname;
+  record["node_name"] = get_fully_qualified_name();
   if (!last_call_) {
-    ss << R"""("status": "WARNING", "note": "waiting for input")""";
+    record["status"] = "WARNING";
+    record["note"] = "waiting for input";
   } else {
     const auto diff = now() - *last_call_;
-    if (diff.seconds() > config.max_heartbeat_s) {
-      ss << R"""("status": "ERROR", "note": "No input processed in )"""
-         << diff.seconds() << R"""( [s]")""";
+    if (diff.seconds() > config.status.max_heartbeat_s) {
+      record["status"] = "ERROR";
+      std::stringstream ss;
+      ss << "No input processed in )" << diff.seconds() << " [s]";
+      record["note"] = ss.str();
     } else {
       double average_elapsed_s = 0.0;
-      ss << R"""("status": "NOMINAL", "note": "Average elapsed time: ")"""
-         << average_elapsed_s << R"""( [s]")""";
+      record["status"] = "NOMINAL";
+      std::stringstream ss;
+      ss << "Average elapsed time: " << average_elapsed_s << " [s]";
+      record["note"] = ss.str();
     }
   }
-  ss << "}";
+
+  std::stringstream ss;
+  ss << record;
 
   auto msg = std::make_unique<std_msgs::msg::String>();
   msg->data = ss.str();
