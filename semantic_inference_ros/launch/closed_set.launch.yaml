@@ -55,13 +55,14 @@ launch:
   - node:  # Remapping pre-recorded labels
       if: $(var use_prerecorded)
       pkg: semantic_inference_ros
-      exec: recolor_node
+      exec: relabel_node
       name: semantic_inference
       on_exit: shutdown
       args: |
         $(if $(not $(var verbose)) --disable-stdout-logs)
-        --config-utilities-file $(find-pkg-share semantic_inference_ros)/config/label_groupings/$(var labelspace_name).yaml
+        --config-utilities-file $(find-pkg-share semantic_inference_ros)/config/label_groupings/$(var labelspace_name).yaml@output/recolor
         --config-utilities-yaml {worker: {max_queue_size: $(var max_image_queue_size),  image_separation_s: $(var min_separation_s)}}
+        --config-utilities-yaml {output: {recolor: {colormap_path: $(var colormap_path)}}}
   - arg: {name: run_backprojection, default: 'false', description: Triggers decompression for RGB stream}
   - arg: {name: backprojection_config, default: '{}', description: Extra parameters for backprojection}
   - node:  # 2D semantic segmentation

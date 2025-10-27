@@ -371,6 +371,7 @@ CvImage::Ptr ClosedSetRosbagWriter::runSegmentation(const CvImage& image,
   const auto derotated = rotator.derotate(result.labels);
   auto labels = std::make_shared<cv_bridge::CvImage>();
   labels->header = image.header;
+  labels->encoding = "16SC1";  // 16-bit signed, single channel
   derotated.convertTo(labels->image, CV_16S);
   return labels;
 }

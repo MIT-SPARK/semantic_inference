@@ -29,6 +29,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * * -------------------------------------------------------------------------- */
 
+#include <config_utilities/config_utilities.h>
+#include <config_utilities/parsing/commandline.h>
 #include <config_utilities/printing.h>
 #include <config_utilities/validation.h>
 #include <ianvs/image_subscription.h>
@@ -87,7 +89,10 @@ void declare_config(RelabelNode::Config& config) {
 }
 
 RelabelNode::RelabelNode(const rclcpp::NodeOptions& options)
-    : Node("recolor_node", options), color_sub_(*this), label_sub_(*this) {
+    : Node("recolor_node", options),
+      config_(config::fromCLI<Config>(options.arguments())),
+      color_sub_(*this),
+      label_sub_(*this) {
   logging::Logger::addSink("ros", std::make_shared<RosLogSink>(get_logger()));
   logging::setConfigUtilitiesLogger();
 
