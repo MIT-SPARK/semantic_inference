@@ -83,6 +83,7 @@ class SegmentationNode : public rclcpp::Node {
   void runSegmentation(const Image::ConstSharedPtr& msg);
 
   void recordStatus(double elapsed_s, const std::string& error = "");
+
   void publishStatus();
 
   std::unique_ptr<Segmenter> segmenter_;
@@ -175,20 +176,6 @@ SegmentationNode::~SegmentationNode() {
   }
 }
 
-void SegmentationNode::recordStatus(double elapsed_s, const std::string& error) {
-  std::lock_guard<std::mutex> lock(status_mutex_);
-  last_call_ = now();
-  last_status_ = error;
-  if (!error.empty()) {
-    return;
-  }
-
-  elapsed_samples_s_.push_back(elapsed_s);
-  if (elapsed_samples_s_.size() > config.status.rate_window_size) {
-    elapsed_samples_s_.pop_front();
-  }
-}
-
 void SegmentationNode::runSegmentation(const Image::ConstSharedPtr& msg) {
   cv_bridge::CvImageConstPtr img_ptr;
   try {
@@ -220,6 +207,20 @@ void SegmentationNode::runSegmentation(const Image::ConstSharedPtr& msg) {
   const auto elapsed =
       std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
   recordStatus(elapsed.count());
+}
+
+void SegmentationNode::recordStatus(double elapsed_s, const std::string& error) {
+  std::lock_guard<std::mutex> lock(status_mutex_);
+  last_call_ = now();
+  last_status_ = error;
+  if (!error.empty()) {
+    return;
+  }
+
+  elapsed_samples_s_.push_back(elapsed_s);
+  if (elapsed_samples_s_.size() > config.status.rate_window_size) {
+    elapsed_samples_s_.pop_front();
+  }
 }
 
 void SegmentationNode::publishStatus() {
