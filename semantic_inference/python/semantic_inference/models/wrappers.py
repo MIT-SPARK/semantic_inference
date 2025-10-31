@@ -335,3 +335,52 @@ class OpenClipConfig(Config):
     def load(cls, filepath):
         """Load config from file."""
         return Config.load(cls, filepath)
+
+
+class Yolov11InstanceSegmenterWrapper(nn.Module):
+    """Yolov11 instance segmentation wrapper."""
+
+    def __init__(self, config):
+        """Load Yolov11 model."""
+        super().__init__()
+        from ultralytics import YOLO
+
+        self.config = config
+        self.model = YOLO(config.model_name)
+    
+    def eval(self):
+        """
+        override eval to avoid issues with yolo model
+        """
+        self.model.model.eval()
+
+    @classmethod
+    def construct(cls, **kwargs):
+        """Load model from configuration dictionary."""
+        config = Yolov11InstanceSegmenterConfig()
+        config.update(kwargs)
+        return cls(config)
+
+    def forward(self, img):
+        """Segment image."""
+        result = self.model(img)[0] # assume batch size 1
+        if result.masks is None:
+            return None, None, None, None
+        categories = result.boxes.cls # int8
+        masks = result.masks.data.to(torch.bool) # 
+        boxes = result.boxes.xyxy # float32
+        confidences = result.boxes.conf # float32
+        # assume the instance id is the index in the result?
+        return categories, masks, boxes, confidences
+
+@register_config("instance_model", name="yolov11", constructor=Yolov11InstanceSegmenterWrapper)
+@dataclasses.dataclass
+class Yolov11InstanceSegmenterConfig(Config):
+    """Configuration for Yolov11 instance segmenter."""
+
+    model_name: str = "yolo11n-seg.pt"
+
+    @classmethod
+    def load(cls, filepath):
+        """Load config from file."""
+        return Config.load(cls, filepath)

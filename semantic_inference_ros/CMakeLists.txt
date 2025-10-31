@@ -85,7 +85,7 @@ install(
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
-install(PROGRAMS app/image_embedding_node app/open_set_node app/text_embedding_node
+install(PROGRAMS app/image_embedding_node app/open_set_node app/text_embedding_node app/instance_segmentation_node
         DESTINATION lib/${PROJECT_NAME}
 )
 install(TARGETS closed_set_rosbag_writer RUNTIME DESTINATION lib/${PROJECT_NAME})

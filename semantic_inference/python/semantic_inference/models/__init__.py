@@ -35,6 +35,7 @@ from semantic_inference.models.openset_segmenter import *
 from semantic_inference.models.patch_extractor import *
 from semantic_inference.models.segment_refinement import *
 from semantic_inference.models.wrappers import *
+from semantic_inference.models.instance_segmenter import *
 
 
 def default_device(use_cuda=True):
