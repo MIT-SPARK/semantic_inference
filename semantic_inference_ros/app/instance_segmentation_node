@@ -47,6 +47,7 @@ class InstanceSegmentationNode(Node):
             self.get_logger().warn(f"config path '{config_path}' does not exist!")
             self.config = InstanceSegmentationNodeConfig()
         else:
+            self.get_logger().info(f"Loading config from '{config_path}'")
             self.config = sc.Config.load(InstanceSegmentationNodeConfig, config_path)
 
         self.get_logger().info(f"Initializing with {self.config.show()}")
@@ -66,8 +67,8 @@ class InstanceSegmentationNode(Node):
         # self._visualizer = self.config.visualizer.create()
         if self._visualizer is not None:
         # TODO: write proper visualizer for instance segmentation
-            self._color_pub = self.create_publisher(
-                Image, "semantic_color/image_raw", 1
+            self._overlay_pub = self.create_publisher(
+                Image, "semantic_overlay/image_raw", 1
             )
 
     def _spin_once(self, header, img):
@@ -88,7 +89,7 @@ class InstanceSegmentationNode(Node):
         if self._visualizer is not None:
             # color_img = self._visualizer.call(ret)
             color_img = self.visualizer_call(ret, img)
-            self._color_pub.publish(
+            self._overlay_pub.publish(
                 Conversions.to_image_msg(header, color_img, encoding="rgb8")
             )
 

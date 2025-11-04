@@ -1,4 +1,5 @@
 ---
-instance_model:
-  type: yolov11
-  model_name: yolo11n-seg.pt
+model:
+  instance_model:
+    type: yolov11
+    model_name: yolo11n-seg.pt
