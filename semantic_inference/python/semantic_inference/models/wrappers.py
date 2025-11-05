@@ -347,7 +347,7 @@ class Yolov11InstanceSegmenterWrapper(nn.Module):
 
         self.config = config
         self.model = YOLO(config.model_name)
-    
+
     def eval(self):
         """
         override eval to avoid issues with yolo model
@@ -363,17 +363,20 @@ class Yolov11InstanceSegmenterWrapper(nn.Module):
 
     def forward(self, img):
         """Segment image."""
-        result = self.model(img)[0] # assume batch size 1
+        result = self.model(img)[0]  # assume batch size 1
         if result.masks is None:
             return None, None, None, None
-        categories = result.boxes.cls # int8
-        masks = result.masks.data.to(torch.bool) # 
-        boxes = result.boxes.xyxy # float32
-        confidences = result.boxes.conf # float32
+        categories = result.boxes.cls  # int8
+        masks = result.masks.data.to(torch.bool)  #
+        boxes = result.boxes.xyxy  # float32
+        confidences = result.boxes.conf  # float32
         # assume the instance id is the index in the result?
         return categories, masks, boxes, confidences
 
-@register_config("instance_model", name="yolov11", constructor=Yolov11InstanceSegmenterWrapper)
+
+@register_config(
+    "instance_model", name="yolov11", constructor=Yolov11InstanceSegmenterWrapper
+)
 @dataclasses.dataclass
 class Yolov11InstanceSegmenterConfig(Config):
     """Configuration for Yolov11 instance segmenter."""

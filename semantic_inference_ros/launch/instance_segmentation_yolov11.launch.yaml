@@ -23,5 +23,5 @@ launch:
       on_exit: shutdown
       param:
         - {name: config_path, value: $(var config_path), type: str}
-      args: >
+      args: >-
         --ros-args --log-level $(var log-level)

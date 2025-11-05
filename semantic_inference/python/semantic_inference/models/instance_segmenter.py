@@ -30,23 +30,14 @@
 """Model to segment an image and encode segments with CLIP embeddings."""
 
 import dataclasses
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
 import torch
-import torch.nn.functional as F
 from spark_config import Config, config_field
 from torch import nn
 
-from semantic_inference.models.mask_functions import ConstantMask
-from semantic_inference.models.patch_extractor import (
-    PatchExtractor,
-    center_crop,
-    default_normalization_parameters,
-    get_image_preprocessor,
-)
-from semantic_inference.models.segment_refinement import SegmentRefinement
 
 def _map_opt(values, f):
     return {k: v if v is None else f(v) for k, v in values.items()}
@@ -57,9 +48,9 @@ class Results:
     """Openset Segmentation Results."""
 
     masks: torch.Tensor
-    boxes: torch.Tensor # bounding boxes for the masks
+    boxes: torch.Tensor  # bounding boxes for the masks
     categories: torch.Tensor
-    confidences: torch.Tensor   
+    confidences: torch.Tensor
 
     @property
     def instances(self):
@@ -74,7 +65,7 @@ class Results:
             img[np_masks[i, ...] > 0] = i + 1
 
         # TODO: 16 + 16 int for instance id and category id
-        
+
         return img
 
     def cpu(self):
@@ -107,10 +98,9 @@ class InstanceSegmenter(nn.Module):
 
         self.config = config
         self.segmenter = self.config.instance_model.create()
-        # self.segment_refinement = SegmentRefinement(config.refinement) # might be useful clean up inprecise edges
-    
+
     def eval(self):
-        """ 
+        """
         Override eval to avoid issues with certain models
         """
         self.segmenter.eval()
@@ -153,8 +143,10 @@ class InstanceSegmenter(nn.Module):
             Encoded image
         """
         categories, masks, boxes, confidences = self.segmenter(rgb_img)
-        
+
         # img = torch.from_numpy(rgb_img).to(self.device)
         # return self.encode(img, masks, boxes)
         # TODO: return the results of the actual instance segmentation model here
-        return Results(masks=masks, boxes=boxes, categories=categories, confidences=confidences)
+        return Results(
+            masks=masks, boxes=boxes, categories=categories, confidences=confidences
+        )
