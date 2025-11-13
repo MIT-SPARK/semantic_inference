@@ -135,7 +135,8 @@ class InstanceSegmentationNode(Node):
         confidences = ret.confidences
 
         # TODO: place holder directly from model, need to be replace by proper yaml
-        category_names = self._model.segmenter.model.names
+        # category_names = self._model.segmenter.model.names
+        category_names = self._model.category_names
 
         # Convert RGB to BGR for OpenCV
         vis_img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)

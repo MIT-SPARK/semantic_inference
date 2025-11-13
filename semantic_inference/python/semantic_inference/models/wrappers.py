@@ -31,10 +31,14 @@
 
 import dataclasses
 
+import os
 import einops
+import numpy as np
 import torch
 import torch.nn as nn
 import torchvision
+from torchvision.ops import box_convert
+
 from spark_config import Config, register_config
 
 from semantic_inference import root_path
@@ -43,6 +47,10 @@ from semantic_inference import root_path
 def models_path():
     """Get path to pre-trained weight storage."""
     return root_path().parent.parent / "models"
+
+def path_to_dot_semantic_inference():
+    """Get path to ~/.semantic_inference directory."""
+    return os.getenv("HOME") + "/.semantic_inference"
 
 
 class FastSAMSegmentation(nn.Module):
@@ -353,6 +361,11 @@ class Yolov11InstanceSegmenterWrapper(nn.Module):
         override eval to avoid issues with yolo model
         """
         self.model.model.eval()
+    
+    @property
+    def category_names(self):
+        """Get category names."""
+        return self.model.names
 
     @classmethod
     def construct(cls, **kwargs):
@@ -366,10 +379,10 @@ class Yolov11InstanceSegmenterWrapper(nn.Module):
         result = self.model(img)[0]  # assume batch size 1
         if result.masks is None:
             return None, None, None, None
-        categories = result.boxes.cls  # int8
-        masks = result.masks.data.to(torch.bool)  #
-        boxes = result.boxes.xyxy  # float32
-        confidences = result.boxes.conf  # float32
+        categories = result.boxes.cls.cpu()  # int8
+        masks = result.masks.data.to(torch.bool).cpu()  #
+        boxes = result.boxes.xyxy.cpu()  # float32
+        confidences = result.boxes.conf.cpu()  # float32
         # assume the instance id is the index in the result?
         return categories, masks, boxes, confidences
 
@@ -382,6 +395,173 @@ class Yolov11InstanceSegmenterConfig(Config):
     """Configuration for Yolov11 instance segmenter."""
 
     model_name: str = "yolo11n-seg.pt"
+
+    @classmethod
+    def load(cls, filepath):
+        """Load config from file."""
+        return Config.load(cls, filepath)
+
+
+class GDSam2InstanceSegmenterWrapper(nn.Module):
+    """Grounded SAM 2 instance segmentation wrapper."""
+
+    def __init__(self, config):
+        """Load Grounded SAM 2 model."""
+        super().__init__()
+        from sam2.build_sam import build_sam2
+        from sam2.sam2_image_predictor import SAM2ImagePredictor
+        from groundingdino.util.inference import load_model
+
+        self.config = config
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.text_prompt = config.text_prompt
+        self.multimask_output = config.multimask_output
+        
+        sam2_model_config_path = os.path.join(
+            "configs/sam2.1", config.sam2_model_config
+        )
+        sam2_checkpoint_path = os.path.join(
+            path_to_dot_semantic_inference(), config.sam2_checkpoint
+        ) # this uses hydra config packages so only need relative path to the pkg installation dir
+        grounding_dino_config_path = os.path.join(
+            path_to_dot_semantic_inference(), "gdsam2_config", config.grounding_dino_config
+        ) 
+        grounding_dino_checkpoint_path = os.path.join(
+            path_to_dot_semantic_inference(), config.grounding_dino_checkpoint
+        )
+        
+        # build SAM2 image predictor
+        self.sam2_model = build_sam2(
+            sam2_model_config_path, 
+            sam2_checkpoint_path
+        )
+        self.sam2_predictor = SAM2ImagePredictor(self.sam2_model)
+        
+        # build grounding dino model
+        self.grounding_model = load_model(
+            model_config_path=grounding_dino_config_path, 
+            model_checkpoint_path=grounding_dino_checkpoint_path, 
+            device=self.device
+        )
+        
+        # convert text prompt to category names
+        self.category_names = self.text_prompt.lower().split('. ')
+        self.category_names = [cat.strip() for cat in self.category_names if len(cat.strip()) > 0]
+        self.category_names[-1] = self.category_names[-1].rstrip('.') # remove the last dot if any
+
+    def preprocess_image(self, img):
+        """Preprocess image for Grounded SAM 2.
+        Input: 
+            - img np.ndarray (H, W, C) uint8
+        Output:
+            - image_transformed torch.Tensor (C, H, W) float32
+        """
+        import groundingdino.datasets.transforms as T
+        transform = T.Compose(
+            [
+                T.RandomResize([800], max_size=1333),
+                T.ToTensor(),
+                T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+            ]
+        )
+        pil_img = torchvision.transforms.ToPILImage()(img)
+        image_transformed, _ = transform(pil_img, None)
+        return image_transformed
+    
+    @classmethod
+    def construct(cls, **kwargs):
+        """Load model from configuration dictionary."""
+        config = GDSam2InstanceSegmenterConfig()
+        config.update(kwargs)
+        return cls(config)
+
+    def forward(self, img):
+        """Segment image."""
+        from groundingdino.util.inference import load_image, predict
+        
+        # preprocess img
+        img_transformed = self.preprocess_image(img)
+        
+        # gdino prediction
+        boxes, confidences, labels = predict(
+            model=self.grounding_model,
+            image=img_transformed,
+            caption=self.text_prompt,
+            box_threshold=self.config.box_threshold,
+            text_threshold=self.config.text_threshold,
+            device=self.device
+        )
+        
+        # if nothing detected
+        if boxes.shape[0] == 0:
+            return None, None, None, None
+
+        # process the box prompt for SAM 2
+        h, w, _ = img.shape
+        boxes = boxes * torch.Tensor([w, h, w, h])
+        input_boxes = box_convert(boxes=boxes, in_fmt="cxcywh", out_fmt="xyxy").numpy()
+
+        # FIXME: figure how does this influence the G-DINO model (from offical gdsam2 demo)
+        # torch.autocast(device_type=self.device.type, dtype=torch.bfloat16).__enter__()
+        # if torch.cuda.is_available() and torch.cuda.get_device_properties(0).major >= 8:
+        #     # turn on tfloat32 for Ampere GPUs (https://pytorch.org/docs/stable/notes/cuda.html#tensorfloat-32-tf32-on-ampere-devices)
+        #     torch.backends.cuda.matmul.allow_tf32 = True
+        #     torch.backends.cudnn.allow_tf32 = True
+            
+        # SAM 2 predicts mask
+        self.sam2_predictor.set_image(img)
+        masks, scores, logits = self.sam2_predictor.predict(
+            point_coords=None,
+            point_labels=None,
+            box=input_boxes,
+            multimask_output=self.multimask_output,
+        )
+
+        # Sample best according to scores if multimask output
+        if self.multimask_output:
+            best = np.argmax(scores, axis=1)                     
+            masks = masks[np.arange(masks.shape[0]), best]    
+
+        # convert the shape to (n, H, W)
+        if masks.ndim == 4:
+            masks = masks.squeeze(1)
+        
+        # convert string labels to indexes based on the text prompt
+        categories = []
+        for label in labels:
+            label_str = label.lower()
+            if label_str in self.category_names:
+                label_indx = self.category_names.index(label_str)
+            else:
+                label_indx = -1 # unknown
+            categories.append(label_indx)
+        categories = torch.tensor(categories)
+        
+        # convert masks to boolean
+        masks = masks.astype(bool)
+        masks = torch.tensor(masks)
+        
+        # use xyxy boxes
+        boxes = torch.tensor(input_boxes)
+    
+        return categories, masks, boxes, confidences
+        
+
+@register_config(
+    "instance_model", name="gdsam2", constructor=GDSam2InstanceSegmenterWrapper
+)
+@dataclasses.dataclass
+class GDSam2InstanceSegmenterConfig(Config):
+    """Configuration for Grounded SAM 2 instance segmenter."""
+    
+    text_prompt: str = "car. tire."
+    sam2_checkpoint: str = "sam2.1_hiera_large.pt"
+    sam2_model_config: str = "sam2.1_hiera_l.yaml"
+    grounding_dino_config: str = "GroundingDINO_SwinT_OGC.py"
+    grounding_dino_checkpoint: str = "groundingdino_swint_ogc.pth"
+    box_threshold: float = 0.35
+    text_threshold: float = 0.25
+    multimask_output: bool = False
 
     @classmethod
     def load(cls, filepath):
