@@ -1,7 +1,8 @@
 ---
 launch:
   - arg: {name: gdsam2_env, default: $(env HOME)/environments/gdsam2, description: Path to instance segmentation environment}
-  - arg: {name: config_path, default: $(find-pkg-share semantic_inference_ros)/config/instance_segmentation/gdsam2.yaml, description: Configuration file for instance segmentation object detector}
+  - arg: {name: model_name, default: gdsam2, description: Name of the segmentation model to use}
+  - arg: {name: config_path, default: $(find-pkg-share semantic_inference_ros)/config/instance_segmentation/$(var model_name).yaml, description: Configuration file for instance segmentation object detector}
   - arg: {name: compressed_rgb, default: 'false', description: Triggers decompression for RGB stream}
   - arg: {name: log-level, default: info, description: Set the ROS2 log level}
   - node:

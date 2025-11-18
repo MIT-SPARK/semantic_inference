@@ -30,6 +30,7 @@ dependencies = [
     "torchvision",
     "spark_config@git+https://github.com/MIT-SPARK/Spark-Config.git",
     "numpy<2",
+    "ultralytics",
 ]
 
 [tool.setuptools.packages.find]
@@ -41,7 +42,6 @@ semantic-inference = "semantic_inference.__main__:cli"
 [project.optional-dependencies]
 dev = ["pytest"]
 openset = [
-    "ultralytics",
     "clip@git+https://github.com/openai/CLIP.git",
     "open_clip_torch",
     "numpy >= 1.20",
