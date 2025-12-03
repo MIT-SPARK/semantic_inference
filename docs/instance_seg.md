@@ -31,7 +31,7 @@ source <PATH_TO_ENVIRONMENT>/bin/activate
 pip install ./semantic_inference[openset]  # note that the openset extra is required for open-set semantic segmentation
 ```
 
-The above setup allows you to use `yolov11`, in order to use `grounded sam 2`, we have to manually install it. 
+The above setup allows you to use `yolov11`, in order to use `grounded sam 2`, we have to manually install it.
 ```shell
 # cd to your favorite path, we can default to `~/.semantic_inference/`
 git clone -b more_gpu https://github.com/MultyXu/Grounded-SAM-2.git

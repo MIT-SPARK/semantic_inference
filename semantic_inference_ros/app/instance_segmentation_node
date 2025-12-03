@@ -105,7 +105,8 @@ class InstanceSegmentationNode(Node):
         boxes = ret.boxes
         confidences = ret.confidences
 
-        # TODO(multy): place holder directly from model, need to be replace by proper yaml
+        # TODO(multy): place holder directly from model,
+        # need to be replace by proper yaml
         category_names = self._model.category_names
 
         # Convert RGB to BGR for OpenCV

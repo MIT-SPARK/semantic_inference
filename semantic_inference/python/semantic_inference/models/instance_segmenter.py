@@ -48,10 +48,10 @@ class Results:
     """Openset Segmentation Results."""
 
     # all on cuda/tensor device? TODO: Maybe should move to cpu by default
-    masks: torch.Tensor # (n, H, W), torch.bool
-    boxes: torch.Tensor # (n, 4) xyxy format, torch.float32
-    categories: torch.Tensor # (n,), torch.float32/int64 (doesn't matter)
-    confidences: torch.Tensor # (n,), torch.float32
+    masks: torch.Tensor  # (n, H, W), torch.bool
+    boxes: torch.Tensor  # (n, 4) xyxy format, torch.float32
+    categories: torch.Tensor  # (n,), torch.float32/int64 (doesn't matter)
+    confidences: torch.Tensor  # (n,), torch.float32
 
     @property
     def instance_seg_img(self):
@@ -136,7 +136,7 @@ class InstanceSegmenter(nn.Module):
     def device(self):
         """Get current model device."""
         return self._canary_param.device
-    
+
     @property
     def category_names(self):
         """Get category names."""
