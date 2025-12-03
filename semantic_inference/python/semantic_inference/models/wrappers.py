@@ -419,10 +419,10 @@ class GDSam2InstanceSegmenterWrapper(nn.Module):
         
         sam2_model_config_path = os.path.join(
             "configs/sam2.1", config.sam2_model_config
-        )
+        ) # this uses hydra config packages so only need relative path to the pkg installation dir
         sam2_checkpoint_path = os.path.join(
             path_to_dot_semantic_inference(), config.sam2_checkpoint
-        ) # this uses hydra config packages so only need relative path to the pkg installation dir
+        ) 
         grounding_dino_config_path = os.path.join(
             path_to_dot_semantic_inference(), "gdsam2_config", config.grounding_dino_config
         ) 

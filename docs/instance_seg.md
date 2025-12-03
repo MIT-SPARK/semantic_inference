@@ -36,6 +36,8 @@ git clone -b more_gpu https://github.com/MultyXu/Grounded-SAM-2.git
 ```
 And follow the `README.md` to install gdsam2.
 
+### Setup model
+Put (or symlink) `GroundingDINO_SwinT_OGC.py` under `~/.semantic_inference/gdsam2_config/`. And, put `sam2.1_hiera_large.pt` and `groundingdino_swint_ogc.pth` under `~/.semantic_inference/`
 
 <!-- ## Models
 
