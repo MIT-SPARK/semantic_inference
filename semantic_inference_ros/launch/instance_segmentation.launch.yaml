@@ -1,6 +1,6 @@
 ---
 launch:
-  - arg: {name: gdsam2_env, default: $(env HOME)/environments/gdsam2, description: Path to instance segmentation environment}
+  - arg: {name: instance_seg_env, default: $(env HOME)/environments/gdsam2, description: Path to instance segmentation environment}
   - arg: {name: model_name, default: gdsam2, description: Name of the segmentation model to use}
   - arg: {name: config_path, default: $(find-pkg-share semantic_inference_ros)/config/instance_segmentation/$(var model_name).yaml, description: Configuration file for instance segmentation object detector}
   - arg: {name: compressed_rgb, default: 'false', description: Triggers decompression for RGB stream}
@@ -20,7 +20,7 @@ launch:
       pkg: semantic_inference_ros
       exec: instance_segmentation_node
       name: semantic_inference
-      pyenv: $(var gdsam2_env)
+      pyenv: $(var instance_seg_env)
       on_exit: shutdown
       param:
         - {name: config_path, value: $(var config_path), type: str}

@@ -5,8 +5,6 @@ import pathlib
 from dataclasses import dataclass, field
 
 import cv2
-
-# additional imports that may not be here
 import numpy as np
 import rclpy
 import spark_config as sc
@@ -62,6 +60,7 @@ class InstanceSegmentationNode(Node):
             self, self.config.worker, "color/image_raw", self._spin_once
         )  # put image in queue for processing
 
+        # TODO(multy): proper visualizer classs needed?
         self._visualizer = "place_holder"
         # self._visualizer = self.config.visualizer.create()
         if self._visualizer is not None:
@@ -78,7 +77,7 @@ class InstanceSegmentationNode(Node):
             self.get_logger().debug("No masks detected in the image.")
             return
 
-        instance_seg_img = self.convert_to_instance_seg_img(ret)
+        instance_seg_img = ret.instance_seg_img
         # Convert to int32 to match 32SC1 encoding expected by cv_bridge
         instance_seg_img = instance_seg_img.astype(np.int32)
         msg = Conversions.to_image_msg(header, instance_seg_img, encoding="32SC1")
@@ -86,7 +85,6 @@ class InstanceSegmentationNode(Node):
         self.get_logger().debug("Published instance segmentation image.")
 
         if self._visualizer is not None:
-            # color_img = self._visualizer.call(ret)
             color_img = self.visualizer_call(ret, img)
             self._overlay_pub.publish(
                 Conversions.to_image_msg(header, color_img, encoding="rgb8")
@@ -95,33 +93,6 @@ class InstanceSegmentationNode(Node):
     def stop(self):
         """Stop the underlying image worker."""
         self._worker.stop()
-
-    def convert_to_instance_seg_img(self, ret):
-        """
-        Convert segmentation results to instance segmentation image.
-        Each pixel value encodes both category id and instance id.
-        First 16 bits are category id, last 16 bits are instance id.
-        """
-        masks = ret.masks.cpu().numpy()
-        category_ids = ret.categories.cpu().numpy()
-        img = np.zeros(masks[0].shape, dtype=np.uint32)
-        for i in range(masks.shape[0]):
-            category_id = int(category_ids[i])  # category id are 0-indexed
-            instance_id = i + 1  # instance ids are 1-indexed
-            combined_id = (
-                category_id << 16
-            ) | instance_id  # combine into single uint32
-            img[masks[i, ...] > 0] = combined_id
-
-        return img
-
-    def recover_instance_and_category(self, instance_seg_img):
-        """
-        Recover instance ids and category ids from instance segmentation image.
-        """
-        instance_ids = (instance_seg_img & 0xFFFF).astype(np.uint16)  # last 16 bits
-        category_ids = (instance_seg_img >> 16).astype(np.uint16)  # first 16 bits
-        return instance_ids, category_ids
 
     def visualizer_call(self, ret, img):
         """
@@ -134,8 +105,7 @@ class InstanceSegmentationNode(Node):
         boxes = ret.boxes
         confidences = ret.confidences
 
-        # TODO: place holder directly from model, need to be replace by proper yaml
-        # category_names = self._model.segmenter.model.names
+        # TODO(multy): place holder directly from model, need to be replace by proper yaml
         category_names = self._model.category_names
 
         # Convert RGB to BGR for OpenCV

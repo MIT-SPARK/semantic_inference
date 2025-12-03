@@ -54,18 +54,22 @@ class Results:
     confidences: torch.Tensor # (n,), torch.float32
 
     @property
-    def instances(self):
-        """Get instance image (if it exists)."""
-        if self.masks.shape[0] == 0:
-            return None
-
-        np_masks = self.masks.numpy()
-        img = np.zeros(np_masks[0].shape, dtype=np.uint16)
-        for i in range(self.masks.shape[0]):
-            # instance ids are 1-indexed
-            img[np_masks[i, ...] > 0] = i + 1
-
-        # TODO: 16 + 16 int for instance id and category id
+    def instance_seg_img(self):
+        """
+        Convert segmentation results to instance segmentation image.
+        Each pixel value encodes both category id and instance id.
+        First 16 bits are category id, last 16 bits are instance id.
+        """
+        masks = self.masks.cpu().numpy()
+        category_ids = self.categories.cpu().numpy()
+        img = np.zeros(masks[0].shape, dtype=np.uint32)
+        for i in range(masks.shape[0]):
+            category_id = int(category_ids[i])  # category id are 0-indexed
+            instance_id = i + 1  # instance ids are 1-indexed
+            combined_id = (
+                category_id << 16
+            ) | instance_id  # combine into single uint32
+            img[masks[i, ...] > 0] = combined_id
 
         return img
 
@@ -150,9 +154,6 @@ class InstanceSegmenter(nn.Module):
         """
         categories, masks, boxes, confidences = self.segmenter(rgb_img)
 
-        # img = torch.from_numpy(rgb_img).to(self.device)
-        # return self.encode(img, masks, boxes)
-        # TODO: return the results of the actual instance segmentation model here
         return Results(
             masks=masks, boxes=boxes, categories=categories, confidences=confidences
         )

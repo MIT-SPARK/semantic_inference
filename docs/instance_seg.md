@@ -22,6 +22,8 @@ Otherwise, omit the ``--system-site-packages`` option:
 python3 -m virtualenv -p /usr/bin/python3 --download <DESIRED_PATH_TO_ENVIRONMENT>
 ```
 
+> NOTE: we default the virtual environment name to `gdsam2` currently.
+
 Then, install `semantic_inference`
 ```shell
 cd <PATH_TO_REPO>
@@ -31,7 +33,7 @@ pip install ./semantic_inference[openset]  # note that the openset extra is requ
 
 The above setup allows you to use `yolov11`, in order to use `grounded sam 2`, we have to manually install it. 
 ```shell
-# cd to your favorite path 
+# cd to your favorite path, we can default to `~/.semantic_inference/`
 git clone -b more_gpu https://github.com/MultyXu/Grounded-SAM-2.git
 ```
 And follow the `README.md` to install gdsam2.

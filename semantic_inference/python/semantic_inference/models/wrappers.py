@@ -357,9 +357,7 @@ class Yolov11InstanceSegmenterWrapper(nn.Module):
         self.model = YOLO(config.model_name)
 
     def eval(self):
-        """
-        override eval to avoid issues with yolo model
-        """
+        """override eval to avoid issues with yolo model"""
         self.model.model.eval()
     
     @property
@@ -379,6 +377,7 @@ class Yolov11InstanceSegmenterWrapper(nn.Module):
         result = self.model(img)[0]  # assume batch size 1
         if result.masks is None:
             return None, None, None, None
+        
         categories = result.boxes.cls.cpu()  # int8
         masks = result.masks.data.to(torch.bool).cpu()  #
         boxes = result.boxes.xyxy.cpu()  # float32
@@ -501,6 +500,7 @@ class GDSam2InstanceSegmenterWrapper(nn.Module):
         boxes = boxes * torch.Tensor([w, h, w, h])
         input_boxes = box_convert(boxes=boxes, in_fmt="cxcywh", out_fmt="xyxy").numpy()
 
+        # Below is the comment from the official sam2 demo:
         # FIXME: figure how does this influence the G-DINO model (from offical gdsam2 demo)
         # torch.autocast(device_type=self.device.type, dtype=torch.bfloat16).__enter__()
         # if torch.cuda.is_available() and torch.cuda.get_device_properties(0).major >= 8:
