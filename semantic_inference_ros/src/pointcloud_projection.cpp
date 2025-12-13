@@ -1,6 +1,7 @@
 #include "semantic_inference_ros/pointcloud_projection.h"
 
 #include <config_utilities/config.h>
+#include <semantic_inference/logging.h>
 
 #include <optional>
 
@@ -9,10 +10,10 @@
 #include <rclcpp/node.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 
-#include "semantic_inference_ros/ros_log_sink.h"
-
 namespace semantic_inference {
 
+using sensor_msgs::PointCloud2ConstIterator;
+using sensor_msgs::PointCloud2Iterator;
 using sensor_msgs::msg::CameraInfo;
 using sensor_msgs::msg::Image;
 using sensor_msgs::msg::PointCloud2;
@@ -49,9 +50,9 @@ struct OutputPosIter {
  private:
   // techinically we could probably just have one iterator, but (small) chance that
   // someone sends a non-contiguous pointcloud
-  sensor_msgs::PointCloud2Iterator<float> x_iter_;
-  sensor_msgs::PointCloud2Iterator<float> y_iter_;
-  sensor_msgs::PointCloud2Iterator<float> z_iter_;
+  PointCloud2Iterator<float> x_iter_;
+  PointCloud2Iterator<float> y_iter_;
+  PointCloud2Iterator<float> z_iter_;
 };
 
 struct InputPosIter {
@@ -71,9 +72,9 @@ struct InputPosIter {
  private:
   // techinically we could probably just have one iterator, but (small) chance that
   // someone sends a non-contiguous pointcloud
-  sensor_msgs::PointCloud2ConstIterator<float> x_iter_;
-  sensor_msgs::PointCloud2ConstIterator<float> y_iter_;
-  sensor_msgs::PointCloud2ConstIterator<float> z_iter_;
+  PointCloud2ConstIterator<float> x_iter_;
+  PointCloud2ConstIterator<float> y_iter_;
+  PointCloud2ConstIterator<float> z_iter_;
 };
 
 struct InputLabelIterBase {
@@ -93,7 +94,7 @@ struct InputLabelIter : InputLabelIterBase {
   uint32_t get() const override { return *iter_; }
 
  private:
-  sensor_msgs::PointCloud2ConstIterator<T> iter_;
+  PointCloud2ConstIterator<T> iter_;
 };
 
 std::unique_ptr<InputLabelIterBase> iterFromFields(const PointCloud2& cloud,
@@ -222,8 +223,8 @@ struct LabelImageAdapter {
 void recolorCloud(PointCloud2& output,
                   const ImageRecolor& recolor,
                   uint32_t unknown_label) {
-  auto labels = sensor_msgs::PointCloud2ConstIterator<uint32_t>(output, "label");
-  auto colors = sensor_msgs::PointCloud2Iterator<uint8_t>(output, "rgba");
+  auto labels = PointCloud2ConstIterator<uint32_t>(output, "label");
+  auto colors = PointCloud2Iterator<uint8_t>(output, "rgba");
   while (labels != labels.end()) {
     const auto unknown = static_cast<uint32_t>(*labels) == unknown_label;
     const auto& color = unknown ? recolor.default_color : recolor.getColor(*labels);
@@ -274,22 +275,27 @@ std::optional<uint32_t> ProjectionConfig::remapInput(
 
 bool projectSemanticImage(const ProjectionConfig& config,
                           const CameraInfo& intrinsics,
-                          const cv::Mat& image,
+                          const cv::Mat& labels,
                           const PointCloud2& cloud,
                           const Eigen::Isometry3f& image_T_cloud,
                           PointCloud2& output,
+                          const cv::Mat& color_image,
                           const ImageRecolor* recolor) {
   image_geometry::PinholeCameraModel model;
   model.fromCameraInfo(intrinsics);
 
   auto pos_in_iter = InputPosIter(cloud);
-  const LabelImageAdapter img_wrapper(image);
+  const LabelImageAdapter img_wrapper(labels);
   // iterator over label field in input pointcloud if it exists
   InputLabelAdapter label_in_iter(cloud, config.input_label_fieldname);
 
-  initOutput(cloud, output, recolor != nullptr);
+  initOutput(cloud, output, recolor != nullptr || !color_image.empty());
   auto pos_out_iter = OutputPosIter(output);
-  auto label_out_iter = sensor_msgs::PointCloud2Iterator<uint32_t>(output, "label");
+  auto label_out_iter = PointCloud2Iterator<uint32_t>(output, "label");
+  std::unique_ptr<PointCloud2Iterator<uint8_t>> color_out_iter;
+  if (!color_image.empty()) {
+    color_out_iter = std::make_unique<PointCloud2Iterator<uint8_t>>(output, "rgba");
+  }
 
   while (pos_in_iter) {
     const Eigen::Vector3f p_cloud = *pos_in_iter;
@@ -304,13 +310,28 @@ bool projectSemanticImage(const ProjectionConfig& config,
       v = std::round(pixel.y);
     }
 
-    const auto in_view = u >= 0 && u < image.cols && v >= 0 && v < image.rows;
+    const auto in_view = u >= 0 && u < labels.cols && v >= 0 && v < labels.rows;
     const uint32_t label_in =
         config.remapInput(*label_in_iter).value_or(config.unknown_label);
     if (in_view) {
       *label_out_iter = config.isOverride(label_in) ? label_in : img_wrapper(v, u);
+      if (color_out_iter) {
+        auto& curr_color_out = *color_out_iter;
+        const auto& pixel = color_image.at<cv::Vec3b>(v, u);
+        curr_color_out[0] = pixel[0];
+        curr_color_out[1] = pixel[1];
+        curr_color_out[2] = pixel[2];
+        curr_color_out[3] = 255u;
+      }
     } else {
       *label_out_iter = config.isAllowed(label_in) ? label_in : config.unknown_label;
+      if (color_out_iter) {
+        auto& curr_color_out = *color_out_iter;
+        curr_color_out[0] = 0;
+        curr_color_out[1] = 0;
+        curr_color_out[2] = 0;
+        curr_color_out[3] = 255u;
+      }
     }
 
     if (!in_view && config.discard_out_of_view) {
@@ -323,9 +344,12 @@ bool projectSemanticImage(const ProjectionConfig& config,
     ++pos_out_iter;
     ++label_in_iter;
     ++label_out_iter;
+    if (color_out_iter) {
+      ++(*color_out_iter);
+    }
   }
 
-  if (recolor) {
+  if (recolor && color_image.empty()) {
     recolorCloud(output, *recolor, config.unknown_label);
   }
 

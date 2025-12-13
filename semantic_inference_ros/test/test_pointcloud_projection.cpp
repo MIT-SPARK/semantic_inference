@@ -135,7 +135,8 @@ TEST(PointcloudProjection, ColorCorrect) {
   config.unknown_label = 5;
 
   PointCloud2 labeled;
-  projectSemanticImage(config, info, img, cloud, image_T_cloud, labeled, &recolor);
+  projectSemanticImage(
+      config, info, img, cloud, image_T_cloud, labeled, cv::Mat(), &recolor);
 
   pcl::PointCloud<pcl::PointXYZRGBL> expected;
   expected.push_back(makePoint(1.0, 2.0, 1.0, 0, 255, 0, 2));

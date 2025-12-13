@@ -43,6 +43,7 @@ bool projectSemanticImage(const ProjectionConfig& config,
                           const sensor_msgs::msg::PointCloud2& cloud,
                           const Eigen::Isometry3f& image_T_cloud,
                           sensor_msgs::msg::PointCloud2& output,
+                          const cv::Mat& color_image = cv::Mat(),
                           const ImageRecolor* recolor = nullptr);
 
 }  // namespace semantic_inference

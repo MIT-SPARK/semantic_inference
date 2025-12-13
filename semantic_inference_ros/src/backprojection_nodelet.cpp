@@ -7,7 +7,6 @@
 #include <message_filters/synchronizer.h>
 #include <tf2_ros/transform_listener.h>
 
-#include <cstdint>
 #include <string>
 
 #include <cv_bridge/cv_bridge.hpp>
@@ -28,7 +27,7 @@ using OptPose = std::optional<Eigen::Isometry3f>;
 
 struct BackprojectionNode : public rclcpp::Node {
  public:
-  using SyncPolicy = ApproximateTime<Image, CameraInfo, PointCloud2>;
+  using SyncPolicy = ApproximateTime<Image, Image, CameraInfo, PointCloud2>;
   using Sync = message_filters::Synchronizer<SyncPolicy>;
 
   struct Config {
@@ -48,11 +47,13 @@ struct BackprojectionNode : public rclcpp::Node {
                        const std::string& child_link,
                        const rclcpp::Time& stamp);
 
-  void callback(const Image::ConstSharedPtr& image_msg,
+  void callback(const Image::ConstSharedPtr& label_msg,
+                const Image::ConstSharedPtr& color_msg,
                 const CameraInfo::ConstSharedPtr& info_msg,
                 const PointCloud2::ConstSharedPtr& cloud_msg);
 
-  ianvs::ImageSubscription image_sub_;
+  ianvs::ImageSubscription label_sub_;
+  ianvs::ImageSubscription color_sub_;
   message_filters::Subscriber<CameraInfo> info_sub_;
   message_filters::Subscriber<PointCloud2> cloud_sub_;
   std::unique_ptr<Sync> sync_;
@@ -80,7 +81,8 @@ void declare_config(BackprojectionNode::Config& config) {
 BackprojectionNode::BackprojectionNode(const rclcpp::NodeOptions& options)
     : Node("backprojection_node", options),
       config(config::fromCLI<Config>(options.arguments())),
-      image_sub_(*this),
+      label_sub_(*this),
+      color_sub_(*this),
       tf_buffer_(get_clock()),
       tf_listener_(tf_buffer_) {
   using namespace std::placeholders;
@@ -102,11 +104,14 @@ BackprojectionNode::BackprojectionNode(const rclcpp::NodeOptions& options)
   const rclcpp::QoS qos(config.input_queue_size);
   // these are designed to default to the same namespaces as the input to the inference
   // node
-  image_sub_.subscribe("semantic/image_raw", config.input_queue_size);
+  label_sub_.subscribe("semantic/image_raw", config.input_queue_size);
+  color_sub_.subscribe("color/image_raw", config.input_queue_size);
   info_sub_.subscribe(this, "color/camera_info", qos.get_rmw_qos_profile());
   cloud_sub_.subscribe(this, "cloud", qos.get_rmw_qos_profile());
-  sync_ = std::make_unique<Sync>(SyncPolicy(10), image_sub_, info_sub_, cloud_sub_);
-  sync_->registerCallback(std::bind(&BackprojectionNode::callback, this, _1, _2, _3));
+  sync_ = std::make_unique<Sync>(
+      SyncPolicy(10), label_sub_, color_sub_, info_sub_, cloud_sub_);
+  sync_->registerCallback(
+      std::bind(&BackprojectionNode::callback, this, _1, _2, _3, _4));
 }
 
 OptPose BackprojectionNode::getTransform(const std::string& parent_link,
@@ -124,13 +129,14 @@ OptPose BackprojectionNode::getTransform(const std::string& parent_link,
   return tf_double.cast<float>();
 }
 
-void BackprojectionNode::callback(const Image::ConstSharedPtr& image_msg,
+void BackprojectionNode::callback(const Image::ConstSharedPtr& label_msg,
+                                  const Image::ConstSharedPtr& color_msg,
                                   const CameraInfo::ConstSharedPtr& info_msg,
                                   const PointCloud2::ConstSharedPtr& cloud_msg) {
   // Find transform from cloud to image frame
   const rclcpp::Time stamp(cloud_msg->header.stamp);
   const auto image_T_cloud = getTransform(
-      !config.camera_frame.empty() ? config.camera_frame : image_msg->header.frame_id,
+      !config.camera_frame.empty() ? config.camera_frame : info_msg->header.frame_id,
       !config.lidar_frame.empty() ? config.lidar_frame : cloud_msg->header.frame_id,
       stamp);
   if (!image_T_cloud) {
@@ -138,9 +144,17 @@ void BackprojectionNode::callback(const Image::ConstSharedPtr& image_msg,
   }
 
   // Convert image
-  cv_bridge::CvImageConstPtr img_ptr;
+  cv_bridge::CvImageConstPtr label_ptr;
   try {
-    img_ptr = cv_bridge::toCvShare(image_msg);
+    label_ptr = cv_bridge::toCvShare(label_msg);
+  } catch (const cv_bridge::Exception& e) {
+    SLOG(ERROR) << "cv_bridge exception: " << e.what();
+    return;
+  }
+
+  cv_bridge::CvImageConstPtr color_ptr;
+  try {
+    color_ptr = cv_bridge::toCvShare(color_msg);
   } catch (const cv_bridge::Exception& e) {
     SLOG(ERROR) << "cv_bridge exception: " << e.what();
     return;
@@ -149,10 +163,11 @@ void BackprojectionNode::callback(const Image::ConstSharedPtr& image_msg,
   auto output = std::make_unique<PointCloud2>();
   const auto valid = projectSemanticImage(config.projection,
                                           *info_msg,
-                                          img_ptr->image,
+                                          label_ptr->image,
                                           *cloud_msg,
                                           image_T_cloud.value(),
                                           *output,
+                                          color_ptr->image,
                                           recolor_.get());
   if (!valid) {
     return;
@@ -161,7 +176,7 @@ void BackprojectionNode::callback(const Image::ConstSharedPtr& image_msg,
   output->header = cloud_msg->header;
   output->header.frame_id = config.projection.use_lidar_frame
                                 ? cloud_msg->header.frame_id
-                                : image_msg->header.frame_id;
+                                : info_msg->header.frame_id;
   pub_->publish(std::move(output));
 }
 
