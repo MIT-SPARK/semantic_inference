@@ -101,9 +101,8 @@ BackprojectionNode::BackprojectionNode(const rclcpp::NodeOptions& options)
 
   pub_ = create_publisher<PointCloud2>("labeled_cloud", config.output_queue_size);
 
+  // these default to the same namespaces as the input to the inference node
   const rclcpp::QoS qos(config.input_queue_size);
-  // these are designed to default to the same namespaces as the input to the inference
-  // node
   label_sub_.subscribe("semantic/image_raw", config.input_queue_size);
   color_sub_.subscribe("color/image_raw", config.input_queue_size);
   info_sub_.subscribe(this, "color/camera_info", qos.get_rmw_qos_profile());
@@ -154,7 +153,7 @@ void BackprojectionNode::callback(const Image::ConstSharedPtr& label_msg,
 
   cv_bridge::CvImageConstPtr color_ptr;
   try {
-    color_ptr = cv_bridge::toCvShare(color_msg);
+    color_ptr = cv_bridge::toCvShare(color_msg, "bgr8");
   } catch (const cv_bridge::Exception& e) {
     SLOG(ERROR) << "cv_bridge exception: " << e.what();
     return;
