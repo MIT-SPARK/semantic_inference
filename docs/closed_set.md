@@ -2,6 +2,13 @@
 
 ## Setting up
 
+We have a new script that will handle installing the required dependencies and downloading some useful model weights. You can run this with
+```shell
+bash install/setup.sh
+```
+after cloning the repository.
+It *mostly* follows the minimal depedency setup instructions below.
+
 ### Getting Dependencies
 
 Using dense 2D (closed-set) semantic-segmentation models requires CUDA and TensorRT.
