@@ -29,6 +29,8 @@ struct ProjectionConfig {
   std::set<uint32_t> allowed_labels;
   //! Input label remapping for input pointcloud
   std::unordered_map<uint32_t, uint32_t> input_remapping;
+  //! Alpha value for out-of-view point colors
+  uint16_t out_of_view_alpha = 0;
 
   bool isOverride(uint32_t label) const { return override_labels.count(label); }
   bool isAllowed(uint32_t label) const { return allowed_labels.count(label); }

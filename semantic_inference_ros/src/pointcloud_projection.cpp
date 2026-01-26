@@ -260,6 +260,9 @@ void declare_config(ProjectionConfig& config) {
   field(config.override_labels, "override_labels");
   field(config.allowed_labels, "allowed_labels");
   field(config.input_remapping, "input_remapping");
+  field(config.out_of_view_alpha, "out_of_view_alpha");
+
+  checkInRange<uint16_t>(config.out_of_view_alpha, 0, 255, "out_of_view_alpha");
 }
 
 std::optional<uint32_t> ProjectionConfig::remapInput(
@@ -330,7 +333,7 @@ bool projectSemanticImage(const ProjectionConfig& config,
         curr_color_out[0] = 0;
         curr_color_out[1] = 0;
         curr_color_out[2] = 0;
-        curr_color_out[3] = 255u;
+        curr_color_out[3] = config.out_of_view_alpha;
       }
     }
 
