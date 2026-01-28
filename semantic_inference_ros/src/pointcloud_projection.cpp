@@ -222,12 +222,23 @@ struct LabelImageAdapter {
 
 void recolorCloud(PointCloud2& output,
                   const ImageRecolor& recolor,
-                  uint32_t unknown_label) {
-  auto labels = PointCloud2ConstIterator<uint32_t>(output, "label");
-  auto colors = PointCloud2Iterator<uint8_t>(output, "rgba");
+                  uint32_t unknown_label, 
+                  bool instance_id) {
+  auto labels = sensor_msgs::PointCloud2ConstIterator<uint32_t>(output, "label");
+  auto colors = sensor_msgs::PointCloud2Iterator<uint8_t>(output, "rgba");
   while (labels != labels.end()) {
-    const auto unknown = static_cast<uint32_t>(*labels) == unknown_label;
-    const auto& color = unknown ? recolor.default_color : recolor.getColor(*labels);
+    // if instance IDs are used, extract the higher 16 bits for the semantic label
+    const auto label_value = instance_id ? (((*labels) & 0xFFFF0000) >> 16) : *labels;
+    // if (*labels > 0) {
+    //   // TODO(multy): sometimes values are not as expected
+    //   SLOG(DEBUG) << "[Lidar Point Cloud Projection] Full label value: " << *labels;
+    //   SLOG(DEBUG) << "[Lidar Point Cloud Projection] Label higher 16 bits value: " <<(((*labels) & 0xFFFF0000) >> 16);
+    //   SLOG(DEBUG) << "[Lidar Point Cloud Projection] Label lower 16 bits value (instance ID): " << ((*labels) & 0xFFFF);
+    //   SLOG(DEBUG) << "Hello";
+    // }
+    
+    const auto unknown = static_cast<uint32_t>(label_value) == unknown_label;
+    const auto& color = unknown ? recolor.default_color : recolor.getColor(label_value);
     // annoyingly BGR order even if field is RGBA
     colors[0] = color[2];
     colors[1] = color[1];
@@ -263,6 +274,7 @@ void declare_config(ProjectionConfig& config) {
   field(config.out_of_view_alpha, "out_of_view_alpha");
 
   checkInRange<uint16_t>(config.out_of_view_alpha, 0, 255, "out_of_view_alpha");
+  field(config.instance_id, "instance_id");
 }
 
 std::optional<uint32_t> ProjectionConfig::remapInput(
@@ -352,8 +364,8 @@ bool projectSemanticImage(const ProjectionConfig& config,
     }
   }
 
-  if (recolor && color_image.empty()) {
-    recolorCloud(output, *recolor, config.unknown_label);
+  if (recolor) {
+    recolorCloud(output, *recolor, config.unknown_label, config.instance_id);
   }
 
   return true;

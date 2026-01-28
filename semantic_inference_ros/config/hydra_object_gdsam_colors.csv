@@ -1,0 +1,6 @@
+name,red,green,blue,alpha,id
+others,125,125,125,125,0
+greenchair,0,255,0,255,1
+van,0,0,255,255,2
+firehydrant,255,0,0,255,3
+unknown,0,102,51,255,4

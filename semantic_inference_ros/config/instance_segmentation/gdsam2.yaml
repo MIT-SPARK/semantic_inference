@@ -2,7 +2,9 @@
 model:
   instance_model:
     type: gdsam2
-    text_prompt: bench. car. trash bin. fire hydrant.
+    # text_prompt: bench. car. trash bin. fire hydrant.
+    text_prompt: unknown. green chair. van. fire hydrant.
+    # text_prompt: unknown. adirondack chair. van. fire hydrant.
     sam2_checkpoint: sam2.1_hiera_large.pt
     sam2_model_config: sam2.1_hiera_l.yaml
     grounding_dino_config: GroundingDINO_SwinT_OGC.py
@@ -10,3 +12,5 @@ model:
     box_threshold: 0.35
     text_threshold: 0.25
     multimask_output: false
+    erosion: false
+    erosion_kernel_size: 5

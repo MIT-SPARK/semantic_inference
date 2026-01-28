@@ -1,11 +1,21 @@
 ---
 launch:
+  # Segmentation configuration
   - arg: {name: instance_seg_env, default: $(env HOME)/environments/gdsam2, description: Path to instance segmentation environment}
   - arg: {name: model_name, default: gdsam2, description: Name of the segmentation model to use}
   - arg: {name: config_path, default: $(find-pkg-share semantic_inference_ros)/config/instance_segmentation/$(var model_name).yaml, description: Configuration file for instance segmentation object detector}
+  # compression and logging
   - arg: {name: compressed_rgb, default: 'false', description: Triggers decompression for RGB stream}
+  # Run options
   - arg: {name: log-level, default: info, description: Set the ROS2 log level}
-  - node:
+  - arg: {name: show_configs, default: 'true', description: Control logging config structs to stdout}
+  # Colormap and label grouping
+  - arg: {name: run_backprojection, default: 'false', description: Triggers point cloud backprojection with RGB semantics}
+  - arg: {name: backprojection_config, default: '{}', description: Extra parameters for backprojection}
+  # - arg: {name: colormap_path, default: $(find-pkg-share semantic_inference_ros)/config/distinct_150_colors.csv, description: Visualization colormap}
+  - arg: {name: colormap_path, default: $(find-pkg-share semantic_inference_ros)/config/hydra_object_gdsam_colors.csv, description: Visualization colormap}
+  # nodes
+  - node: # Decompress RGB stream
       if: $(var compressed_rgb)
       pkg: image_transport
       exec: republish
@@ -14,9 +24,9 @@ launch:
         - {name: in_transport, value: compressed}
         - {name: out_transport, value: raw}
       remap:
-        - {from: in/compressed, to: /acl_jackal/forward/color/image_raw/compressed}
+        - {from: in/compressed, to: color/image_raw/compressed} # TODO(multy): make topic configurable? /acl_jackal/forward/
         - {from: out, to: color/image_raw}
-  - pyenv_node:
+  - pyenv_node: # 2D instance segmentation
       pkg: semantic_inference_ros
       exec: instance_segmentation_node
       name: semantic_inference
@@ -26,3 +36,12 @@ launch:
         - {name: config_path, value: $(var config_path), type: str}
       args: >-
         --ros-args --log-level $(var log-level)
+  - node:  # point cloud backprojection
+      pkg: semantic_inference_ros
+      exec: backprojection_node
+      name: semantic_projector
+      args: |
+        --config-utilities-yaml {recolor: {colormap_path: $(var colormap_path)}}
+        --config-utilities-yaml {show_config: $(var show_configs)}
+        --config-utilities-yaml $(var backprojection_config)
+      if: $(var run_backprojection)

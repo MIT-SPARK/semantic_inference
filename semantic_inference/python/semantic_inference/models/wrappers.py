@@ -37,6 +37,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torchvision
+import cv2
 from spark_config import Config, register_config
 from torchvision.ops import box_convert
 
@@ -415,6 +416,8 @@ class GDSam2InstanceSegmenterWrapper(nn.Module):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.text_prompt = config.text_prompt
         self.multimask_output = config.multimask_output
+        self.erosion = config.erosion
+        self.erosion_kernel_size = config.erosion_kernel_size
 
         # hydra config pkg: only need relative path to the pkg installation dir
         sam2_model_config_path = os.path.join(
@@ -533,7 +536,13 @@ class GDSam2InstanceSegmenterWrapper(nn.Module):
         # convert the shape to (n, H, W)
         if masks.ndim == 4:
             masks = masks.squeeze(1)
-
+        
+        # If needed, apply erosion to masks
+        if self.erosion:
+            kernel = np.ones((self.config.erosion_kernel_size, self.config.erosion_kernel_size), np.uint8)
+            for i in range(masks.shape[0]):
+                masks[i] = cv2.erode(masks[i].astype(np.uint8), kernel, iterations=1)
+                
         # convert string labels to indexes based on the text prompt
         categories = []
         for label in labels:
@@ -570,6 +579,8 @@ class GDSam2InstanceSegmenterConfig(Config):
     box_threshold: float = 0.35
     text_threshold: float = 0.25
     multimask_output: bool = False
+    erosion: bool = False
+    erosion_kernel_size: int = 5
 
     @classmethod
     def load(cls, filepath):
