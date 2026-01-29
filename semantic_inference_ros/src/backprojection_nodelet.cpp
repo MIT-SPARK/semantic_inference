@@ -177,11 +177,11 @@ void BackprojectionNode::callback(const Image::ConstSharedPtr& label_msg,
   output->header = cloud_msg->header;
   output->header.frame_id = config.projection.use_lidar_frame
                                 ? cloud_msg->header.frame_id
-                                : image_msg->header.frame_id;
+                                : label_msg->header.frame_id;
   // modify the output header stamp to be the image timestamp to reflect the time of the
   // semantic labels
   if (config.use_image_stamp) {
-    output->header.stamp = image_msg->header.stamp;
+    output->header.stamp = label_msg->header.stamp;
   }
 
   pub_->publish(std::move(output));
