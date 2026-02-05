@@ -342,9 +342,9 @@ bool projectSemanticImage(const ProjectionConfig& config,
       *label_out_iter = config.isAllowed(label_in) ? label_in : config.unknown_label;
       if (color_out_iter) {
         auto& curr_color_out = *color_out_iter;
-        curr_color_out[0] = 0;
-        curr_color_out[1] = 0;
-        curr_color_out[2] = 0;
+        curr_color_out[0] = 125;
+        curr_color_out[1] = 125;
+        curr_color_out[2] = 125;
         curr_color_out[3] = config.out_of_view_alpha;
       }
     }
