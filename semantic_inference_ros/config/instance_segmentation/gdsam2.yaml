@@ -3,7 +3,7 @@ model:
   instance_model:
     type: gdsam2
     # text_prompt: bench. car. trash bin. fire hydrant.
-    text_prompt: unknown. green chair. van. fire hydrant.
+    text_prompt: unknown. green chair. van. fire hydrant. ground. grass. sand. sidewalk. dock. road.
     # text_prompt: unknown. adirondack chair. van. fire hydrant.
     sam2_checkpoint: sam2.1_hiera_large.pt
     sam2_model_config: sam2.1_hiera_l.yaml
