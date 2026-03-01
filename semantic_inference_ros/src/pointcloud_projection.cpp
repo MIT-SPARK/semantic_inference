@@ -222,7 +222,7 @@ struct LabelImageAdapter {
 
 void recolorCloud(PointCloud2& output,
                   const ImageRecolor& recolor,
-                  uint32_t unknown_label, 
+                  uint32_t unknown_label,
                   bool instance_id) {
   auto labels = sensor_msgs::PointCloud2ConstIterator<uint32_t>(output, "label");
   auto colors = sensor_msgs::PointCloud2Iterator<uint8_t>(output, "rgba");
@@ -232,11 +232,12 @@ void recolorCloud(PointCloud2& output,
     // if (*labels > 0) {
     //   // TODO(multy): sometimes values are not as expected
     //   SLOG(DEBUG) << "[Lidar Point Cloud Projection] Full label value: " << *labels;
-    //   SLOG(DEBUG) << "[Lidar Point Cloud Projection] Label higher 16 bits value: " <<(((*labels) & 0xFFFF0000) >> 16);
-    //   SLOG(DEBUG) << "[Lidar Point Cloud Projection] Label lower 16 bits value (instance ID): " << ((*labels) & 0xFFFF);
+    //   SLOG(DEBUG) << "[Lidar Point Cloud Projection] Label higher 16 bits value: "
+    //   <<(((*labels) & 0xFFFF0000) >> 16); SLOG(DEBUG) << "[Lidar Point Cloud
+    //   Projection] Label lower 16 bits value (instance ID): " << ((*labels) & 0xFFFF);
     //   SLOG(DEBUG) << "Hello";
     // }
-    
+
     const auto unknown = static_cast<uint32_t>(label_value) == unknown_label;
     const auto& color = unknown ? recolor.default_color : recolor.getColor(label_value);
     // annoyingly BGR order even if field is RGBA

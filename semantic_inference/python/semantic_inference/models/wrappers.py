@@ -32,12 +32,12 @@
 import dataclasses
 import os
 
+import cv2
 import einops
 import numpy as np
 import torch
 import torch.nn as nn
 import torchvision
-import cv2
 from spark_config import Config, register_config
 from torchvision.ops import box_convert
 
@@ -536,13 +536,16 @@ class GDSam2InstanceSegmenterWrapper(nn.Module):
         # convert the shape to (n, H, W)
         if masks.ndim == 4:
             masks = masks.squeeze(1)
-        
+
         # If needed, apply erosion to masks
         if self.erosion:
-            kernel = np.ones((self.config.erosion_kernel_size, self.config.erosion_kernel_size), np.uint8)
+            kernel = np.ones(
+                (self.config.erosion_kernel_size, self.config.erosion_kernel_size),
+                np.uint8,
+            )
             for i in range(masks.shape[0]):
                 masks[i] = cv2.erode(masks[i].astype(np.uint8), kernel, iterations=1)
-                
+
         # convert string labels to indexes based on the text prompt
         categories = []
         for label in labels:

@@ -16,7 +16,7 @@ launch:
   - arg: {name: colormap_path, default: $(find-pkg-share semantic_inference_ros)/config/hydra_object_gdsam_colors.csv, description: Visualization colormap}
   - arg: {name: image_topic, default: color/image_raw, description: Camera topic to use for backprojection coloring}
   # nodes
-  - node: # Decompress RGB stream
+  - node:  # Decompress RGB stream
       if: $(var compressed_rgb)
       pkg: image_transport
       exec: republish
@@ -27,7 +27,7 @@ launch:
       remap:
         - {from: in/compressed, to: $(var image_topic)/compressed}
         - {from: out, to: $(var image_topic)}
-  - pyenv_node: # 2D instance segmentation
+  - pyenv_node:  # 2D instance segmentation
       pkg: semantic_inference_ros
       exec: instance_segmentation_node
       name: semantic_inference
@@ -38,7 +38,7 @@ launch:
       args: >-
         --ros-args --log-level $(var log-level)
       remap:
-        - {from: color/image_raw, to: $(var image_topic)} 
+        - {from: color/image_raw, to: $(var image_topic)}
   - node:  # point cloud backprojection
       pkg: semantic_inference_ros
       exec: backprojection_node
