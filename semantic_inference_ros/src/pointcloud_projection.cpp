@@ -229,15 +229,6 @@ void recolorCloud(PointCloud2& output,
   while (labels != labels.end()) {
     // if instance IDs are used, extract the higher 16 bits for the semantic label
     const auto label_value = instance_id ? (((*labels) & 0xFFFF0000) >> 16) : *labels;
-    // if (*labels > 0) {
-    //   // TODO(multy): sometimes values are not as expected
-    //   SLOG(DEBUG) << "[Lidar Point Cloud Projection] Full label value: " << *labels;
-    //   SLOG(DEBUG) << "[Lidar Point Cloud Projection] Label higher 16 bits value: "
-    //   <<(((*labels) & 0xFFFF0000) >> 16); SLOG(DEBUG) << "[Lidar Point Cloud
-    //   Projection] Label lower 16 bits value (instance ID): " << ((*labels) & 0xFFFF);
-    //   SLOG(DEBUG) << "Hello";
-    // }
-
     const auto unknown = static_cast<uint32_t>(label_value) == unknown_label;
     const auto& color = unknown ? recolor.default_color : recolor.getColor(label_value);
     // annoyingly BGR order even if field is RGBA
@@ -343,9 +334,9 @@ bool projectSemanticImage(const ProjectionConfig& config,
       *label_out_iter = config.isAllowed(label_in) ? label_in : config.unknown_label;
       if (color_out_iter) {
         auto& curr_color_out = *color_out_iter;
-        curr_color_out[0] = 125;
-        curr_color_out[1] = 125;
-        curr_color_out[2] = 125;
+        curr_color_out[0] = 0;
+        curr_color_out[1] = 0;
+        curr_color_out[2] = 0;
         curr_color_out[3] = config.out_of_view_alpha;
       }
     }

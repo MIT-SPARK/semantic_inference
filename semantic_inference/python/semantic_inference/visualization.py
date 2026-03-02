@@ -36,9 +36,11 @@ import random
 from dataclasses import dataclass
 from typing import Any
 
+import cv2
 import distinctipy
 import matplotlib.colors
 import matplotlib.pyplot as plt
+import numpy as np
 import spark_config as sc
 from matplotlib.patches import Rectangle
 
@@ -313,3 +315,90 @@ def make_colormap_legend(
         )
 
     return fig
+
+
+def get_semantic_overlay_img(category_names, ret, img):
+    """
+    Process the result from instance segmenter and generate color image.
+    The returned color image contain bounding boxes, masks, and category labels.
+    """
+
+    categories = ret.categories
+    masks = ret.masks
+    boxes = ret.boxes
+    confidences = ret.confidences
+
+    # Convert RGB to BGR for OpenCV
+    vis_img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+
+    # Generate random colors for each class
+    np.random.seed(42)  # for consistent colors
+    colors = np.random.randint(0, 255, size=(len(category_names), 3), dtype=np.uint8)
+
+    # Overlay segmentation masks
+    if masks is not None:
+        for i, mask_tensor in enumerate(masks.data):
+            box = boxes[i]
+            cls = int(categories[i].cpu().numpy())
+
+            # Get color for the class
+            color = colors[cls].tolist()
+
+            # Get mask and resize it to the image dimensions
+            mask_np = mask_tensor.cpu().numpy().astype(np.uint8)
+            mask_resized = cv2.resize(
+                mask_np,
+                (vis_img_bgr.shape[1], vis_img_bgr.shape[0]),
+                interpolation=cv2.INTER_NEAREST,
+            )
+
+            # Find contours to create a mask overlay
+            contours, _ = cv2.findContours(
+                mask_resized, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+            )
+
+            # Create a transparent overlay
+            overlay = vis_img_bgr.copy()
+            cv2.drawContours(overlay, contours, -1, color, -1)
+
+            # Blend the overlay with the original image
+            alpha = 0.5
+            vis_img_bgr = cv2.addWeighted(overlay, alpha, vis_img_bgr, 1 - alpha, 0)
+
+    # Draw bounding boxes and labels
+    for i, box in enumerate(boxes):
+        x1, y1, x2, y2 = map(int, box.cpu().numpy())
+        conf = confidences[i].cpu().numpy()
+        cls = int(categories[i].cpu().numpy())
+        label = f"{category_names[cls]} {conf:.2f}"
+
+        color = colors[cls].tolist()
+
+        # Draw bounding box
+        cv2.rectangle(vis_img_bgr, (x1, y1), (x2, y2), color, 2)
+
+        # Put label above the bounding box
+        (label_width, label_height), baseline = cv2.getTextSize(
+            label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2
+        )
+        cv2.rectangle(
+            vis_img_bgr,
+            (x1, y1 - label_height - 10),
+            (x1 + label_width, y1),
+            color,
+            -1,
+        )
+        cv2.putText(
+            vis_img_bgr,
+            label,
+            (x1, y1 - 5),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.5,
+            (255, 255, 255),
+            1,
+        )
+
+    # Convert BGR back to RGB for displaying with matplotlib
+    vis_img_rgb = cv2.cvtColor(vis_img_bgr, cv2.COLOR_BGR2RGB)
+
+    return vis_img_rgb

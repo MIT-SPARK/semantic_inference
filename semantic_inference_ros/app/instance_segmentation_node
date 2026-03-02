@@ -4,7 +4,6 @@
 import pathlib
 from dataclasses import dataclass, field
 
-import cv2
 import numpy as np
 import rclpy
 import spark_config as sc
@@ -14,6 +13,7 @@ from sensor_msgs.msg import Image
 
 import semantic_inference.models as models
 import semantic_inference_ros
+from semantic_inference.visualization import get_semantic_overlay_img
 from semantic_inference_ros import Conversions, ImageWorkerConfig
 
 
@@ -24,10 +24,10 @@ class InstanceSegmentationNodeConfig(sc.Config):
     worker: ImageWorkerConfig = field(default_factory=ImageWorkerConfig)
     model: models.InstanceSegmenterConfig = field(
         default_factory=models.InstanceSegmenterConfig
-    )  # create InstanceSegmenterConfig in models
-    # visualizer: Any = sc.config_field(
-    #     "feature_visualizer", default="component", required=False
-    # )
+    )
+    visualize_semantic_img: bool = sc.config_field(
+        "visualize_semantic_img", default=True, required=False
+    )
 
 
 class InstanceSegmentationNode(Node):
@@ -53,18 +53,12 @@ class InstanceSegmentationNode(Node):
         self._model.eval()  # TODO: causing issue with yolo model
         self.get_logger().info("Finished initializing!")
 
-        self._pub = self.create_publisher(
-            Image, "semantic/image_raw", 1
-        )  # publish segmented image
+        self._pub = self.create_publisher(Image, "semantic/image_raw", 1)
         self._worker = semantic_inference_ros.ImageWorker(
             self, self.config.worker, "color/image_raw", self._spin_once
-        )  # put image in queue for processing
+        )
 
-        # TODO(multy): proper visualizer classs needed?
-        self._visualizer = "place_holder"
-        # self._visualizer = self.config.visualizer.create()
-        if self._visualizer is not None:
-            # TODO: write proper visualizer for instance segmentation
+        if self.config.visualize_semantic_img:
             self._overlay_pub = self.create_publisher(
                 Image, "semantic_overlay/image_raw", 1
             )
@@ -84,8 +78,9 @@ class InstanceSegmentationNode(Node):
         self._pub.publish(msg)
         self.get_logger().debug("Published instance segmentation image.")
 
-        if self._visualizer is not None:
-            color_img = self.visualizer_call(ret, img)
+        if self.config.visualize_semantic_img:
+            category_names = self._model.category_names
+            color_img = get_semantic_overlay_img(category_names, ret, img)
             self._overlay_pub.publish(
                 Conversions.to_image_msg(header, color_img, encoding="rgb8")
             )
@@ -93,98 +88,6 @@ class InstanceSegmentationNode(Node):
     def stop(self):
         """Stop the underlying image worker."""
         self._worker.stop()
-
-    def visualizer_call(self, ret, img):
-        """
-        Process the result from yolo instance segmenter and generate color image.
-        The returned color image contain bounding boxes, masks, and category labels.
-        """
-
-        categories = ret.categories
-        masks = ret.masks
-        boxes = ret.boxes
-        confidences = ret.confidences
-
-        # TODO(multy): place holder directly from model,
-        # need to be replace by proper yaml
-        category_names = self._model.category_names
-
-        # Convert RGB to BGR for OpenCV
-        vis_img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-
-        # Generate random colors for each class
-        np.random.seed(42)  # for consistent colors
-        colors = np.random.randint(
-            0, 255, size=(len(category_names), 3), dtype=np.uint8
-        )
-
-        # Overlay segmentation masks
-        if masks is not None:
-            for i, mask_tensor in enumerate(masks.data):
-                box = boxes[i]
-                cls = int(categories[i].cpu().numpy())
-
-                # Get color for the class
-                color = colors[cls].tolist()
-
-                # Get mask and resize it to the image dimensions
-                mask_np = mask_tensor.cpu().numpy().astype(np.uint8)
-                mask_resized = cv2.resize(
-                    mask_np,
-                    (vis_img_bgr.shape[1], vis_img_bgr.shape[0]),
-                    interpolation=cv2.INTER_NEAREST,
-                )
-
-                # Find contours to create a mask overlay
-                contours, _ = cv2.findContours(
-                    mask_resized, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
-                )
-
-                # Create a transparent overlay
-                overlay = vis_img_bgr.copy()
-                cv2.drawContours(overlay, contours, -1, color, -1)
-
-                # Blend the overlay with the original image
-                alpha = 0.5
-                vis_img_bgr = cv2.addWeighted(overlay, alpha, vis_img_bgr, 1 - alpha, 0)
-
-        # Draw bounding boxes and labels
-        for i, box in enumerate(boxes):
-            x1, y1, x2, y2 = map(int, box.cpu().numpy())
-            conf = confidences[i].cpu().numpy()
-            cls = int(categories[i].cpu().numpy())
-            label = f"{category_names[cls]} {conf:.2f}"
-
-            color = colors[cls].tolist()
-
-            # Draw bounding box
-            cv2.rectangle(vis_img_bgr, (x1, y1), (x2, y2), color, 2)
-
-            # Put label above the bounding box
-            (label_width, label_height), baseline = cv2.getTextSize(
-                label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2
-            )
-            cv2.rectangle(
-                vis_img_bgr,
-                (x1, y1 - label_height - 10),
-                (x1 + label_width, y1),
-                color,
-                -1,
-            )
-            cv2.putText(
-                vis_img_bgr,
-                label,
-                (x1, y1 - 5),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
-                (255, 255, 255),
-                1,
-            )
-
-        # Convert BGR back to RGB for displaying with matplotlib
-        vis_img_rgb = cv2.cvtColor(vis_img_bgr, cv2.COLOR_BGR2RGB)
-
-        return vis_img_rgb
 
 
 def main():

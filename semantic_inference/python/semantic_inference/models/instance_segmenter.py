@@ -47,7 +47,7 @@ def _map_opt(values, f):
 class Results:
     """Openset Segmentation Results."""
 
-    # all on cuda/tensor device? TODO: Maybe should move to cpu by default
+    # Expecting all tensor to be on cpu
     masks: torch.Tensor  # (n, H, W), torch.bool
     boxes: torch.Tensor  # (n, 4) xyxy format, torch.float32
     categories: torch.Tensor  # (n,), torch.float32/int64 (doesn't matter)
@@ -88,8 +88,8 @@ class Results:
 class InstanceSegmenterConfig(Config):
     """Main config for instance segmenter."""
 
-    instance_model: Any = config_field("instance_model", default="yolov11")
     # relevant configs (model path, model weights) for the model
+    instance_model: Any = config_field("instance_model", default="yolov11")
 
 
 class InstanceSegmenter(nn.Module):

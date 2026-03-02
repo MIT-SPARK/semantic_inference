@@ -356,6 +356,7 @@ class Yolov11InstanceSegmenterWrapper(nn.Module):
 
         self.config = config
         self.model = YOLO(config.model_name)
+        self.confidence_threshold = config.confidence_threshold
 
     def eval(self):
         """override eval to avoid issues with yolo model"""
@@ -380,10 +381,16 @@ class Yolov11InstanceSegmenterWrapper(nn.Module):
             return None, None, None, None
 
         categories = result.boxes.cls.cpu()  # int8
-        masks = result.masks.data.to(torch.bool).cpu()  #
+        masks = result.masks.data.to(torch.bool).cpu()
         boxes = result.boxes.xyxy.cpu()  # float32
         confidences = result.boxes.conf.cpu()  # float32
-        # assume the instance id is the index in the result?
+
+        # filter by confidence threshold
+        mask_indices = confidences > self.confidence_threshold
+        categories = categories[mask_indices]
+        masks = masks[mask_indices]
+        boxes = boxes[mask_indices]
+        confidences = confidences[mask_indices]
         return categories, masks, boxes, confidences
 
 
@@ -395,6 +402,7 @@ class Yolov11InstanceSegmenterConfig(Config):
     """Configuration for Yolov11 instance segmenter."""
 
     model_name: str = "yolo11n-seg.pt"
+    confidence_threshold: float = 0.25
 
     @classmethod
     def load(cls, filepath):
