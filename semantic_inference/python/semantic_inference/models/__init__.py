@@ -30,6 +30,7 @@
 import torch
 
 from semantic_inference.models.feature_visualizers import *
+from semantic_inference.models.instance_segmenter import *
 from semantic_inference.models.mask_functions import *
 from semantic_inference.models.openset_segmenter import *
 from semantic_inference.models.patch_extractor import *

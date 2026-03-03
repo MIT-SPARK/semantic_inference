@@ -1,0 +1,111 @@
+#!/usr/bin/env python3
+"""Node that runs openset segmentation."""
+
+import pathlib
+from dataclasses import dataclass, field
+
+import numpy as np
+import rclpy
+import spark_config as sc
+import torch
+from rclpy.node import Node
+from sensor_msgs.msg import Image
+
+import semantic_inference.models as models
+import semantic_inference_ros
+from semantic_inference.visualization import get_semantic_overlay_img
+from semantic_inference_ros import Conversions, ImageWorkerConfig
+
+
+@dataclass
+class InstanceSegmentationNodeConfig(sc.Config):
+    """Configuration for ClipPublisherNode."""
+
+    worker: ImageWorkerConfig = field(default_factory=ImageWorkerConfig)
+    model: models.InstanceSegmenterConfig = field(
+        default_factory=models.InstanceSegmenterConfig
+    )
+    visualize_semantic_img: bool = sc.config_field(
+        "visualize_semantic_img", default=True, required=False
+    )
+
+
+class InstanceSegmentationNode(Node):
+    """Node to run instance segmentation."""
+
+    def __init__(self):
+        """Start subscriber and publisher."""
+        super().__init__("instance_segmentation_node")
+        config_path = (
+            self.declare_parameter("config_path", "").get_parameter_value().string_value
+        )
+        config_path = pathlib.Path(config_path).expanduser().absolute()
+        if not config_path.exists() and config_path != "":
+            self.get_logger().warn(f"config path '{config_path}' does not exist!")
+            self.config = InstanceSegmentationNodeConfig()
+        else:
+            self.get_logger().info(f"Loading config from '{config_path}'")
+            self.config = sc.Config.load(InstanceSegmentationNodeConfig, config_path)
+
+        self.get_logger().info(f"Initializing with {self.config.show()}")
+        device = models.default_device()
+        self._model = models.InstanceSegmenter(self.config.model).to(device)
+        self._model.eval()  # TODO: causing issue with yolo model
+        self.get_logger().info("Finished initializing!")
+
+        self._pub = self.create_publisher(Image, "semantic/image_raw", 1)
+        self._worker = semantic_inference_ros.ImageWorker(
+            self, self.config.worker, "color/image_raw", self._spin_once
+        )
+
+        if self.config.visualize_semantic_img:
+            self._overlay_pub = self.create_publisher(
+                Image, "semantic_overlay/image_raw", 1
+            )
+
+    def _spin_once(self, header, img):
+        with torch.no_grad():
+            ret = self._model.segment(img, is_rgb_order=True).cpu()
+
+        if ret.masks is None:
+            self.get_logger().debug("No masks detected in the image.")
+            return
+
+        instance_seg_img = ret.instance_seg_img
+        # Convert to int32 to match 32SC1 encoding expected by cv_bridge
+        instance_seg_img = instance_seg_img.astype(np.int32)
+        msg = Conversions.to_image_msg(header, instance_seg_img, encoding="32SC1")
+        self._pub.publish(msg)
+        self.get_logger().debug("Published instance segmentation image.")
+
+        if self.config.visualize_semantic_img:
+            category_names = self._model.category_names
+            color_img = get_semantic_overlay_img(category_names, ret, img)
+            self._overlay_pub.publish(
+                Conversions.to_image_msg(header, color_img, encoding="rgb8")
+            )
+
+    def stop(self):
+        """Stop the underlying image worker."""
+        self._worker.stop()
+
+
+def main():
+    """Start a node."""
+    rclpy.init()
+
+    node = None
+    try:
+        node = InstanceSegmentationNode()
+        semantic_inference_ros.setup_ros_log_forwarding(node)
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        rclpy.try_shutdown()
+        if node is not None:
+            node.stop()
+
+
+if __name__ == "__main__":
+    main()

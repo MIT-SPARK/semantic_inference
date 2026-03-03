@@ -31,6 +31,9 @@ struct ProjectionConfig {
   std::unordered_map<uint32_t, uint32_t> input_remapping;
   //! Alpha value for out-of-view point colors
   uint16_t out_of_view_alpha = 0;
+  //! Whether the input labels are in the form of instance IDs (16 bit semantics + 16
+  //! bit instance)
+  bool instance_id = false;
 
   bool isOverride(uint32_t label) const { return override_labels.count(label); }
   bool isAllowed(uint32_t label) const { return allowed_labels.count(label); }
