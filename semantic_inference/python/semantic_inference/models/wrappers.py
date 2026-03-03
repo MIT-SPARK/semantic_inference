@@ -355,7 +355,10 @@ class Yolov11InstanceSegmenterWrapper(nn.Module):
         from ultralytics import YOLO
 
         self.config = config
-        self.model = YOLO(config.model_name)
+        model_weights = os.path.join(
+            path_to_dot_semantic_inference(), f"{config.model_name}"
+        )
+        self.model = YOLO(model_weights)
         self.confidence_threshold = config.confidence_threshold
 
     def eval(self):
