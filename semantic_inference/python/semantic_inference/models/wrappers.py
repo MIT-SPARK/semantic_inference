@@ -427,9 +427,9 @@ class GDSam2InstanceSegmenterWrapper(nn.Module):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # Enable TF32 for faster fp32 matrix ops on Ampere+ GPUs (Blackwell: major=10)
-        # if torch.cuda.is_available() and torch.cuda.get_device_properties(0).major >= 8:
-        #     torch.backends.cuda.matmul.allow_tf32 = True
-        #     torch.backends.cudnn.allow_tf32 = True
+        if torch.cuda.is_available() and torch.cuda.get_device_properties(0).major >= 8:
+            torch.backends.cuda.matmul.allow_tf32 = True
+            torch.backends.cudnn.allow_tf32 = True
 
         self.text_prompt = config.text_prompt
         self.multimask_output = config.multimask_output
@@ -524,7 +524,7 @@ class GDSam2InstanceSegmenterWrapper(nn.Module):
         h, w, _ = img.shape
         boxes = boxes * torch.Tensor([w, h, w, h])
         input_boxes = box_convert(boxes=boxes, in_fmt="cxcywh", out_fmt="xyxy").numpy()
-        
+
         """
         Below is the comment from the official sam2 demo:
         FIXME: figure how does this influence the G-DINO model
@@ -536,24 +536,15 @@ class GDSam2InstanceSegmenterWrapper(nn.Module):
             torch.backends.cudnn.allow_tf32 = True
         """
 
-        # SAM 2 predicts mask
-        self.sam2_predictor.set_image(img)
-        masks, scores, logits = self.sam2_predictor.predict(
-            point_coords=None,
-            point_labels=None,
-            box=input_boxes,
-            multimask_output=self.multimask_output,
-        )
-
         # SAM2 predicts mask — bfloat16 autocast scoped to SAM2 only (leaves GD in fp32)
-        # with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16):
-        #     self.sam2_predictor.set_image(img)
-        #     masks, scores, logits = self.sam2_predictor.predict(
-        #         point_coords=None,
-        #         point_labels=None,
-        #         box=input_boxes,
-        #         multimask_output=self.multimask_output,
-        #     )
+        with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16):
+            self.sam2_predictor.set_image(img)
+            masks, scores, logits = self.sam2_predictor.predict(
+                point_coords=None,
+                point_labels=None,
+                box=input_boxes,
+                multimask_output=self.multimask_output,
+            )
 
         # Sample best according to scores if multimask output
         if self.multimask_output:
