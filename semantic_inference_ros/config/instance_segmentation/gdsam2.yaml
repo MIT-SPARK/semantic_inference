@@ -6,8 +6,8 @@ model:
     text_prompt: unknown. green chair. van. fire hydrant. ground. grass. sand. sidewalk. dock. road. path. ignore. building. shelter. signal. rock. fence. boat. sign. hill. bridge. wall. floor. ceiling.
       door. stairs. pole. rail. structure. window. surface. flora. flower. bed. box. storage. barrel. bag. basket. ignore. flag. decor. light. appliance. trash. bicycle. food. clothes.
     # text_prompt: unknown. adirondack chair. van. fire hydrant.
-    sam2_checkpoint: sam2.1_hiera_large.pt
-    sam2_model_config: sam2.1_hiera_l.yaml
+    sam2_checkpoint: sam2.1_hiera_small.pt
+    sam2_model_config: sam2.1_hiera_s.yaml
     grounding_dino_config: GroundingDINO_SwinT_OGC.py
     grounding_dino_checkpoint: groundingdino_swint_ogc.pth
     box_threshold: 0.45
