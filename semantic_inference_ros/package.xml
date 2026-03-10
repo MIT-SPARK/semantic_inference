@@ -24,6 +24,7 @@
   <depend>tf2_eigen</depend>
   <exec_depend>rclpy</exec_depend>
   <exec_depend>image_transport_plugins</exec_depend>
+  <exec_depend>ros_system_monitor_msgs</exec_depend>
 
   <test_depend>pcl_conversions</test_depend>
   <test_depend>ament_cmake_gtest</test_depend>

@@ -9,6 +9,7 @@ import rclpy
 import spark_config as sc
 import torch
 from rclpy.node import Node
+from ros_system_monitor_msgs.msg import NodeInfoMsg
 from sensor_msgs.msg import Image
 
 import semantic_inference.models as models
@@ -53,6 +54,10 @@ class InstanceSegmentationNode(Node):
         self._model.eval()  # TODO: causing issue with yolo model
         self.get_logger().info("Finished initializing!")
 
+        self._last_inference_time = None
+        self._status_pub = self.create_publisher(NodeInfoMsg, "~/status", 1)
+        self._hb_timer = self.create_timer(0.1, self._hb_callback)
+
         self._pub = self.create_publisher(Image, "semantic/image_raw", 1)
         self._worker = semantic_inference_ros.ImageWorker(
             self, self.config.worker, "color/image_raw", self._spin_once
@@ -76,6 +81,7 @@ class InstanceSegmentationNode(Node):
         instance_seg_img = instance_seg_img.astype(np.int32)
         msg = Conversions.to_image_msg(header, instance_seg_img, encoding="32SC1")
         self._pub.publish(msg)
+        self._last_inference_time = self.get_clock().now().nanoseconds * 1e-9
         self.get_logger().debug("Published instance segmentation image.")
 
         if self.config.visualize_semantic_img:
@@ -84,6 +90,22 @@ class InstanceSegmentationNode(Node):
             self._overlay_pub.publish(
                 Conversions.to_image_msg(header, color_img, encoding="rgb8")
             )
+
+    def _hb_callback(self):
+        msg = NodeInfoMsg()
+        msg.nickname = "instance_seg"
+        msg.node_name = self.get_fully_qualified_name()
+        now = self.get_clock().now().nanoseconds * 1e-9
+        if self._last_inference_time is None:
+            msg.status = NodeInfoMsg.STARTUP
+            msg.notes = "Waiting for first image."
+        elif now - self._last_inference_time > 10.0:
+            msg.status = NodeInfoMsg.WARNING
+            msg.notes = f"No inference for {now - self._last_inference_time:.1f}s."
+        else:
+            msg.status = NodeInfoMsg.NOMINAL
+            msg.notes = "Running."
+        self._status_pub.publish(msg)
 
     def stop(self):
         """Stop the underlying image worker."""
