@@ -352,14 +352,22 @@ class Yolov11InstanceSegmenterWrapper(nn.Module):
     def __init__(self, config):
         """Load Yolov11 model."""
         super().__init__()
-        from ultralytics import YOLO
 
         self.config = config
+        self.confidence_threshold = config.confidence_threshold
+        self.min_segmentation_size = config.min_segmentation_size
+        self.overlap_merge_iou = config.overlap_merge_iou
+
+        self.init_model()
+
+    def init_model(self):
+        """Initialize the model."""
+        from ultralytics import YOLO
+
         model_weights = os.path.join(
-            path_to_dot_semantic_inference(), f"{config.model_name}"
+            path_to_dot_semantic_inference(), f"{self.config.model_name}"
         )
         self.model = YOLO(model_weights)
-        self.confidence_threshold = config.confidence_threshold
 
     def eval(self):
         """override eval to avoid issues with yolo model"""
@@ -379,21 +387,31 @@ class Yolov11InstanceSegmenterWrapper(nn.Module):
 
     def forward(self, img):
         """Segment image."""
-        result = self.model(img)[0]  # assume batch size 1
+        result = self.model(
+            img,
+            conf=self.confidence_threshold,
+            imgsz=(img.shape[0], img.shape[1]),
+            # Set True to maintain original image size for masks,
+            # required for hydra, but slow down the model
+            retina_masks=True,
+            iou=self.overlap_merge_iou,
+        )[0]  # assume batch size 1
         if result.masks is None:
             return None, None, None, None
 
-        categories = result.boxes.cls.cpu()  # int8
+        categories = result.boxes.cls.to(torch.int).cpu()  # int8
         masks = result.masks.data.to(torch.bool).cpu()
         boxes = result.boxes.xyxy.cpu()  # float32
         confidences = result.boxes.conf.cpu()  # float32
 
-        # filter by confidence threshold
-        mask_indices = confidences > self.confidence_threshold
-        categories = categories[mask_indices]
-        masks = masks[mask_indices]
-        boxes = boxes[mask_indices]
-        confidences = confidences[mask_indices]
+        # filter out small masks
+        if self.min_segmentation_size > 0:
+            mask_sizes = masks.sum(dim=(1, 2))  # number of pixels in each mask
+            size_indices = mask_sizes > self.min_segmentation_size
+            categories = categories[size_indices]
+            masks = masks[size_indices]
+            boxes = boxes[size_indices]
+            confidences = confidences[size_indices]
         return categories, masks, boxes, confidences
 
 
@@ -406,11 +424,47 @@ class Yolov11InstanceSegmenterConfig(Config):
 
     model_name: str = "yolo11n-seg.pt"
     confidence_threshold: float = 0.25
+    min_segmentation_size: int = 0  # number of pixels to filter out small masks
+    overlap_merge_iou: float = 0.7  # merging overlaping object detection
 
     @classmethod
     def load(cls, filepath):
         """Load config from file."""
         return Config.load(cls, filepath)
+
+
+class YoloeInstanceSegmenterWrapper(Yolov11InstanceSegmenterWrapper):
+    """Yoloe instance segmentation wrapper."""
+
+    def __init__(self, config):
+        super().__init__(config)
+
+    def init_model(self):
+        """Initialize the model."""
+        from ultralytics import YOLOE
+
+        model_weights = os.path.join(
+            path_to_dot_semantic_inference(), f"{self.config.model_name}"
+        )
+        self.model = YOLOE(model_weights)
+
+        if not self.config.text_prompt:
+            raise ValueError(
+                "text_prompt must be provided for YoloeInstanceSegmenterWrapper"
+            )
+
+        self.model.set_classes(self.config.text_prompt)
+
+
+@register_config(
+    "instance_model", name="yoloe", constructor=YoloeInstanceSegmenterWrapper
+)
+@dataclasses.dataclass
+class YoloeInstanceSegmenterConfig(Yolov11InstanceSegmenterConfig):
+    """Configuration for Yoloe instance segmenter."""
+
+    model_name: str = "yoloe-26l-seg.pt"
+    text_prompt: list[str] = dataclasses.field(default_factory=list)
 
 
 class GDSam2InstanceSegmenterWrapper(nn.Module):
