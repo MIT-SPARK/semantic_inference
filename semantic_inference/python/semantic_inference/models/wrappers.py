@@ -346,23 +346,25 @@ class OpenClipConfig(Config):
         return Config.load(cls, filepath)
 
 
-class Yolov11InstanceSegmenterWrapper(nn.Module):
-    """Yolov11 instance segmentation wrapper."""
+class YoloInstanceSegmenterBase(nn.Module):
+    """Base class for YOLO instance segmentation wrappers.
+
+    Subclasses must assign self.model in their __init__.
+    """
 
     def __init__(self, config):
-        """Load Yolov11 model."""
+        """Store shared configuration."""
         super().__init__()
-        from ultralytics import YOLO
-
         self.config = config
-        model_weights = os.path.join(
-            path_to_dot_semantic_inference(), f"{config.model_name}"
-        )
-        self.model = YOLO(model_weights)
         self.confidence_threshold = config.confidence_threshold
+        self.min_segmentation_size = config.min_segmentation_size
+        self.overlap_merge_iou = config.overlap_merge_iou
+        self.model_weights = os.path.join(
+            path_to_dot_semantic_inference(), f"{self.config.model_name}"
+        )
 
     def eval(self):
-        """override eval to avoid issues with yolo model"""
+        """Override eval to avoid issues with yolo model."""
         self.model.model.eval()
 
     @property
@@ -370,47 +372,104 @@ class Yolov11InstanceSegmenterWrapper(nn.Module):
         """Get category names."""
         return self.model.names
 
-    @classmethod
-    def construct(cls, **kwargs):
-        """Load model from configuration dictionary."""
-        config = Yolov11InstanceSegmenterConfig()
-        config.update(kwargs)
-        return cls(config)
-
     def forward(self, img):
         """Segment image."""
-        result = self.model(img)[0]  # assume batch size 1
+        result = self.model(
+            img,
+            conf=self.confidence_threshold,
+            imgsz=(img.shape[0], img.shape[1]),
+            # Set True to maintain original image size for masks,
+            # required for hydra, but slow down the model
+            retina_masks=True,
+            iou=self.overlap_merge_iou,
+        )[0]  # assume batch size 1
         if result.masks is None:
-            return None, None, None, None
+            return None, None, None, None, (img.shape[0], img.shape[1])
 
-        categories = result.boxes.cls.cpu()  # int8
+        categories = result.boxes.cls.to(torch.int).cpu()  # int8
         masks = result.masks.data.to(torch.bool).cpu()
         boxes = result.boxes.xyxy.cpu()  # float32
         confidences = result.boxes.conf.cpu()  # float32
 
-        # filter by confidence threshold
-        mask_indices = confidences > self.confidence_threshold
-        categories = categories[mask_indices]
-        masks = masks[mask_indices]
-        boxes = boxes[mask_indices]
-        confidences = confidences[mask_indices]
-        return categories, masks, boxes, confidences
+        # filter out small masks
+        if self.min_segmentation_size > 0:
+            mask_sizes = masks.sum(dim=(1, 2))  # number of pixels in each mask
+            size_indices = mask_sizes > self.min_segmentation_size
+            categories = categories[size_indices]
+            masks = masks[size_indices]
+            boxes = boxes[size_indices]
+            confidences = confidences[size_indices]
+        return categories, masks, boxes, confidences, (masks.shape[1], masks.shape[2])
 
 
-@register_config(
-    "instance_model", name="yolov11", constructor=Yolov11InstanceSegmenterWrapper
-)
 @dataclasses.dataclass
-class Yolov11InstanceSegmenterConfig(Config):
-    """Configuration for Yolov11 instance segmenter."""
+class YoloInstanceSegmenterBaseConfig(Config):
+    """Shared configuration for YOLO instance segmenters."""
 
-    model_name: str = "yolo11n-seg.pt"
+    model_name: str = ""
     confidence_threshold: float = 0.25
+    min_segmentation_size: int = 0  # number of pixels to filter out small masks
+    overlap_merge_iou: float = 0.7  # merging overlapping object detection
 
     @classmethod
     def load(cls, filepath):
         """Load config from file."""
         return Config.load(cls, filepath)
+
+
+class YolosegInstanceSegmenterWrapper(YoloInstanceSegmenterBase):
+    """Yolov11 instance segmentation wrapper."""
+
+    def __init__(self, config):
+        """Load Yolov11 model."""
+        from ultralytics import YOLO
+
+        super().__init__(config)
+        self.model = YOLO(self.model_weights)
+
+    @classmethod
+    def construct(cls, **kwargs):
+        """Load model from configuration dictionary."""
+        config = YolosegInstanceSegmenterConfig()
+        config.update(kwargs)
+        return cls(config)
+
+
+@register_config(
+    "instance_model", name="yolo-seg", constructor=YolosegInstanceSegmenterWrapper
+)
+@dataclasses.dataclass
+class YolosegInstanceSegmenterConfig(YoloInstanceSegmenterBaseConfig):
+    """Configuration for YOLO segmentation instance segmenter."""
+
+    model_name: str = "yolo11n-seg.pt"
+
+
+class YoloeInstanceSegmenterWrapper(YoloInstanceSegmenterBase):
+    """Yoloe instance segmentation wrapper."""
+
+    def __init__(self, config):
+        from ultralytics import YOLOE
+
+        if not config.text_prompt:
+            raise ValueError(
+                "text_prompt must be provided for YoloeInstanceSegmenterWrapper"
+            )
+
+        super().__init__(config)
+        self.model = YOLOE(self.model_weights)
+        self.model.set_classes(self.config.text_prompt)
+
+
+@register_config(
+    "instance_model", name="yoloe", constructor=YoloeInstanceSegmenterWrapper
+)
+@dataclasses.dataclass
+class YoloeInstanceSegmenterConfig(YoloInstanceSegmenterBaseConfig):
+    """Configuration for Yoloe instance segmenter."""
+
+    model_name: str = "yoloe-26m-seg.pt"
+    text_prompt: list[str] = dataclasses.field(default_factory=list)
 
 
 class GDSam2InstanceSegmenterWrapper(nn.Module):
@@ -425,6 +484,12 @@ class GDSam2InstanceSegmenterWrapper(nn.Module):
 
         self.config = config
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        # Enable TF32 for faster fp32 matrix ops on Ampere+ GPUs (Blackwell: major=10)
+        if torch.cuda.is_available() and torch.cuda.get_device_properties(0).major >= 8:
+            torch.backends.cuda.matmul.allow_tf32 = True
+            torch.backends.cudnn.allow_tf32 = True
+
         self.text_prompt = config.text_prompt
         self.multimask_output = config.multimask_output
         self.erosion = config.erosion
@@ -512,7 +577,7 @@ class GDSam2InstanceSegmenterWrapper(nn.Module):
 
         # if nothing detected
         if boxes.shape[0] == 0:
-            return None, None, None, None
+            return None, None, None, None, (img.shape[0], img.shape[1])
 
         # process the box prompt for SAM 2
         h, w, _ = img.shape
@@ -530,14 +595,15 @@ class GDSam2InstanceSegmenterWrapper(nn.Module):
             torch.backends.cudnn.allow_tf32 = True
         """
 
-        # SAM 2 predicts mask
-        self.sam2_predictor.set_image(img)
-        masks, scores, logits = self.sam2_predictor.predict(
-            point_coords=None,
-            point_labels=None,
-            box=input_boxes,
-            multimask_output=self.multimask_output,
-        )
+        # SAM2 predicts mask — bfloat16 autocast scoped to SAM2 only (leaves GD in fp32)
+        with torch.autocast(device_type=self.device.type, dtype=torch.bfloat16):
+            self.sam2_predictor.set_image(img)
+            masks, scores, logits = self.sam2_predictor.predict(
+                point_coords=None,
+                point_labels=None,
+                box=input_boxes,
+                multimask_output=self.multimask_output,
+            )
 
         # Sample best according to scores if multimask output
         if self.multimask_output:
@@ -575,7 +641,7 @@ class GDSam2InstanceSegmenterWrapper(nn.Module):
         # use xyxy boxes
         boxes = torch.tensor(input_boxes)
 
-        return categories, masks, boxes, confidences
+        return categories, masks, boxes, confidences, (masks.shape[1], masks.shape[2])
 
 
 @register_config(

@@ -328,6 +328,10 @@ def get_semantic_overlay_img(category_names, ret, img):
     boxes = ret.boxes
     confidences = ret.confidences
 
+    if masks is None:
+        # no bounding boxes to draw
+        return img
+
     # Convert RGB to BGR for OpenCV
     vis_img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
 

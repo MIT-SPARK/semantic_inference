@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Node that runs openset segmentation."""
 
+import collections
+import json
 import pathlib
+import time
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -10,6 +13,7 @@ import spark_config as sc
 import torch
 from rclpy.node import Node
 from sensor_msgs.msg import Image
+from std_msgs.msg import String
 
 import semantic_inference.models as models
 import semantic_inference_ros
@@ -53,6 +57,11 @@ class InstanceSegmentationNode(Node):
         self._model.eval()  # TODO: causing issue with yolo model
         self.get_logger().info("Finished initializing!")
 
+        self._last_inference_time = None
+        self._inference_times_ms = collections.deque(maxlen=30)
+        self._status_pub = self.create_publisher(String, "~/status", 1)
+        self._hb_timer = self.create_timer(0.1, self._hb_callback)
+
         self._pub = self.create_publisher(Image, "semantic/image_raw", 1)
         self._worker = semantic_inference_ros.ImageWorker(
             self, self.config.worker, "color/image_raw", self._spin_once
@@ -64,18 +73,25 @@ class InstanceSegmentationNode(Node):
             )
 
     def _spin_once(self, header, img):
+        self.get_logger().debug(f"recived image of size: {img.shape}")
+        t0 = time.monotonic()
         with torch.no_grad():
-            ret = self._model.segment(img, is_rgb_order=True).cpu()
+            ret = self._model.segment(img, is_rgb_order=True)
+        self._inference_times_ms.append((time.monotonic() - t0) * 1e3)
 
         if ret.masks is None:
             self.get_logger().debug("No masks detected in the image.")
-            return
+        else:
+            self.get_logger().debug("get image size: " + str(ret.img_shape))
+            self.get_logger().debug(f"result category type: {ret.categories.dtype}")
 
+        # get 32 bit instance + cateogry img, all 0 if no box detected
         instance_seg_img = ret.instance_seg_img
         # Convert to int32 to match 32SC1 encoding expected by cv_bridge
         instance_seg_img = instance_seg_img.astype(np.int32)
         msg = Conversions.to_image_msg(header, instance_seg_img, encoding="32SC1")
         self._pub.publish(msg)
+        self._last_inference_time = self.get_clock().now().nanoseconds * 1e-9
         self.get_logger().debug("Published instance segmentation image.")
 
         if self.config.visualize_semantic_img:
@@ -84,6 +100,26 @@ class InstanceSegmentationNode(Node):
             self._overlay_pub.publish(
                 Conversions.to_image_msg(header, color_img, encoding="rgb8")
             )
+
+    def _hb_callback(self):
+        record = {
+            "nickname": "instance_seg",
+            "node_name": self.get_fully_qualified_name(),
+        }
+        now = self.get_clock().now().nanoseconds * 1e-9
+        if self._last_inference_time is None:
+            record["status"] = "STARTUP"
+            record["note"] = "Waiting for first image."
+        elif now - self._last_inference_time > 10.0:
+            record["status"] = "WARNING"
+            record["note"] = f"No inference for {now - self._last_inference_time:.1f}s."
+        else:
+            record["status"] = "NOMINAL"
+            avg_ms = sum(self._inference_times_ms) / len(self._inference_times_ms)
+            record["note"] = f"Average inference: {avg_ms:.1f} ms"
+        msg = String()
+        msg.data = json.dumps(record)
+        self._status_pub.publish(msg)
 
     def stop(self):
         """Stop the underlying image worker."""

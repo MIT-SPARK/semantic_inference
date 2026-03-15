@@ -1,0 +1,8 @@
+---
+model:
+  instance_model:
+    type: yoloe
+    model_name: yoloe-26m-seg.pt
+    text_prompt: [ignore, chair, cone, bag]
+    confidence_threshold: 0.1
+    min_segmentation_size: 0

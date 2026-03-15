@@ -25,7 +25,7 @@ source <PATH_TO_ENVIRONMENT>/bin/activate
 pip install ./semantic_inference
 ```
 
-The above setup allows you to use `yolov11`, in order to use `Grounded Sam 2`, we have to manually install it.
+The above setup allows you to use `yolo instance segmentation`, in order to use `Grounded Sam 2`, we have to manually install it.
 ```shell
 # cd to your favorite path, we can default to `~/.semantic_inference/`
 git clone -b more_gpu https://github.com/MultyXu/Grounded-SAM-2.git
@@ -35,7 +35,9 @@ And follow the `README.md` in the cloned repo to install gdsam2.
 ## Setup models
 For `Grounded Sam 2`, put (or symlink) `GroundingDINO_SwinT_OGC.py` under `~/.semantic_inference/gdsam2_config/`. And, put `sam2.1_hiera_large.pt` and `groundingdino_swint_ogc.pth` under `~/.semantic_inference/`
 
-For `Yolo`, download [yolo11n-seg.pt](https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11n-seg.pt) under `~/.semantic_inference/`
+For `YOLO`, download [yolo11n-seg.pt](https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11n-seg.pt) under `~/.semantic_inference/`.
+
+For `YOLOE`, download [yoloe-26m-seg.pt](https://github.com/ultralytics/assets/releases/download/v8.4.0/yoloe-26m-seg.pt) under `~/.semantic_inference/`.
 
 ## Trying out close-set instance segmentation nodes
 
