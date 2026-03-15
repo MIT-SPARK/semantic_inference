@@ -69,7 +69,6 @@ struct BackprojectionNode : public rclcpp::Node {
 void declare_config(BackprojectionNode::Config& config) {
   using namespace config;
   name("BackprojectionNode::Config");
-
   field(config.projection, "projection");
   field(config.recolor, "recolor");
   field(config.input_queue_size, "input_queue_size");
