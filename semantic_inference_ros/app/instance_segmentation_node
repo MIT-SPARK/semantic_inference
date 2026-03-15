@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Node that runs openset segmentation."""
 
+import collections
+import json
 import pathlib
+import time
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -9,8 +12,8 @@ import rclpy
 import spark_config as sc
 import torch
 from rclpy.node import Node
-from ros_system_monitor_msgs.msg import NodeInfoMsg
 from sensor_msgs.msg import Image
+from std_msgs.msg import String
 
 import semantic_inference.models as models
 import semantic_inference_ros
@@ -55,7 +58,8 @@ class InstanceSegmentationNode(Node):
         self.get_logger().info("Finished initializing!")
 
         self._last_inference_time = None
-        self._status_pub = self.create_publisher(NodeInfoMsg, "~/status", 1)
+        self._inference_times_ms = collections.deque(maxlen=30)
+        self._status_pub = self.create_publisher(String, "~/status", 1)
         self._hb_timer = self.create_timer(0.1, self._hb_callback)
 
         self._pub = self.create_publisher(Image, "semantic/image_raw", 1)
@@ -70,8 +74,10 @@ class InstanceSegmentationNode(Node):
 
     def _spin_once(self, header, img):
         self.get_logger().debug(f"recived image of size: {img.shape}")
+        t0 = time.monotonic()
         with torch.no_grad():
             ret = self._model.segment(img, is_rgb_order=True).cpu()
+        self._inference_times_ms.append((time.monotonic() - t0) * 1e3)
 
         if ret.masks is None:
             self.get_logger().debug("No masks detected in the image.")
@@ -97,19 +103,23 @@ class InstanceSegmentationNode(Node):
             )
 
     def _hb_callback(self):
-        msg = NodeInfoMsg()
-        msg.nickname = "instance_seg"
-        msg.node_name = self.get_fully_qualified_name()
+        record = {
+            "nickname": "instance_seg",
+            "node_name": self.get_fully_qualified_name(),
+        }
         now = self.get_clock().now().nanoseconds * 1e-9
         if self._last_inference_time is None:
-            msg.status = NodeInfoMsg.STARTUP
-            msg.notes = "Waiting for first image."
+            record["status"] = "STARTUP"
+            record["note"] = "Waiting for first image."
         elif now - self._last_inference_time > 10.0:
-            msg.status = NodeInfoMsg.WARNING
-            msg.notes = f"No inference for {now - self._last_inference_time:.1f}s."
+            record["status"] = "WARNING"
+            record["note"] = f"No inference for {now - self._last_inference_time:.1f}s."
         else:
-            msg.status = NodeInfoMsg.NOMINAL
-            msg.notes = "Running."
+            record["status"] = "NOMINAL"
+            avg_ms = sum(self._inference_times_ms) / len(self._inference_times_ms)
+            record["note"] = f"Average inference: {avg_ms:.1f} ms"
+        msg = String()
+        msg.data = json.dumps(record)
         self._status_pub.publish(msg)
 
     def stop(self):
