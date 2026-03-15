@@ -37,7 +37,7 @@ struct BackprojectionNode : public rclcpp::Node {
     size_t output_queue_size = 1;
     bool show_config = true;
     std::string camera_frame;
-    std::string lidar_fid;
+    std::string lidar_frame;
     bool use_image_stamp = false;
     bool use_recolor = false;
   } const config;
@@ -76,7 +76,7 @@ void declare_config(BackprojectionNode::Config& config) {
   field(config.output_queue_size, "output_queue_size");
   field(config.show_config, "show_config");
   field(config.camera_frame, "camera_frame");
-  field(config.lidar_fid, "lidar_fid");
+  field(config.lidar_frame, "lidar_frame");
   field(config.use_image_stamp, "use_image_stamp");
   field(config.use_recolor, "use_recolor");
 
@@ -143,7 +143,7 @@ void BackprojectionNode::callback(const Image::ConstSharedPtr& label_msg,
   const auto image_fid =
       !config.camera_frame.empty() ? config.camera_frame : info_msg->header.frame_id;
   const auto lidar_fid =
-      !config.lidar_fid.empty() ? config.lidar_fid : cloud_msg->header.frame_id;
+      !config.lidar_frame.empty() ? config.lidar_frame : cloud_msg->header.frame_id;
   const auto image_T_cloud = getTransform(image_fid, lidar_fid, stamp);
   if (!image_T_cloud) {
     return;
