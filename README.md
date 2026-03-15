@@ -80,6 +80,7 @@ echo "build: {cmake-args: [--no-warn-unused-cli, -DCMAKE_BUILD_TYPE=Release]}" >
 Once you've added this repository to your workspace, follow one (or both) of the following setup-guides as necessary:
 - [Closed-Set](docs/closed_set.md#setting-up)
 - [Open-Set](docs/open_set.md#setting-up)
+- [Instance-Seg](docs/instance_seg.md)
 
 > **Note** </br>
 > Some of our other (larger) packages have or will have more accessible guides to getting `semantic_inference` set up for specific applications, such as [Hydra](https://github.com/MIT-SPARK/Hydra), [Khronos](https://github.com/MIT-SPARK/Khronos) or [Clio](https://github.com/MIT-SPARK/Clio).
