@@ -52,6 +52,7 @@ class Results:
     boxes: torch.Tensor  # (n, 4) xyxy format, torch.float32
     categories: torch.Tensor  # (n,), torch.float32/int64 (doesn't matter)
     confidences: torch.Tensor  # (n,), torch.float32
+    img_shape: tuple[int, int]
 
     @property
     def instance_seg_img(self):
@@ -60,6 +61,9 @@ class Results:
         Each pixel value encodes both category id and instance id.
         First 16 bits are category id, last 16 bits are instance id.
         """
+        if self.masks is None:
+            return np.zeros(self.img_shape)
+
         masks = self.masks.cpu().numpy()
         category_ids = self.categories.cpu().numpy()
         img = np.zeros(masks[0].shape, dtype=np.uint32)
@@ -152,8 +156,12 @@ class InstanceSegmenter(nn.Module):
         Returns:
             Encoded image
         """
-        categories, masks, boxes, confidences = self.segmenter(rgb_img)
+        categories, masks, boxes, confidences, img_shape = self.segmenter(rgb_img)
 
         return Results(
-            masks=masks, boxes=boxes, categories=categories, confidences=confidences
+            masks=masks,
+            boxes=boxes,
+            categories=categories,
+            confidences=confidences,
+            img_shape=img_shape,
         )
