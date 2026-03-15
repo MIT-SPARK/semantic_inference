@@ -93,7 +93,7 @@ class InstanceSegmenterConfig(Config):
     """Main config for instance segmenter."""
 
     # relevant configs (model path, model weights) for the model
-    instance_model: Any = config_field("instance_model", default="yolov11")
+    instance_model: Any = config_field("instance_model", default="yolo-seg")
 
 
 class InstanceSegmenter(nn.Module):

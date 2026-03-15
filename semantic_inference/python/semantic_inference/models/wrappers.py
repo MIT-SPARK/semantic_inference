@@ -346,44 +346,31 @@ class OpenClipConfig(Config):
         return Config.load(cls, filepath)
 
 
-class Yolov11InstanceSegmenterWrapper(nn.Module):
-    """Yolov11 instance segmentation wrapper."""
+class YoloInstanceSegmenterBase(nn.Module):
+    """Base class for YOLO instance segmentation wrappers.
+
+    Subclasses must assign self.model in their __init__.
+    """
 
     def __init__(self, config):
-        """Load Yolov11 model."""
+        """Store shared configuration."""
         super().__init__()
-
         self.config = config
         self.confidence_threshold = config.confidence_threshold
         self.min_segmentation_size = config.min_segmentation_size
         self.overlap_merge_iou = config.overlap_merge_iou
-
-        self.init_model()
-
-    def init_model(self):
-        """Initialize the model."""
-        from ultralytics import YOLO
-
-        model_weights = os.path.join(
+        self.model_weights = os.path.join(
             path_to_dot_semantic_inference(), f"{self.config.model_name}"
         )
-        self.model = YOLO(model_weights)
 
     def eval(self):
-        """override eval to avoid issues with yolo model"""
+        """Override eval to avoid issues with yolo model."""
         self.model.model.eval()
 
     @property
     def category_names(self):
         """Get category names."""
         return self.model.names
-
-    @classmethod
-    def construct(cls, **kwargs):
-        """Load model from configuration dictionary."""
-        config = Yolov11InstanceSegmenterConfig()
-        config.update(kwargs)
-        return cls(config)
 
     def forward(self, img):
         """Segment image."""
@@ -415,17 +402,14 @@ class Yolov11InstanceSegmenterWrapper(nn.Module):
         return categories, masks, boxes, confidences, (masks.shape[1], masks.shape[2])
 
 
-@register_config(
-    "instance_model", name="yolov11", constructor=Yolov11InstanceSegmenterWrapper
-)
 @dataclasses.dataclass
-class Yolov11InstanceSegmenterConfig(Config):
-    """Configuration for Yolov11 instance segmenter."""
+class YoloInstanceSegmenterBaseConfig(Config):
+    """Shared configuration for YOLO instance segmenters."""
 
-    model_name: str = "yolo11n-seg.pt"
+    model_name: str = ""
     confidence_threshold: float = 0.25
     min_segmentation_size: int = 0  # number of pixels to filter out small masks
-    overlap_merge_iou: float = 0.7  # merging overlaping object detection
+    overlap_merge_iou: float = 0.7  # merging overlapping object detection
 
     @classmethod
     def load(cls, filepath):
@@ -433,26 +417,47 @@ class Yolov11InstanceSegmenterConfig(Config):
         return Config.load(cls, filepath)
 
 
-class YoloeInstanceSegmenterWrapper(Yolov11InstanceSegmenterWrapper):
+class YolosegInstanceSegmenterWrapper(YoloInstanceSegmenterBase):
+    """Yolov11 instance segmentation wrapper."""
+
+    def __init__(self, config):
+        """Load Yolov11 model."""
+        from ultralytics import YOLO
+
+        super().__init__(config)
+        self.model = YOLO(self.model_weights)
+
+    @classmethod
+    def construct(cls, **kwargs):
+        """Load model from configuration dictionary."""
+        config = YolosegInstanceSegmenterConfig()
+        config.update(kwargs)
+        return cls(config)
+
+
+@register_config(
+    "instance_model", name="yolo-seg", constructor=YolosegInstanceSegmenterWrapper
+)
+@dataclasses.dataclass
+class YolosegInstanceSegmenterConfig(YoloInstanceSegmenterBaseConfig):
+    """Configuration for YOLO segmentation instance segmenter."""
+
+    model_name: str = "yolo11n-seg.pt"
+
+
+class YoloeInstanceSegmenterWrapper(YoloInstanceSegmenterBase):
     """Yoloe instance segmentation wrapper."""
 
     def __init__(self, config):
-        super().__init__(config)
-
-    def init_model(self):
-        """Initialize the model."""
         from ultralytics import YOLOE
 
-        model_weights = os.path.join(
-            path_to_dot_semantic_inference(), f"{self.config.model_name}"
-        )
-        self.model = YOLOE(model_weights)
-
-        if not self.config.text_prompt:
+        if not config.text_prompt:
             raise ValueError(
                 "text_prompt must be provided for YoloeInstanceSegmenterWrapper"
             )
 
+        super().__init__(config)
+        self.model = YOLOE(self.model_weights)
         self.model.set_classes(self.config.text_prompt)
 
 
@@ -460,10 +465,10 @@ class YoloeInstanceSegmenterWrapper(Yolov11InstanceSegmenterWrapper):
     "instance_model", name="yoloe", constructor=YoloeInstanceSegmenterWrapper
 )
 @dataclasses.dataclass
-class YoloeInstanceSegmenterConfig(Yolov11InstanceSegmenterConfig):
+class YoloeInstanceSegmenterConfig(YoloInstanceSegmenterBaseConfig):
     """Configuration for Yoloe instance segmenter."""
 
-    model_name: str = "yoloe-26l-seg.pt"
+    model_name: str = "yoloe-26m-seg.pt"
     text_prompt: list[str] = dataclasses.field(default_factory=list)
 
 
