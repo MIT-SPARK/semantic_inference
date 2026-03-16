@@ -39,6 +39,7 @@ struct BackprojectionNode : public rclcpp::Node {
     std::string camera_frame;
     std::string lidar_frame;
     bool use_image_stamp = false;
+    bool use_recolor = false;
   } const config;
 
   explicit BackprojectionNode(const rclcpp::NodeOptions& options);
@@ -76,6 +77,8 @@ void declare_config(BackprojectionNode::Config& config) {
   field(config.camera_frame, "camera_frame");
   field(config.lidar_frame, "lidar_frame");
   field(config.use_image_stamp, "use_image_stamp");
+  field(config.use_recolor, "use_recolor");
+
   check(config.input_queue_size, GT, 0, "input_queue_size");
   check(config.output_queue_size, GT, 0, "output_queue_size");
 }
@@ -136,10 +139,11 @@ void BackprojectionNode::callback(const Image::ConstSharedPtr& label_msg,
                                   const PointCloud2::ConstSharedPtr& cloud_msg) {
   // Find transform from cloud to image frame
   const rclcpp::Time stamp(cloud_msg->header.stamp);
-  const auto image_T_cloud = getTransform(
-      !config.camera_frame.empty() ? config.camera_frame : info_msg->header.frame_id,
-      !config.lidar_frame.empty() ? config.lidar_frame : cloud_msg->header.frame_id,
-      stamp);
+  const auto image_fid =
+      !config.camera_frame.empty() ? config.camera_frame : info_msg->header.frame_id;
+  const auto lidar_fid =
+      !config.lidar_frame.empty() ? config.lidar_frame : cloud_msg->header.frame_id;
+  const auto image_T_cloud = getTransform(image_fid, lidar_fid, stamp);
   if (!image_T_cloud) {
     return;
   }
@@ -162,6 +166,7 @@ void BackprojectionNode::callback(const Image::ConstSharedPtr& label_msg,
   }
 
   auto output = std::make_unique<PointCloud2>();
+  const auto recolor = config.use_recolor ? recolor_.get() : nullptr;
   const auto valid = projectSemanticImage(config.projection,
                                           *info_msg,
                                           label_ptr->image,
@@ -169,18 +174,15 @@ void BackprojectionNode::callback(const Image::ConstSharedPtr& label_msg,
                                           image_T_cloud.value(),
                                           *output,
                                           color_ptr->image,
-                                          recolor_.get());
+                                          recolor);
   if (!valid) {
     return;
   }
 
   output->header = cloud_msg->header;
-  output->header.frame_id = config.projection.use_lidar_frame
-                                ? cloud_msg->header.frame_id
-                                : label_msg->header.frame_id;
-  // modify the output header stamp to be the image timestamp to reflect the time of the
-  // semantic labels
+  output->header.frame_id = config.projection.use_lidar_frame ? lidar_fid : image_fid;
   if (config.use_image_stamp) {
+    // force the lidar timestamp to be identical to the image timestamp
     output->header.stamp = label_msg->header.stamp;
   }
 
