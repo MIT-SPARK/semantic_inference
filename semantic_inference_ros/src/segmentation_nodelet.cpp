@@ -33,6 +33,7 @@
 #include <config_utilities/parsing/commandline.h>
 #include <ianvs/image_subscription.h>
 #include <semantic_inference/image_rotator.h>
+#include <semantic_inference/image_resizer.h>
 #include <semantic_inference/model_config.h>
 #include <semantic_inference/segmenter.h>
 
@@ -63,6 +64,7 @@ class SegmentationNode : public rclcpp::Node {
   struct Config {
     Segmenter::Config segmenter;
     WorkerConfig worker;
+    ImageResizer::Config image_resizer;
     ImageRotator::Config image_rotator;
     bool show_config = true;
     bool show_output_config = false;
@@ -99,6 +101,7 @@ class SegmentationNode : public rclcpp::Node {
 
   OutputPublisher output_pub_;
   ImageRotator image_rotator_;
+  ImageResizer image_resizer_;
   ianvs::ImageSubscription sub_;
 };
 
@@ -121,6 +124,7 @@ void declare_config(SegmentationNode::Config& config) {
   name("SegmentationNode::Config");
   field(config.segmenter, "segmenter");
   field(config.worker, "worker");
+  field(config.image_resizer, "image_resizer");
   field(config.image_rotator, "image_rotator");
   field(config.show_config, "show_config");
   field(config.show_output_config, "show_output_config");
@@ -134,6 +138,7 @@ SegmentationNode::SegmentationNode(const rclcpp::NodeOptions& options)
           config::fromCLI<OutputPublisher::Config>(options.arguments(), "output")),
       output_pub_(output_config, *this),
       image_rotator_(config.image_rotator),
+      image_resizer_(config.image_resizer),
       sub_(*this) {
   logging::Logger::addSink("ros", std::make_shared<RosLogSink>(get_logger()));
   logging::setConfigUtilitiesLogger();
@@ -154,6 +159,7 @@ SegmentationNode::SegmentationNode(const rclcpp::NodeOptions& options)
     SLOG(ERROR) << "Exception: " << e.what();
     throw e;
   }
+
 
   worker_ = std::make_unique<ImageWorker>(
       config.worker,
@@ -192,7 +198,9 @@ void SegmentationNode::runSegmentation(const Image::ConstSharedPtr& msg) {
               << (img_ptr->image.type() == CV_8UC3 ? "yes" : "no");
 
   const auto start = std::chrono::steady_clock::now();
-  const auto rotated = image_rotator_.rotate(img_ptr->image);
+  cv::Mat scaled_image = image_resizer_.resizeForModelInput(img_ptr->image);
+  const auto rotated = image_rotator_.rotate(scaled_image);
+
   const auto result = segmenter_->infer(rotated);
   if (!result) {
     SLOG(ERROR) << "failed to run inference!";
@@ -201,7 +209,8 @@ void SegmentationNode::runSegmentation(const Image::ConstSharedPtr& msg) {
   }
 
   const auto derotated = image_rotator_.derotate(result.labels);
-  output_pub_.publish(img_ptr->header, derotated, img_ptr->image);
+  const auto descaled = image_resizer_.restoreToOriginal(derotated, img_ptr->image.size());
+  output_pub_.publish(img_ptr->header, descaled, img_ptr->image);
   const auto end = std::chrono::steady_clock::now();
 
   const auto elapsed =

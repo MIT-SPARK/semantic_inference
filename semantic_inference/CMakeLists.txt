@@ -36,7 +36,7 @@ configure_file(cmake/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/semantic_inference_
 add_library(
   ${PROJECT_NAME}
   src/image_recolor.cpp src/image_rotator.cpp src/image_utilities.cpp src/logging.cpp
-  src/model_config.cpp src/segmenter.cpp
+  src/model_config.cpp src/segmenter.cpp src/image_resizer.cpp
 )
 target_link_libraries(${PROJECT_NAME} PUBLIC config_utilities::config_utilities ${OpenCV_LIBRARIES})
 target_include_directories(
