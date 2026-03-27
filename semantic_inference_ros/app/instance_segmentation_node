@@ -32,6 +32,9 @@ class InstanceSegmentationNodeConfig(sc.Config):
     visualize_semantic_img: bool = sc.config_field(
         "visualize_semantic_img", default=True, required=False
     )
+    nickname: str = sc.config_field(
+        "nickname", default="semantic_inference", required=False
+    )
 
 
 class InstanceSegmentationNode(Node):
@@ -58,6 +61,7 @@ class InstanceSegmentationNode(Node):
         self.get_logger().info("Finished initializing!")
 
         self._last_inference_time = None
+        self._nickname = self.config.nickname
         self._inference_times_ms = collections.deque(maxlen=30)
         self._status_pub = self.create_publisher(String, "~/status", 1)
         self._hb_timer = self.create_timer(0.1, self._hb_callback)
@@ -103,7 +107,7 @@ class InstanceSegmentationNode(Node):
 
     def _hb_callback(self):
         record = {
-            "nickname": "instance_seg",
+            "nickname": self._nickname,
             "node_name": self.get_fully_qualified_name(),
         }
         now = self.get_clock().now().nanoseconds * 1e-9
