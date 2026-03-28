@@ -29,12 +29,8 @@ class InstanceSegmentationNodeConfig(sc.Config):
     model: models.InstanceSegmenterConfig = field(
         default_factory=models.InstanceSegmenterConfig
     )
-    visualize_semantic_img: bool = sc.config_field(
-        "visualize_semantic_img", default=True, required=False
-    )
-    nickname: str = sc.config_field(
-        "nickname", default="semantic_inference", required=False
-    )
+    visualize_semantic_img: bool = True
+    nickname: str = "semantic_inference"
 
 
 class InstanceSegmentationNode(Node):
