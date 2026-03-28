@@ -354,6 +354,7 @@ class YoloInstanceSegmenterBase(nn.Module):
     def __init__(self, config):
         """Store shared configuration."""
         import ultralytics
+
         super().__init__()
 
         ultralytics.settings.update({"weights_dir": str(models_path())})
