@@ -31,6 +31,7 @@
 
 import dataclasses
 import os
+import pathlib
 
 import cv2
 import einops
@@ -41,17 +42,15 @@ import torchvision
 from spark_config import Config, register_config
 from torchvision.ops import box_convert
 
-from semantic_inference import root_path
+import semantic_inference.misc as misc
 
 
 def models_path():
-    """Get path to pre-trained weight storage."""
-    return root_path().parent.parent / "models"
-
-
-def path_to_dot_semantic_inference():
     """Get path to ~/.semantic_inference directory."""
-    return os.getenv("HOME") + "/.semantic_inference"
+    model_dir = os.getenv("SEMANTIC_INFERENCE_MODEL_DIR")
+    mpath = pathlib.Path(model_dir or "~/.semantic_inference").expanduser().absolute()
+    misc.Logger.error(f"Using model path: {mpath}")
+    return mpath
 
 
 class FastSAMSegmentation(nn.Module):
@@ -354,14 +353,11 @@ class YoloInstanceSegmenterBase(nn.Module):
 
     def __init__(self, config):
         """Store shared configuration."""
+        import ultralytics
         super().__init__()
+
+        ultralytics.settings.update({"weights_dir": str(models_path())})
         self.config = config
-        self.confidence_threshold = config.confidence_threshold
-        self.min_segmentation_size = config.min_segmentation_size
-        self.overlap_merge_iou = config.overlap_merge_iou
-        self.model_weights = os.path.join(
-            path_to_dot_semantic_inference(), f"{self.config.model_name}"
-        )
 
     def eval(self):
         """Override eval to avoid issues with yolo model."""
@@ -376,12 +372,12 @@ class YoloInstanceSegmenterBase(nn.Module):
         """Segment image."""
         result = self.model(
             img,
-            conf=self.confidence_threshold,
+            conf=self.config.confidence_threshold,
             imgsz=(img.shape[0], img.shape[1]),
             # Set True to maintain original image size for masks,
             # required for hydra, but slow down the model
             retina_masks=True,
-            iou=self.overlap_merge_iou,
+            iou=self.config.overlap_merge_iou,
         )[0]  # assume batch size 1
         if result.masks is None:
             return None, None, None, None, (img.shape[0], img.shape[1])
@@ -392,13 +388,14 @@ class YoloInstanceSegmenterBase(nn.Module):
         confidences = result.boxes.conf.cpu()  # float32
 
         # filter out small masks
-        if self.min_segmentation_size > 0:
+        if self.config.min_segmentation_size > 0:
             mask_sizes = masks.sum(dim=(1, 2))  # number of pixels in each mask
-            size_indices = mask_sizes > self.min_segmentation_size
+            size_indices = mask_sizes > self.config.min_segmentation_size
             categories = categories[size_indices]
             masks = masks[size_indices]
             boxes = boxes[size_indices]
             confidences = confidences[size_indices]
+
         return categories, masks, boxes, confidences, (masks.shape[1], masks.shape[2])
 
 
@@ -422,10 +419,10 @@ class YolosegInstanceSegmenterWrapper(YoloInstanceSegmenterBase):
 
     def __init__(self, config):
         """Load Yolov11 model."""
-        from ultralytics import YOLO
+        import ultralytics
 
         super().__init__(config)
-        self.model = YOLO(self.model_weights)
+        self.model = ultralytics.YOLO(self.config.model_name)
 
     @classmethod
     def construct(cls, **kwargs):
@@ -449,15 +446,13 @@ class YoloeInstanceSegmenterWrapper(YoloInstanceSegmenterBase):
     """Yoloe instance segmentation wrapper."""
 
     def __init__(self, config):
-        from ultralytics import YOLOE
+        import ultralytics
 
         if not config.text_prompt:
-            raise ValueError(
-                "text_prompt must be provided for YoloeInstanceSegmenterWrapper"
-            )
+            raise ValueError("text_prompt is required!")
 
         super().__init__(config)
-        self.model = YOLOE(self.model_weights)
+        self.model = ultralytics.YOLOE(self.config.model_name)
         self.model.set_classes(self.config.text_prompt)
 
 
@@ -496,19 +491,15 @@ class GDSam2InstanceSegmenterWrapper(nn.Module):
         self.erosion_kernel_size = config.erosion_kernel_size
 
         # hydra config pkg: only need relative path to the pkg installation dir
-        sam2_model_config_path = os.path.join(
-            "configs/sam2.1", config.sam2_model_config
+        sam2_model_config_path = (
+            pathlib.Path("configs") / "sam2.1" / config.sam2_model_config
         )
-        sam2_checkpoint_path = os.path.join(
-            path_to_dot_semantic_inference(), config.sam2_checkpoint
+        sam2_checkpoint_path = models_path() / config.sam2_checkpoint
+        grounding_dino_config_path = (
+            models_path() / "gdsam2_config" / config.grounding_dino_config
         )
-        grounding_dino_config_path = os.path.join(
-            path_to_dot_semantic_inference(),
-            "gdsam2_config",
-            config.grounding_dino_config,
-        )
-        grounding_dino_checkpoint_path = os.path.join(
-            path_to_dot_semantic_inference(), config.grounding_dino_checkpoint
+        grounding_dino_checkpoint_path = (
+            models_path() / config.grounding_dino_checkpoint
         )
 
         # build SAM2 image predictor
