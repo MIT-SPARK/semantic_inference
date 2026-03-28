@@ -49,7 +49,7 @@ def models_path():
     """Get path to ~/.semantic_inference directory."""
     model_dir = os.getenv("SEMANTIC_INFERENCE_MODEL_DIR")
     mpath = pathlib.Path(model_dir or "~/.semantic_inference").expanduser().absolute()
-    misc.Logger.error(f"Using model path: {mpath}")
+    misc.Logger.debug(f"Using model path: {mpath}")
     return mpath
 
 
