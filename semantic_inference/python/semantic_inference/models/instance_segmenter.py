@@ -38,6 +38,8 @@ import torch
 from spark_config import Config, config_field
 from torch import nn
 
+from semantic_inference.image_rotator import ImageRotator, RotationType
+
 
 def _map_opt(values, f):
     return {k: v if v is None else f(v) for k, v in values.items()}
@@ -52,30 +54,7 @@ class Results:
     boxes: torch.Tensor  # (n, 4) xyxy format, torch.float32
     categories: torch.Tensor  # (n,), torch.float32/int64 (doesn't matter)
     confidences: torch.Tensor  # (n,), torch.float32
-    img_shape: tuple[int, int]
-
-    @property
-    def instance_seg_img(self):
-        """
-        Convert segmentation results to instance segmentation image.
-        Each pixel value encodes both category id and instance id.
-        First 16 bits are category id, last 16 bits are instance id.
-        """
-        if self.masks is None:
-            return np.zeros(self.img_shape)
-
-        masks = self.masks.cpu().numpy()
-        category_ids = self.categories.cpu().numpy()
-        img = np.zeros(masks[0].shape, dtype=np.uint32)
-        for i in range(masks.shape[0]):
-            category_id = int(category_ids[i])  # category id are 0-indexed
-            instance_id = i + 1  # instance ids are 1-indexed
-            combined_id = (
-                category_id << 16
-            ) | instance_id  # combine into single uint32
-            img[masks[i, ...] > 0] = combined_id
-
-        return img
+    instances: np.ndarray  # (H, W, c) np.uint32 (result image)
 
     def cpu(self):
         """Move results to CPU."""
@@ -94,6 +73,7 @@ class InstanceSegmenterConfig(Config):
 
     # relevant configs (model path, model weights) for the model
     instance_model: Any = config_field("instance_model", default="yolo-seg")
+    rotation_type: str = "none"
 
 
 class InstanceSegmenter(nn.Module):
@@ -106,6 +86,7 @@ class InstanceSegmenter(nn.Module):
         self._canary_param = nn.Parameter(torch.empty(0))
 
         self.config = config
+        self._rotator = ImageRotator(RotationType(config.rotation_type))
         self.segmenter = self.config.instance_model.create()
 
     def eval(self):
@@ -134,7 +115,7 @@ class InstanceSegmenter(nn.Module):
             Encoded image
         """
         img = rgb_img if is_rgb_order else rgb_img[:, :, ::-1].copy()
-        return self(img)
+        return self._rotator.derotate(img)
 
     @property
     def device(self):
@@ -156,12 +137,28 @@ class InstanceSegmenter(nn.Module):
         Returns:
             Encoded image
         """
-        categories, masks, boxes, confidences, img_shape = self.segmenter(rgb_img)
+        rotated = self._rotator.rotate(rgb_img)
+        categories, masks, boxes, confidences = self.segmenter(rotated)
+
+        if self.masks is None:
+            instances = np.zeros(rgb_img.shape[:2])
+        else:
+            instances = np.zeros(masks[0].shape, dtype=np.uint32)
+            masks = self.masks.cpu().numpy()
+            category_ids = self.categories.cpu().numpy()
+            for i in range(masks.shape[0]):
+                category_id = int(category_ids[i])  # category id are 0-indexed
+                instance_id = i + 1  # instance ids are 1-indexed
+                # combine into single uint32
+                combined_id = (category_id << 16) | instance_id
+                instances[masks[i, ...] > 0] = combined_id
+
+            instances = self._rotator.derotate(instances)
 
         return Results(
             masks=masks,
             boxes=boxes,
             categories=categories,
             confidences=confidences,
-            img_shape=img_shape,
+            instances=instances,
         )

@@ -381,7 +381,7 @@ class YoloInstanceSegmenterBase(nn.Module):
             iou=self.config.overlap_merge_iou,
         )[0]  # assume batch size 1
         if result.masks is None:
-            return None, None, None, None, (img.shape[0], img.shape[1])
+            return None, None, None, None
 
         categories = result.boxes.cls.to(torch.int).cpu()  # int8
         masks = result.masks.data.to(torch.bool).cpu()
@@ -397,7 +397,7 @@ class YoloInstanceSegmenterBase(nn.Module):
             boxes = boxes[size_indices]
             confidences = confidences[size_indices]
 
-        return categories, masks, boxes, confidences, (masks.shape[1], masks.shape[2])
+        return categories, masks, boxes, confidences
 
 
 @dataclasses.dataclass
@@ -569,7 +569,7 @@ class GDSam2InstanceSegmenterWrapper(nn.Module):
 
         # if nothing detected
         if boxes.shape[0] == 0:
-            return None, None, None, None, (img.shape[0], img.shape[1])
+            return None, None, None, None
 
         # process the box prompt for SAM 2
         h, w, _ = img.shape
@@ -633,7 +633,7 @@ class GDSam2InstanceSegmenterWrapper(nn.Module):
         # use xyxy boxes
         boxes = torch.tensor(input_boxes)
 
-        return categories, masks, boxes, confidences, (masks.shape[1], masks.shape[2])
+        return categories, masks, boxes, confidences
 
 
 @register_config(
