@@ -85,10 +85,8 @@ class InstanceSegmentationNode(Node):
             self.get_logger().debug("get image size: " + str(ret.img_shape))
             self.get_logger().debug(f"result category type: {ret.categories.dtype}")
 
-        # get 32 bit instance + cateogry img, all 0 if no box detected
-        instance_seg_img = ret.instance_seg_img
         # Convert to int32 to match 32SC1 encoding expected by cv_bridge
-        instance_seg_img = instance_seg_img.astype(np.int32)
+        instance_seg_img = ret.instances.astype(np.int32)
         msg = Conversions.to_image_msg(header, instance_seg_img, encoding="32SC1")
         self._pub.publish(msg)
         self._last_inference_time = self.get_clock().now().nanoseconds * 1e-9
