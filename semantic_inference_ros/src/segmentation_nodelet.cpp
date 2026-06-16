@@ -32,8 +32,8 @@
 #include <config_utilities/config_utilities.h>
 #include <config_utilities/parsing/commandline.h>
 #include <ianvs/image_subscription.h>
-#include <semantic_inference/image_rotator.h>
 #include <semantic_inference/image_resizer.h>
+#include <semantic_inference/image_rotator.h>
 #include <semantic_inference/model_config.h>
 #include <semantic_inference/segmenter.h>
 
@@ -160,7 +160,6 @@ SegmentationNode::SegmentationNode(const rclcpp::NodeOptions& options)
     throw e;
   }
 
-
   worker_ = std::make_unique<ImageWorker>(
       config.worker,
       [this](const auto& msg) { runSegmentation(msg); },
@@ -209,7 +208,8 @@ void SegmentationNode::runSegmentation(const Image::ConstSharedPtr& msg) {
   }
 
   const auto derotated = image_rotator_.derotate(result.labels);
-  const auto descaled = image_resizer_.restoreToOriginal(derotated, img_ptr->image.size());
+  const auto descaled =
+      image_resizer_.restoreToOriginal(derotated, img_ptr->image.size());
   output_pub_.publish(img_ptr->header, descaled, img_ptr->image);
   const auto end = std::chrono::steady_clock::now();
 

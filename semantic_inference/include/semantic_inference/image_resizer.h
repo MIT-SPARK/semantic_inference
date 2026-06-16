@@ -47,7 +47,8 @@ struct ImageResizer {
   ImageResizer& operator=(const ImageResizer& other);
 
   cv::Mat resizeForModelInput(const cv::Mat& input) const;
-  // @brief Resize an RGB image to the target width and height prior to passing into a segmentation model.
+  // @brief Resize an RGB image to the target width and height prior to passing into a
+  // segmentation model.
   //
   // @param original input image.
 

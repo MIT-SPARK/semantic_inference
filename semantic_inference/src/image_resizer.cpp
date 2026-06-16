@@ -30,13 +30,14 @@
  * * -------------------------------------------------------------------------- */
 
 #include "semantic_inference/image_resizer.h"
-#include "semantic_inference/logging.h"
 
 #include <config_utilities/config.h>
 #include <config_utilities/types/enum.h>
 #include <config_utilities/validation.h>
+
 #include <opencv2/opencv.hpp>
 
+#include "semantic_inference/logging.h"
 
 namespace semantic_inference {
 
@@ -49,37 +50,32 @@ void declare_config(ImageResizer::Config& config) {
 
 ImageResizer::ImageResizer() : ImageResizer(Config{}) {}
 
-ImageResizer::ImageResizer(const Config& config)
-    : config(config::checkValid(config)) {}
+ImageResizer::ImageResizer(const Config& config) : config(config::checkValid(config)) {}
 
-ImageResizer::ImageResizer(const ImageResizer& other)
-    : config(other.config) {}
+ImageResizer::ImageResizer(const ImageResizer& other) : config(other.config) {}
 
 ImageResizer& ImageResizer::operator=(const ImageResizer& other) {
   const_cast<Config&>(config) = other.config;
   return *this;
 }
 
-cv::Mat ImageResizer::resizeForModelInput(const cv::Mat& input) const
-{
-    // if either width or height is negative, then no op. Note defaults are both -1
-    if (config.width < 0 || config.height < 0)
-        return input;
+cv::Mat ImageResizer::resizeForModelInput(const cv::Mat& input) const {
+  // if either width or height is negative, then no op. Note defaults are both -1
+  if (config.width < 0 || config.height < 0) return input;
 
-    cv::Mat scaled;
-    cv::resize(input, scaled, cv::Size(config.width, config.height), 0.0, 0.0, cv::INTER_AREA);
-    return scaled;
+  cv::Mat scaled;
+  cv::resize(
+      input, scaled, cv::Size(config.width, config.height), 0.0, 0.0, cv::INTER_AREA);
+  return scaled;
 }
 
-cv::Mat ImageResizer::restoreToOriginal(const cv::Mat& input, const cv::Size& target) const
-{
-    if (config.width < 0 || config.height < 0)
-        return input;
+cv::Mat ImageResizer::restoreToOriginal(const cv::Mat& input,
+                                        const cv::Size& target) const {
+  if (config.width < 0 || config.height < 0) return input;
 
-    cv::Mat scaled;
-    cv::resize(input, scaled, target, 0, 0, cv::INTER_NEAREST);
-    return scaled;
+  cv::Mat scaled;
+  cv::resize(input, scaled, target, 0, 0, cv::INTER_NEAREST);
+  return scaled;
 }
-
 
 }  // namespace semantic_inference
