@@ -62,7 +62,7 @@ colcon test --packages-select semantic_inference
 
 Running dense 2D semantic segmentation requires obtaining a pre-trained model.
 Several pre-exported models live [here](https://www.dropbox.com/scl/fo/zgi4nx6dqd4gme9qmkqzy/AHCxucEsOPLJOY2heJdS_jg?rlkey=4yj25cq6h0c6igch0r4kdcth1&st=cft0qilw&dl=0).
-By default, the code uses [this](https://drive.google.com/file/d/1XRcsyLSvqqhqNIaOI_vmqpUpmBT6gk9-/view?usp=drive_link) model.
+By default, the code uses [this](https://www.dropbox.com/scl/fi/qtaqm3htsdjlnoyqjvrol/ade20k-efficientvit_seg_l2.onnx?rlkey=3evg4gfeybd0wie0gom8535zo&st=qoztrhiz&dl=0) model.
 
 By default, the closed set node looks under the directory `$HOME/.semantic_inference` for models (this works on Linux or as long as `HOME` is set).
 It is possible to change this directory by specifying the `SEMANTIC_INFERENCE_MODEL_DIR` environment variable.
