@@ -20,6 +20,7 @@ rosidl_generate_interfaces(
   msg/FeatureVectors.msg
   msg/FeatureVectorStamped.msg
   msg/FeatureImage.msg
+  msg/Labelspace.msg
   srv/EncodeFeature.srv
   DEPENDENCIES
   builtin_interfaces
