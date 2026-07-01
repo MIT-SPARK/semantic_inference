@@ -19,6 +19,7 @@ import semantic_inference.models as models
 import semantic_inference_ros
 from semantic_inference.visualization import get_semantic_overlay_img
 from semantic_inference_ros import Conversions, ImageWorkerConfig
+from semantic_inference_msgs.msg import Labelspace
 
 
 @dataclass
@@ -31,6 +32,12 @@ class InstanceSegmentationNodeConfig(sc.Config):
     )
     visualize_semantic_img: bool = True
     nickname: str = "semantic_inference"
+
+
+def _latch_qos(depth):
+    return rclpy.qos.QoSProfile(
+        depth=depth, durability=rclpy.qos.DurabilityPolicy.TRANSIENT_LOCAL
+    )
 
 
 class InstanceSegmentationNode(Node):
@@ -62,6 +69,10 @@ class InstanceSegmentationNode(Node):
         self._status_pub = self.create_publisher(String, "~/status", 1)
         self._hb_timer = self.create_timer(0.1, self._hb_callback)
 
+        qos = _latch_qos(1)
+        self._labelspace_pub = self.create_publisher(Labelspace, "~/labelspace", qos)
+        self._publish_labelspace()
+
         self._pub = self.create_publisher(Image, "semantic/image_raw", 1)
         self._worker = semantic_inference_ros.ImageWorker(
             self, self.config.worker, "color/image_raw", self._spin_once
@@ -77,8 +88,8 @@ class InstanceSegmentationNode(Node):
         t0 = time.monotonic()
         with torch.no_grad():
             ret = self._model.segment(img, is_rgb_order=True)
-        self._inference_times_ms.append((time.monotonic() - t0) * 1e3)
 
+        self._inference_times_ms.append((time.monotonic() - t0) * 1e3)
         if ret.masks is None:
             self.get_logger().debug("No masks detected in the image.")
         else:
@@ -98,6 +109,14 @@ class InstanceSegmentationNode(Node):
             self._overlay_pub.publish(
                 Conversions.to_image_msg(header, color_img, encoding="rgb8")
             )
+
+    def _publish_labelspace(self):
+        msg = Labelspace()
+        msg.names = [""] + self._model.category_names
+        # labels are 1-indexed and msg.names is 1 + len(model_categories)
+        metadata = {"object_labels": list(range(1, len(msg.names)))}
+        msg.metadata = json.dumps(metadata)
+        self._labelspace_pub.publish(msg)
 
     def _hb_callback(self):
         record = {

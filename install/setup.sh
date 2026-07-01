@@ -1,15 +1,16 @@
 #!/bin/bash
 
-# Installs dependencies for building and running closed-set models
-# Usage: ./setup.sh [--no-models] [--no-closed-set] [--no-cuda]"
+# Installs dependencies for building and running semantic_inference
+# Usage: ./setup.sh [--no-models] [--no-closed-set] [--no-cuda] [--no-python]"
 #
-# This installs a minimal set of dependencies that *should* work, but YMMV.
+# This installs a minimal set of dependencies that *should* work for TensorRT, but YMMV.
 # Note: CUDA is hard-coded to install the 24.04 keyring and repos.
 #
 # Options:
 #   --no-models: Do not download model weights
 #   --no-closed-set: Do not install closed-set dependencies
 #   --no-cuda: Do not install the CUDA keyring (if you already have CUDA set up)
+#   --no-python: Do not set up python virtual environment for instance and open-set segmentation
 #   -h/--help: Show brief usage information
 
 function download_model() {
@@ -19,9 +20,14 @@ function download_model() {
     fi
 }
 
+
+# from https://stackoverflow.com/a/246128
+SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+
 MODELS=true  # Download models
 CLOSED_SET=true  # Install closed-set deps
 CUDA=true  # Install cuda key
+MAKE_ENV=true  # Make python environment
 while [[ $# -gt 0 ]]; do
     case $1 in
         --no-models)
@@ -33,8 +39,11 @@ while [[ $# -gt 0 ]]; do
         --no-cuda)
             CUDA=false
             ;;
+        --no-python)
+            MAKE_ENV=false
+            ;;
         --help|-h)
-            echo "Usage: ./setup.sh [--no-models] [--no-closed-set] [--no-cuda]"
+            echo "Usage: ./setup.sh [--no-models] [--no-closed-set] [--no-cuda] [--no-python]"
             exit 0
     esac
     shift
@@ -66,4 +75,14 @@ if [ "$MODELS" = true ]; then
     download_model ade20k-efficientvit_seg_l2.onnx "https://www.dropbox.com/scl/fi/qtaqm3htsdjlnoyqjvrol/ade20k-efficientvit_seg_l2.onnx?rlkey=3evg4gfeybd0wie0gom8535zo&st=1ocu1vl7&dl=1"
     download_model ade20k-hrnetv2-c1.onnx "https://www.dropbox.com/scl/fi/6hvyfgtk1j0uqt1t7dal9/ade20k-hrnetv2-c1.onnx?rlkey=k009j60g556h9p79bdoxgskbx&st=sqz7sqyl&dl=1"
     download_model ade20k-mobilenetv2dilated-c1_deepsup.onnx "https://www.dropbox.com/scl/fi/dlcizojblgaq8dnhd94o4/ade20k-mobilenetv2dilated-c1_deepsup.onnx?rlkey=5m7tv9x8bt0gsg1q77tert9ic&st=ixu66280&dl=1"
+fi
+
+
+if [ "$MAKE_ENV" = true ]; then
+    PACKAGE_PATH="$(dirname ${SCRIPT_DIR})"
+    mkdir -p "$HOME"/.semantic_inference
+    python3 -m venv --system-site-packages --clear "$HOME"/.semantic_inference/env
+    source "$HOME"/.semantic_inference/env/bin/activate
+    python3 -m pip install -e "${PACKAGE_PATH}/semantic_inference"[openset]
+    deactivate
 fi

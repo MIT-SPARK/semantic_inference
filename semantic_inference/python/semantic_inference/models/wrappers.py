@@ -346,7 +346,8 @@ class OpenClipConfig(Config):
 
 
 class YoloInstanceSegmenterBase(nn.Module):
-    """Base class for YOLO instance segmentation wrappers.
+    """
+    Base class for YOLO instance segmentation wrappers.
 
     Subclasses must assign self.model in their __init__.
     """
@@ -367,7 +368,7 @@ class YoloInstanceSegmenterBase(nn.Module):
     @property
     def category_names(self):
         """Get category names."""
-        return self.model.names
+        return [v for k, v in self.model.names.items()]
 
     def forward(self, img):
         """Segment image."""
