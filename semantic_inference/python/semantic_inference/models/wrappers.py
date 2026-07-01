@@ -30,7 +30,6 @@
 """Model wrappers for image segmentation."""
 
 import dataclasses
-import os
 import pathlib
 
 import cv2
@@ -42,15 +41,7 @@ import torchvision
 from spark_config import Config, register_config
 from torchvision.ops import box_convert
 
-import semantic_inference.misc as misc
-
-
-def models_path():
-    """Get path to ~/.semantic_inference directory."""
-    model_dir = os.getenv("SEMANTIC_INFERENCE_MODEL_DIR")
-    mpath = pathlib.Path(model_dir or "~/.semantic_inference").expanduser().absolute()
-    misc.Logger.debug(f"Using model path: {mpath}")
-    return mpath
+from semantic_inference.misc import models_path
 
 
 class FastSAMSegmentation(nn.Module):

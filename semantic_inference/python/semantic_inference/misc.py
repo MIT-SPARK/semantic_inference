@@ -30,5 +30,15 @@
 """Various useful utilities."""
 
 import logging
+import os
+import pathlib
 
 Logger = logging.getLogger("semantic_inference")
+
+
+def models_path():
+    """Get path to ~/.semantic_inference directory."""
+    model_dir = os.getenv("SEMANTIC_INFERENCE_MODEL_DIR")
+    mpath = pathlib.Path(model_dir or "~/.semantic_inference").expanduser().absolute()
+    Logger.debug(f"Using model path: {mpath}")
+    return mpath

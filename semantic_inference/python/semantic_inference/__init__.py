@@ -31,7 +31,7 @@
 
 import pathlib
 
-from semantic_inference.misc import Logger
+from semantic_inference.misc import Logger, models_path
 
 
 def root_path():

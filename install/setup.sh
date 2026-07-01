@@ -70,14 +70,6 @@ if [ "$CLOSED_SET" = true ]; then
     sudo apt install libnvinfer-dev libnvonnxparsers-dev libnvinfer-plugin-dev "cuda-nvcc-${version}-${minor_version}" -y
 fi
 
-if [ "$MODELS" = true ]; then
-    mkdir -p "$HOME"/.semantic_inference/
-    download_model ade20k-efficientvit_seg_l2.onnx "https://www.dropbox.com/scl/fi/qtaqm3htsdjlnoyqjvrol/ade20k-efficientvit_seg_l2.onnx?rlkey=3evg4gfeybd0wie0gom8535zo&st=1ocu1vl7&dl=1"
-    download_model ade20k-hrnetv2-c1.onnx "https://www.dropbox.com/scl/fi/6hvyfgtk1j0uqt1t7dal9/ade20k-hrnetv2-c1.onnx?rlkey=k009j60g556h9p79bdoxgskbx&st=sqz7sqyl&dl=1"
-    download_model ade20k-mobilenetv2dilated-c1_deepsup.onnx "https://www.dropbox.com/scl/fi/dlcizojblgaq8dnhd94o4/ade20k-mobilenetv2dilated-c1_deepsup.onnx?rlkey=5m7tv9x8bt0gsg1q77tert9ic&st=ixu66280&dl=1"
-fi
-
-
 if [ "$MAKE_ENV" = true ]; then
     PACKAGE_PATH="$(dirname ${SCRIPT_DIR})"
     mkdir -p "$HOME"/.semantic_inference
@@ -85,4 +77,17 @@ if [ "$MAKE_ENV" = true ]; then
     source "$HOME"/.semantic_inference/env/bin/activate
     python3 -m pip install -e "${PACKAGE_PATH}/semantic_inference"[openset]
     deactivate
+fi
+
+if [ "$MODELS" = true ]; then
+    mkdir -p "$HOME"/.semantic_inference/
+    download_model ade20k-efficientvit_seg_l2.onnx "https://www.dropbox.com/scl/fi/qtaqm3htsdjlnoyqjvrol/ade20k-efficientvit_seg_l2.onnx?rlkey=3evg4gfeybd0wie0gom8535zo&st=1ocu1vl7&dl=1"
+    download_model ade20k-hrnetv2-c1.onnx "https://www.dropbox.com/scl/fi/6hvyfgtk1j0uqt1t7dal9/ade20k-hrnetv2-c1.onnx?rlkey=k009j60g556h9p79bdoxgskbx&st=sqz7sqyl&dl=1"
+    download_model ade20k-mobilenetv2dilated-c1_deepsup.onnx "https://www.dropbox.com/scl/fi/dlcizojblgaq8dnhd94o4/ade20k-mobilenetv2dilated-c1_deepsup.onnx?rlkey=5m7tv9x8bt0gsg1q77tert9ic&st=ixu66280&dl=1"
+    if [[ -e $HOME/.semantic_inference/env ]]; then
+        "$HOME"/.semantic_inference/env/bin/python3 "${SCRIPT_DIR}/download_weights.py" \
+            yolo11n-seg.pt \
+            yoloe-26m-seg.pt \
+            mobileclip2_b.ts
+    fi
 fi
