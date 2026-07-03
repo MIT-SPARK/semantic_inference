@@ -70,7 +70,7 @@ class InstanceSegmentationNode(Node):
         self._hb_timer = self.create_timer(0.1, self._hb_callback)
 
         qos = _latch_qos(1)
-        self._labelspace_pub = self.create_publisher(Labelspace, "~/labelspace", qos)
+        self._labelspace_pub = self.create_publisher(Labelspace, "labelspace", qos)
         self._publish_labelspace()
 
         self._pub = self.create_publisher(Image, "semantic/image_raw", 1)
@@ -93,7 +93,6 @@ class InstanceSegmentationNode(Node):
         if ret.masks is None:
             self.get_logger().debug("No masks detected in the image.")
         else:
-            self.get_logger().debug("get image size: " + str(ret.img_shape))
             self.get_logger().debug(f"result category type: {ret.categories.dtype}")
 
         # Convert to int32 to match 32SC1 encoding expected by cv_bridge
