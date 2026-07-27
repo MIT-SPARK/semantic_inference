@@ -18,8 +18,8 @@ from std_msgs.msg import String
 import semantic_inference.models as models
 import semantic_inference_ros
 from semantic_inference.visualization import get_semantic_overlay_img
-from semantic_inference_ros import Conversions, ImageWorkerConfig
 from semantic_inference_msgs.msg import Labelspace
+from semantic_inference_ros import Conversions, ImageWorkerConfig
 
 
 @dataclass

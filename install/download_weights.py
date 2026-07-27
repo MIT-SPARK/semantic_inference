@@ -2,8 +2,9 @@
 import argparse
 import pathlib
 
-import semantic_inference
 import ultralytics
+
+import semantic_inference
 
 
 def main():
