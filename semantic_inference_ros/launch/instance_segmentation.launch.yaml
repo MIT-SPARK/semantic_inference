@@ -1,19 +1,16 @@
 ---
 launch:
   # Segmentation configuration
-  - arg: {name: instance_seg_env, default: $(env HOME)/environments/gdsam2, description: Path to instance segmentation environment}
-  - arg: {name: model_name, default: gdsam2, description: Name of the segmentation model to use}
-  - arg: {name: config_path, default: $(find-pkg-share semantic_inference_ros)/config/instance_segmentation/$(var model_name).yaml, description: Configuration file for instance segmentation object detector}
-  # compression and logging
+  - arg: {name: env_path, default: $(env HOME)/.semantic_inference/env, description: Path to semantic_inference python environment}
+  - arg: {name: model_name, default: yoloe, description: Name of the segmentation model to use}
+  - arg: {name: config_path, default: $(find-pkg-share semantic_inference_ros)/config/instance_segmentation/$(var model_name).yaml, description: Configuration file for model}
+  # Node behavior
   - arg: {name: compressed_rgb, default: 'false', description: Triggers decompression for RGB stream}
-  # Run options
   - arg: {name: log-level, default: info, description: Set the ROS2 log level}
   - arg: {name: show_configs, default: 'true', description: Control logging config structs to stdout}
-  # Colormap and label grouping
   - arg: {name: run_backprojection, default: 'false', description: Triggers point cloud backprojection with RGB semantics}
   - arg: {name: backprojection_config, default: '{}', description: Extra parameters for backprojection}
-  # - arg: {name: colormap_path, default: $(find-pkg-share semantic_inference_ros)/config/distinct_150_colors.csv, description: Visualization colormap}
-  - arg: {name: colormap_path, default: $(find-pkg-share semantic_inference_ros)/config/hydra_object_gdsam_colors.csv, description: Visualization colormap}
+  - arg: {name: colormap_path, default: $(find-pkg-share semantic_inference_ros)/config/distinct_150_colors.csv, description: Visualization colormap}
   - arg: {name: image_topic, default: color/image_raw, description: Camera topic to use for backprojection coloring}
   # nodes
   - node:  # Decompress RGB stream
@@ -31,7 +28,7 @@ launch:
       pkg: semantic_inference_ros
       exec: instance_segmentation_node
       name: semantic_inference
-      pyenv: $(var instance_seg_env)
+      pyenv: $(var env_path)
       on_exit: shutdown
       param:
         - {name: config_path, value: $(var config_path), type: str}

@@ -327,8 +327,7 @@ def get_semantic_overlay_img(category_names, ret, img):
     masks = ret.masks
     boxes = ret.boxes
     confidences = ret.confidences
-
-    if masks is None:
+    if masks is None or len(masks.shape) == 2:
         # no bounding boxes to draw
         return img
 
@@ -341,15 +340,15 @@ def get_semantic_overlay_img(category_names, ret, img):
 
     # Overlay segmentation masks
     if masks is not None:
-        for i, mask_tensor in enumerate(masks.data):
+        for i, mask_tensor in enumerate(masks):
             box = boxes[i]
-            cls = int(categories[i].cpu().numpy())
+            cls = int(categories[i])
 
             # Get color for the class
             color = colors[cls].tolist()
 
             # Get mask and resize it to the image dimensions
-            mask_np = mask_tensor.cpu().numpy().astype(np.uint8)
+            mask_np = mask_tensor.astype(np.uint8)
             mask_resized = cv2.resize(
                 mask_np,
                 (vis_img_bgr.shape[1], vis_img_bgr.shape[0]),
@@ -371,9 +370,9 @@ def get_semantic_overlay_img(category_names, ret, img):
 
     # Draw bounding boxes and labels
     for i, box in enumerate(boxes):
-        x1, y1, x2, y2 = map(int, box.cpu().numpy())
-        conf = confidences[i].cpu().numpy()
-        cls = int(categories[i].cpu().numpy())
+        x1, y1, x2, y2 = map(int, box)
+        conf = confidences[i]
+        cls = int(categories[i])
         label = f"{category_names[cls]} {conf:.2f}"
 
         color = colors[cls].tolist()

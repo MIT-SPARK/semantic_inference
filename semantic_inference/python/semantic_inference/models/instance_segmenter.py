@@ -115,7 +115,7 @@ class InstanceSegmenter(nn.Module):
             Encoded image
         """
         img = rgb_img if is_rgb_order else rgb_img[:, :, ::-1].copy()
-        return self._rotator.derotate(img)
+        return self(img)
 
     @property
     def device(self):
@@ -140,14 +140,14 @@ class InstanceSegmenter(nn.Module):
         rotated = self._rotator.rotate(rgb_img)
         categories, masks, boxes, confidences = self.segmenter(rotated)
 
-        if self.masks is None:
+        if masks is None:
             instances = np.zeros(rgb_img.shape[:2])
         else:
             instances = np.zeros(masks[0].shape, dtype=np.uint32)
-            masks = self.masks.cpu().numpy()
-            category_ids = self.categories.cpu().numpy()
+            masks = masks.cpu().numpy()
+            category_ids = categories.cpu().numpy()
             for i in range(masks.shape[0]):
-                category_id = int(category_ids[i])  # category id are 0-indexed
+                category_id = int(category_ids[i]) + 1  # category id are 1-indexed
                 instance_id = i + 1  # instance ids are 1-indexed
                 # combine into single uint32
                 combined_id = (category_id << 16) | instance_id
