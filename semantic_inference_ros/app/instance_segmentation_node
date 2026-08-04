@@ -32,6 +32,7 @@ class InstanceSegmentationNodeConfig(sc.Config):
     )
     visualize_semantic_img: bool = True
     nickname: str = "semantic_inference"
+    invalid_ids: list[int] = field(default_factory=list)
 
 
 def _latch_qos(depth):
@@ -110,10 +111,17 @@ class InstanceSegmentationNode(Node):
             )
 
     def _publish_labelspace(self):
+        # labels are 1-indexed and msg.names is 1 + len(model_categories)
+        num_names = len(self._model.category_names) + 1
+        invalid_set = set(self.config.invalid_ids)
+        metadata = {}
+        metadata["invalid_labels"] = self.config.invalid_ids
+        metadata["object_labels"] = [
+            x for x in range(1, num_names) if x not in invalid_set
+        ]
+
         msg = Labelspace()
         msg.names = [""] + self._model.category_names
-        # labels are 1-indexed and msg.names is 1 + len(model_categories)
-        metadata = {"object_labels": list(range(1, len(msg.names)))}
         msg.metadata = json.dumps(metadata)
         self._labelspace_pub.publish(msg)
 
