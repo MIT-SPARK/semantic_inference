@@ -121,7 +121,7 @@ class InstanceSegmentationNode(Node):
 
         msg = Labelspace()
         msg.names = [""] + self._model.category_names
-        msg.invalid = [0] + self.config.invalid_ids
+        msg.invalid = self.config.invalid_ids
         msg.metadata = json.dumps(metadata)
         self._labelspace_pub.publish(msg)
 
