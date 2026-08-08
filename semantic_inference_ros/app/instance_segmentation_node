@@ -115,13 +115,13 @@ class InstanceSegmentationNode(Node):
         num_names = len(self._model.category_names) + 1
         invalid_set = set(self.config.invalid_ids)
         metadata = {}
-        metadata["invalid_labels"] = self.config.invalid_ids
         metadata["object_labels"] = [
             x for x in range(1, num_names) if x not in invalid_set
         ]
 
         msg = Labelspace()
         msg.names = [""] + self._model.category_names
+        msg.invalid = self.config.invalid_ids
         msg.metadata = json.dumps(metadata)
         self._labelspace_pub.publish(msg)
 
