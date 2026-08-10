@@ -227,8 +227,8 @@ void recolorCloud(PointCloud2& output,
   auto labels = sensor_msgs::PointCloud2ConstIterator<uint32_t>(output, "label");
   auto colors = sensor_msgs::PointCloud2Iterator<uint8_t>(output, "rgba");
   while (labels != labels.end()) {
-    // if instance IDs are used, extract the higher 16 bits for the semantic label
-    const auto label_value = instance_id ? (((*labels) & 0xFFFF0000) >> 16) : *labels;
+    // if instance IDs are used, extract the lower 16 bits for the semantic label
+    const auto label_value = instance_id ? ((*labels) & 0x0000FFFF) : *labels;
     const auto unknown = static_cast<uint32_t>(label_value) == unknown_label;
     const auto& color = unknown ? recolor.default_color : recolor.getColor(label_value);
     // annoyingly BGR order even if field is RGBA

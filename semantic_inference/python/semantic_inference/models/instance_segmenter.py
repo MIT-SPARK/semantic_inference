@@ -158,7 +158,7 @@ class InstanceSegmenter(nn.Module):
                 category_id = int(category_ids[i]) + self.config.category_offset
                 instance_id = i + 1  # instance ids are 1-indexed
                 # combine into single uint32
-                combined_id = (category_id << 16) | instance_id
+                combined_id = (instance_id << 16) | category_id
                 instances[masks[i, ...] > 0] = combined_id
 
             instances = self._rotator.derotate(instances)
