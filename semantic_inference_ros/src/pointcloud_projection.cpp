@@ -241,7 +241,19 @@ void recolorCloud(PointCloud2& output,
   }
 }
 
-}  // namespace
+struct CharIntConverter {
+  static uint16_t toIntermediate(uint8_t orig, std::string&) { return orig; }
+
+  static void fromIntermediate(const uint16_t& intermediate,
+                               uint8_t& value,
+                               std::string& error) {
+    if (intermediate > 255) {
+      error = "Value " + std::to_string(intermediate) + " overflows uint8_t max";
+    }
+
+    value = static_cast<uint8_t>(intermediate);
+  }
+};
 
 struct LabelConverter {
   static int32_t toIntermediate(uint32_t orig, std::string&) { return orig; }
@@ -253,6 +265,8 @@ struct LabelConverter {
   }
 };
 
+}  // namespace
+
 void declare_config(ProjectionConfig& config) {
   using namespace config;
   name("ProjectionConfig::Config");
@@ -263,9 +277,7 @@ void declare_config(ProjectionConfig& config) {
   field(config.override_labels, "override_labels");
   field(config.allowed_labels, "allowed_labels");
   field(config.input_remapping, "input_remapping");
-  field(config.out_of_view_alpha, "out_of_view_alpha");
-
-  checkInRange<uint16_t>(config.out_of_view_alpha, 0, 255, "out_of_view_alpha");
+  field<CharIntConverter>(config.out_of_view_alpha, "out_of_view_alpha");
   field(config.instance_id, "instance_id");
 }
 
