@@ -6,6 +6,7 @@ import json
 import pathlib
 import time
 from dataclasses import dataclass, field
+from typing import Any
 
 import numpy as np
 import rclpy
@@ -32,7 +33,9 @@ class InstanceSegmentationNodeConfig(sc.Config):
     )
     visualize_semantic_img: bool = True
     nickname: str = "semantic_inference"
+    extra_categories: list[str] = field(default_factory=list)
     invalid_ids: list[int] = field(default_factory=list)
+    category_metadata: dict[str, Any] = field(default_factory=dict)
 
 
 def _latch_qos(depth):
@@ -58,6 +61,7 @@ class InstanceSegmentationNode(Node):
             self.get_logger().info(f"Loading config from '{config_path}'")
             self.config = sc.Config.load(InstanceSegmentationNodeConfig, config_path)
 
+        self.config.model.category_offset = 1 + len(self.config.extra_categories)
         self.get_logger().info(f"Initializing with {self.config.show()}")
         device = models.default_device()
         self._model = models.InstanceSegmenter(self.config.model).to(device)
@@ -111,17 +115,19 @@ class InstanceSegmentationNode(Node):
             )
 
     def _publish_labelspace(self):
-        # labels are 1-indexed and msg.names is 1 + len(model_categories)
-        num_names = len(self._model.category_names) + 1
-        invalid_set = set(self.config.invalid_ids)
-        metadata = {}
+        # categories are [unknown] + [extra non-model labels] + [model labels]
+        num_names = len(self._model.category_names)
+        offset = self.config.model.category_offset
+        invalid = [x + offset for x in self.config.invalid_ids]
+
+        metadata = self.config.category_metadata
         metadata["object_labels"] = [
-            x for x in range(1, num_names) if x not in invalid_set
+            x for x in range(offset, num_names + offset) if x not in set(invalid)
         ]
 
         msg = Labelspace()
-        msg.names = [""] + self._model.category_names
-        msg.invalid = self.config.invalid_ids
+        msg.names = [""] + self.config.extra_categories + self._model.category_names
+        msg.invalid = invalid
         msg.metadata = json.dumps(metadata)
         self._labelspace_pub.publish(msg)
 
@@ -141,6 +147,7 @@ class InstanceSegmentationNode(Node):
             record["status"] = "NOMINAL"
             avg_ms = sum(self._inference_times_ms) / len(self._inference_times_ms)
             record["note"] = f"Average inference: {avg_ms:.1f} ms"
+
         msg = String()
         msg.data = json.dumps(record)
         self._status_pub.publish(msg)

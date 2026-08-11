@@ -69,11 +69,19 @@ class Results:
 
 @dataclass
 class InstanceSegmenterConfig(Config):
-    """Main config for instance segmenter."""
+    """
+    Main config for instance segmenter.
+
+    Attributes:
+        instance_model: Configuration for underlying instance segmentation model.
+        rotation_type: Amount of rotation to apply (0, 90 c/ccw, 180).
+        label_offset: Fixed offset to apply to labels
+    """
 
     # relevant configs (model path, model weights) for the model
     instance_model: Any = config_field("instance_model", default="yolo-seg")
     rotation_type: str = "none"
+    category_offset: int = 1
 
 
 class InstanceSegmenter(nn.Module):
@@ -147,10 +155,10 @@ class InstanceSegmenter(nn.Module):
             masks = masks.cpu().numpy()
             category_ids = categories.cpu().numpy()
             for i in range(masks.shape[0]):
-                category_id = int(category_ids[i]) + 1  # category id are 1-indexed
+                category_id = int(category_ids[i]) + self.config.category_offset
                 instance_id = i + 1  # instance ids are 1-indexed
                 # combine into single uint32
-                combined_id = (category_id << 16) | instance_id
+                combined_id = (instance_id << 16) | category_id
                 instances[masks[i, ...] > 0] = combined_id
 
             instances = self._rotator.derotate(instances)
