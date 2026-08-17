@@ -1,5 +1,7 @@
 ---
 launch:
+  # Segmentation configuration
+  - arg: {name: env_path, default: $(env HOME)/.semantic_inference/env, description: Path to semantic_inference python environment}
   - arg: {name: model_name, default: ViT-L/14, description: Model to use for segmentation}
   - arg: {name: min_period_s, default: '0.0', description: Minimum time between inputs}
   - arg: {name: compressed_rgb, default: 'false', description: Triggers decompression for RGB stream}
@@ -14,10 +16,11 @@ launch:
       remap:
         - {from: in/compressed, to: color/image_raw/compressed}
         - {from: out, to: color/image_raw}
-  - node:
+  - pyenv_node:
       pkg: semantic_inference_ros
       exec: image_embedding_node
       name: image_embedding_node
+      pyenv: $(var env_path)
       param:
         - name: config
           value: '{model: {model_name: $(var model_name)}, worker: {min_separation_s: $(var min_period_s)}}'
