@@ -374,6 +374,9 @@ def get_semantic_overlay_img(category_names, ret, img):
         conf = confidences[i]
         cls = int(categories[i])
         label = f"{category_names[cls]} {conf:.2f}"
+        if getattr(ret, "track_ids", None) is not None:
+            raw_id = int(ret.track_ids[i])
+            label = f"{label} id={raw_id if raw_id >= 0 else '?'}"
 
         color = colors[cls].tolist()
 
