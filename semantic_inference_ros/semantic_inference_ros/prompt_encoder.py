@@ -29,6 +29,9 @@
 #
 """Utility for prompt embedding service."""
 
+from std_msgs.msg import String
+
+from semantic_inference_msgs.msg import FeatureVectorStamped
 from semantic_inference_msgs.srv import EncodeFeature
 from semantic_inference_ros.ros_conversions import Conversions
 
@@ -36,14 +39,25 @@ from semantic_inference_ros.ros_conversions import Conversions
 class PromptEncoder:
     """Node implementation."""
 
-    def __init__(self, node, model, name="~/embed"):
+    def __init__(self, node, model, name="semantic/embed"):
         """Construct a feature encoder node."""
         self._node = node
         self._model = model
         self._srv = node.create_service(EncodeFeature, name, self._callback)
+        self._pub = node.create_publisher(FeatureVectorStamped, f"{name}/feature", 1)
+        self._sub = node.create_subscription(
+            String, f"{name}/prompt", self._sub_callback, 10
+        )
 
     def _callback(self, request, response):
         embedding = self._model.embed_text(request.prompt).cpu().numpy().squeeze()
         response.feature.header.stamp = self._node.get_clock().now().to_msg()
         response.feature.feature = Conversions.to_feature(embedding)
         return response
+
+    def _sub_callback(self, msg: String):
+        embedding = self._model.embed_text(msg.data).cpu().numpy().squeeze()
+        response = FeatureVectorStamped()
+        response.header.stamp = self._node.get_clock().now().to_msg()
+        response.feature = Conversions.to_feature(embedding)
+        self._pub.publish(response)
