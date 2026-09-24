@@ -1,0 +1,7 @@
+name,red,green,blue,alpha,id
+background,0,0,0,255,0
+smooth,0,128,0,255,1
+rough,255,255,0,255,2
+bumpy,255,128,0,255,3
+forbidden,255,0,0,255,4
+obstacle,0,0,128,255,5

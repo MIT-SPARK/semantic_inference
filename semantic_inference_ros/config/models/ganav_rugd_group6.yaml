@@ -1,0 +1,12 @@
+---
+# GA-Nav 6-group traversability model exported by exporting/export_ganav.py. The export
+# has a fixed input size (640x360 by default), so images are resized to it and the
+# labels are restored to the original resolution.
+segmenter:
+  model:
+    color:
+      mean: [0.485, 0.456, 0.406]
+      stddev: [0.229, 0.224, 0.225]
+image_resizer:
+  width: 640
+  height: 360

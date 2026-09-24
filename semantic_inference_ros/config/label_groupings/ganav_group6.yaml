@@ -1,0 +1,9 @@
+---
+name: ganav_group6
+groups:
+  - {name: background, labels: [0]}
+  - {name: smooth, labels: [1]}
+  - {name: rough, labels: [2]}
+  - {name: bumpy, labels: [3]}
+  - {name: forbidden, labels: [4]}
+  - {name: obstacle, labels: [5]}
