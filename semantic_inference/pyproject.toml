@@ -17,6 +17,7 @@ classifiers = [
 ]
 dependencies = [
     "click",
+    "boxmot<20",  # last numpy<2 version
     "distinctipy",
     "einops",
     "imageio",
