@@ -55,6 +55,12 @@ class Results:
     categories: torch.Tensor  # (n,), torch.float32/int64 (doesn't matter)
     confidences: torch.Tensor  # (n,), torch.float32
     instances: np.ndarray  # (H, W, c) np.uint32 (result image)
+    # (n,) int64 raw (pre-wrap) tracker ids, aligned to
+    # masks/boxes/categories/confidences. -1 means the tracker didn't associate that
+    # detection to a track this frame. Debug/visualization only (see
+    # visualization.get_semantic_overlay_img) -- `instances` above already carries the
+    # wrapped id actually used downstream; not part of that format.
+    track_ids: np.ndarray = None
 
     def cpu(self):
         """Move results to CPU."""
@@ -74,12 +80,17 @@ class InstanceSegmenterConfig(Config):
 
     Attributes:
         instance_model: Configuration for underlying instance segmentation model.
+        instance_tracker: Configuration for the tracker assigning temporally-consistent
+            instance ids (see semantic_inference.models.instance_tracker). Defaults to a
+            BoxMOT-backed tracker; set type "null" to reproduce the legacy per-frame
+            index ids.
         rotation_type: Amount of rotation to apply (0, 90 c/ccw, 180).
         label_offset: Fixed offset to apply to labels
     """
 
     # relevant configs (model path, model weights) for the model
     instance_model: Any = config_field("instance_model", default="yolo-seg")
+    instance_tracker: Any = config_field("instance_tracker", default="boxmot")
     rotation_type: str = "none"
     category_offset: int = 1
 
@@ -96,6 +107,7 @@ class InstanceSegmenter(nn.Module):
         self.config = config
         self._rotator = ImageRotator(RotationType(config.rotation_type))
         self.segmenter = self.config.instance_model.create()
+        self.instance_tracker = self.config.instance_tracker.create()
 
     def eval(self):
         """
@@ -148,6 +160,27 @@ class InstanceSegmenter(nn.Module):
         rotated = self._rotator.rotate(rgb_img)
         categories, masks, boxes, confidences = self.segmenter(rotated)
 
+        if categories is None:
+            # No detections this frame. Still feed the tracker an empty update: BoxMOT's
+            # Kalman predictions and lost-track ageing must advance every frame, not
+            # just frames with detections (see
+            # semantic_inference.models.instance_tracker).
+            track_categories = torch.empty(0, dtype=torch.int64)
+            track_boxes = torch.empty((0, 4), dtype=torch.float32)
+            track_confidences = torch.empty(0, dtype=torch.float32)
+        else:
+            track_categories, track_boxes, track_confidences = (
+                categories,
+                boxes,
+                confidences,
+            )
+        track_ids = self.instance_tracker.update(
+            track_categories,
+            track_boxes,
+            track_confidences,
+            np.ascontiguousarray(rotated),
+        )
+
         if masks is None:
             instances = np.zeros(rgb_img.shape[:2])
         else:
@@ -155,8 +188,21 @@ class InstanceSegmenter(nn.Module):
             masks = masks.cpu().numpy()
             category_ids = categories.cpu().numpy()
             for i in range(masks.shape[0]):
+                raw_id = int(track_ids[i])
+                if raw_id < 0:
+                    # Tracker did not associate this detection to a track this frame;
+                    # leave its pixels unlabeled (id 0) rather than mint a fake/unstable
+                    # id for it.
+                    continue
+
                 category_id = int(category_ids[i]) + self.config.category_offset
-                instance_id = i + 1  # instance ids are 1-indexed
+                # Wrap into 16 bits, reserving 0 (0 stays "no instance"/background
+                # downstream). NOTE: the wire's upper 16 bits land in a *signed* 16-bit
+                # channel downstream (InstanceSubscriber::fillInput unpacks `original >>
+                # 16` into a CV_16SC1 mat, hydra_ros/src/input/image_receiver.cpp), so
+                # the usable range is [1, 32767], not [1, 65535] -- an id above 32767
+                # wraps negative on that side.
+                instance_id = (raw_id % 32767) + 1
                 # combine into single uint32
                 combined_id = (instance_id << 16) | category_id
                 instances[masks[i, ...] > 0] = combined_id
@@ -169,4 +215,5 @@ class InstanceSegmenter(nn.Module):
             categories=categories,
             confidences=confidences,
             instances=instances,
+            track_ids=track_ids,
         )
