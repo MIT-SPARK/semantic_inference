@@ -99,19 +99,6 @@ class ClipReidAdapter:
         return embeddings.float().cpu().numpy()
 
 
-class IndexInstanceTracker(InstanceTracker):
-    """No temporal tracking: each detection's id is its index in the current frame."""
-
-    def __init__(self, config: "IndexInstanceTrackerConfig"):
-        """Nothing to construct."""
-        self.config = config
-
-    def update(self, categories, boxes, confidences, frame):
-        """Return per-frame indices, so every detection is kept (legacy instance ids)."""
-        n = 0 if boxes is None else boxes.shape[0]
-        return np.arange(n, dtype=np.int64)
-
-
 class BoxmotInstanceTracker(InstanceTracker):
     """Wraps a BoxMOT tracker to produce stable per-object IDs."""
 
@@ -182,9 +169,3 @@ class BoxmotInstanceTrackerConfig(Config):
     reid_backend: str = "clip"
     reid_weights: str = "ViT-B/16"
     device: str = "cpu"
-
-
-@register_config("instance_tracker", name="null", constructor=IndexInstanceTracker)
-@dataclasses.dataclass
-class IndexInstanceTrackerConfig(Config):
-    """Config for the pass-through tracker (per-frame index ids, no detections dropped)."""
