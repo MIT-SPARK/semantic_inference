@@ -97,7 +97,9 @@ class InstanceSegmenterConfig(Config):
     use_instance_tracker: bool = True
     instance_tracker: Any = config_field("instance_tracker", default="boxmot")
     use_refinement: bool = False
-    refinement: SegmentRefinement.Config = field(default_factory=SegmentRefinement.Config)
+    refinement: SegmentRefinement.Config = field(
+        default_factory=SegmentRefinement.Config
+    )
     rotation_type: str = "none"
     category_offset: int = 1
 
@@ -115,7 +117,9 @@ class InstanceSegmenter(nn.Module):
         self._rotator = ImageRotator(RotationType(config.rotation_type))
         self.segmenter = self.config.instance_model.create()
         self.instance_tracker = (
-            self.config.instance_tracker.create() if config.use_instance_tracker else None
+            self.config.instance_tracker.create()
+            if config.use_instance_tracker
+            else None
         )
         self.segment_refinement = (
             SegmentRefinement(config.refinement) if config.use_refinement else None
