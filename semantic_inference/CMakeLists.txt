@@ -52,7 +52,14 @@ add_library(
 )
 
 if(ENABLE_TENSORRT_CXX_VALUE)
-  target_link_libraries(${PROJECT_NAME} PRIVATE TensorRT::TensorRT CUDA::cudart)
+  # The CUDA toolkit include dir can contain another copy of the TensorRT headers (the
+  # ZED SDK installs one), which would shadow the system headers found by
+  # FindTensorRT. Link cudart without its include dirs and search the CUDA headers
+  # after the system ones instead.
+  target_link_libraries(${PROJECT_NAME} PRIVATE TensorRT::TensorRT ${CUDA_cudart_LIBRARY})
+  foreach(dir IN LISTS CUDAToolkit_INCLUDE_DIRS)
+    target_compile_options(${PROJECT_NAME} PRIVATE "SHELL:-idirafter ${dir}")
+  endforeach()
   target_sources(${PROJECT_NAME} PRIVATE src/trt_utilities.cpp src/model.cpp)
 endif()
 
