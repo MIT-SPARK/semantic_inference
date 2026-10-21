@@ -57,6 +57,12 @@ if(TensorRT_INCLUDE_DIR)
   foreach(arg IN ITEMS MAJOR MINOR PATCH BUILD)
     set(REGEX_STRING "#define NV_TENSORRT_${arg} ([0-9]+)[^\n]*\n")
     string(REGEX MATCH "${REGEX_STRING}" line-match ${version-file})
+    if(NOT line-match)
+      # TensorRT 11 defines NV_TENSORRT_* in terms of TRT_*_ENTERPRISE
+      string(REGEX MATCH "#define TRT_${arg}_ENTERPRISE ([0-9]+)[^\n]*\n" line-match
+                   ${version-file}
+      )
+    endif()
     if(line-match)
       list(APPEND VERSION_ITEMS ${CMAKE_MATCH_1})
     endif()
@@ -86,13 +92,31 @@ if(TensorRT_FOUND)
   set(TensorRT_INCLUDE_DIRS ${TensorRT_INCLUDE_DIR})
 endif()
 
+# The system TensorRT headers usually live in an implicit include directory (e.g.
+# /usr/include/x86_64-linux-gnu), which CMake drops from the compile line. Any other
+# copy of the headers on an explicit include path then wins instead, e.g. the TensorRT
+# that the ZED SDK installs into the CUDA toolkit, leaving the headers and the library
+# from different TensorRT versions. Forwarding the headers that were found through a
+# directory in the build tree keeps them on the compile line ahead of the CUDA headers.
+if(TensorRT_FOUND)
+  set(TensorRT_FORWARD_INCLUDE_DIR "${CMAKE_BINARY_DIR}/tensorrt_include")
+  file(REMOVE_RECURSE "${TensorRT_FORWARD_INCLUDE_DIR}")
+  file(MAKE_DIRECTORY "${TensorRT_FORWARD_INCLUDE_DIR}")
+  file(GLOB TensorRT_HEADERS "${TensorRT_INCLUDE_DIR}/Nv*.h")
+  foreach(header IN LISTS TensorRT_HEADERS)
+    get_filename_component(header_name "${header}" NAME)
+    file(CREATE_LINK "${header}" "${TensorRT_FORWARD_INCLUDE_DIR}/${header_name}" SYMBOLIC)
+  endforeach()
+  set(TensorRT_INCLUDE_DIRS ${TensorRT_FORWARD_INCLUDE_DIR})
+endif()
+
 set(TensorRT_COMPONENT_LIBRARIES "")
 foreach(component IN LISTS TensorRT_FIND_COMPONENTS)
   if(TensorRT_${component}_FOUND AND NOT TARGET TensorRT::${component})
     add_library(TensorRT::${component} UNKNOWN IMPORTED)
     set_target_properties(
       TensorRT::${component} PROPERTIES IMPORTED_LOCATION "${TensorRT_${component}_LIBRARY}"
-                                        INTERFACE_INCLUDE_DIRECTORIES "${TensorRT_INCLUDE_DIR}"
+                                        INTERFACE_INCLUDE_DIRECTORIES "${TensorRT_INCLUDE_DIRS}"
     )
     list(APPEND TensorRT_COMPONENT_LIBRARIES TensorRT::${component})
   endif()
@@ -104,7 +128,7 @@ if(TensorRT_FOUND AND NOT TARGET TensorRT::TensorRT)
     TensorRT::TensorRT
     PROPERTIES IMPORTED_LOCATION "${TensorRT_LIBRARY}"
                VERSION "${TensorRT_VERSION}"
-               INTERFACE_INCLUDE_DIRECTORIES "${TensorRT_INCLUDE_DIR}"
+               INTERFACE_INCLUDE_DIRECTORIES "${TensorRT_INCLUDE_DIRS}"
                INTERFACE_LINK_LIBRARIES "${TensorRT_COMPONENT_LIBRARIES}"
   )
 endif()
