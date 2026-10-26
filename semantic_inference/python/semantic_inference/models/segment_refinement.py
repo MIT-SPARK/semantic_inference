@@ -84,8 +84,7 @@ class SegmentRefinement(nn.Module):
         """
         Refine computed masks, also returning which input masks were kept.
 
-        Masks that end up empty are dropped, so per-mask data aligned with the inputs (e.g.
-        categories, confidences, track ids) must be index-selected with the returned indices.
+        Masks that end up empty are dropped
 
         Args:
             masks (torch.Tensor): bool tensor of N image masks of shape (N, R, C)

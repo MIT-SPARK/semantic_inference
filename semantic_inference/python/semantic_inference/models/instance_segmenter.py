@@ -86,8 +86,7 @@ class InstanceSegmenterConfig(Config):
         instance_tracker: Configuration for the tracker assigning temporally-consistent
             instance ids (see semantic_inference.models.instance_tracker). Defaults to a
             BoxMOT-backed tracker.
-        refinement: Optional mask refinement (see SegmentRefinement), applied to the masks
-            after the tracker update so tracking still sees the model's boxes.
+        refinement: Optional mask refinement after the tracker update
         rotation_type: Amount of rotation to apply (0, 90 c/ccw, 180).
         label_offset: Fixed offset to apply to labels
     """
@@ -196,7 +195,7 @@ class InstanceSegmenter(nn.Module):
             )
 
         if masks is not None and self.segment_refinement is not None:
-            # Refinement drops masks that end up empty: keep the per-detection data aligned.
+            # Select all masks that are not empty after refinement
             masks, refined_boxes, kept = self.segment_refinement.refine(masks, boxes)
             boxes = refined_boxes.to(torch.float32)
             categories = categories[kept.to(categories.device)]
