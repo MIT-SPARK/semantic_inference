@@ -30,7 +30,7 @@
 """Model to segment an image and encode segments with CLIP embeddings."""
 
 import dataclasses
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
@@ -39,6 +39,7 @@ from spark_config import Config, config_field
 from torch import nn
 
 from semantic_inference.image_rotator import ImageRotator, RotationType
+from semantic_inference.models.segment_refinement import SegmentRefinement
 
 
 def _map_opt(values, f):
@@ -80,17 +81,24 @@ class InstanceSegmenterConfig(Config):
 
     Attributes:
         instance_model: Configuration for underlying instance segmentation model.
+        use_instance_tracker: Whether to create and run instance_tracker. If false, the
+            instance id of each detection is its index in the frame (legacy ids).
         instance_tracker: Configuration for the tracker assigning temporally-consistent
             instance ids (see semantic_inference.models.instance_tracker). Defaults to a
-            BoxMOT-backed tracker; set type "null" to reproduce the legacy per-frame
-            index ids.
+            BoxMOT-backed tracker.
+        refinement: Optional mask refinement after the tracker update
         rotation_type: Amount of rotation to apply (0, 90 c/ccw, 180).
         label_offset: Fixed offset to apply to labels
     """
 
     # relevant configs (model path, model weights) for the model
     instance_model: Any = config_field("instance_model", default="yolo-seg")
+    use_instance_tracker: bool = True
     instance_tracker: Any = config_field("instance_tracker", default="boxmot")
+    use_refinement: bool = False
+    refinement: SegmentRefinement.Config = field(
+        default_factory=SegmentRefinement.Config
+    )
     rotation_type: str = "none"
     category_offset: int = 1
 
@@ -107,7 +115,14 @@ class InstanceSegmenter(nn.Module):
         self.config = config
         self._rotator = ImageRotator(RotationType(config.rotation_type))
         self.segmenter = self.config.instance_model.create()
-        self.instance_tracker = self.config.instance_tracker.create()
+        self.instance_tracker = (
+            self.config.instance_tracker.create()
+            if config.use_instance_tracker
+            else None
+        )
+        self.segment_refinement = (
+            SegmentRefinement(config.refinement) if config.use_refinement else None
+        )
 
     def eval(self):
         """
@@ -160,26 +175,34 @@ class InstanceSegmenter(nn.Module):
         rotated = self._rotator.rotate(rgb_img)
         categories, masks, boxes, confidences = self.segmenter(rotated)
 
-        if categories is None:
+        if self.instance_tracker is None:
+            num_detections = 0 if categories is None else len(categories)
+            track_ids = np.arange(num_detections, dtype=np.int64)
+        elif categories is None:
             # No detections this frame. Still feed the tracker an empty update: BoxMOT's
             # Kalman predictions and lost-track ageing must advance every frame, not
             # just frames with detections (see
             # semantic_inference.models.instance_tracker).
-            track_categories = torch.empty(0, dtype=torch.int64)
-            track_boxes = torch.empty((0, 4), dtype=torch.float32)
-            track_confidences = torch.empty(0, dtype=torch.float32)
-        else:
-            track_categories, track_boxes, track_confidences = (
-                categories,
-                boxes,
-                confidences,
+            track_ids = self.instance_tracker.update(
+                torch.empty(0, dtype=torch.int64),
+                torch.empty((0, 4), dtype=torch.float32),
+                torch.empty(0, dtype=torch.float32),
+                np.ascontiguousarray(rotated),
             )
-        track_ids = self.instance_tracker.update(
-            track_categories,
-            track_boxes,
-            track_confidences,
-            np.ascontiguousarray(rotated),
-        )
+        else:
+            track_ids = self.instance_tracker.update(
+                categories, boxes, confidences, np.ascontiguousarray(rotated)
+            )
+
+        if masks is not None and self.segment_refinement is not None:
+            # Select all masks that are not empty after refinement
+            masks, refined_boxes, kept = self.segment_refinement.refine(masks, boxes)
+            boxes = refined_boxes.to(torch.float32)
+            categories = categories[kept.to(categories.device)]
+            confidences = confidences[kept.to(confidences.device)]
+            track_ids = np.asarray(track_ids)[kept.cpu().numpy()]
+            if masks.size(0) == 0:
+                masks = None
 
         if masks is None:
             instances = np.zeros(rgb_img.shape[:2])

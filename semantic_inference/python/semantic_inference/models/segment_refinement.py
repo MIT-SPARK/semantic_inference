@@ -44,7 +44,8 @@ class SegmentRefinementConfig(Config):
     dilate_masks: bool = False
     kernel_size: int = 3
     kernel_tolerance: float = 1.0e-3
-    dilation_passes: int = 1
+    passes: int = 1
+    erode_only: bool = False
 
 
 class SegmentRefinement(nn.Module):
@@ -76,12 +77,28 @@ class SegmentRefinement(nn.Module):
         Returns:
             masks, bboxes as tensors
         """
+        masks, bboxes, _ = self.refine(masks, bboxes)
+        return masks, bboxes
+
+    def refine(self, masks, bboxes):
+        """
+        Refine computed masks, also returning which input masks were kept.
+
+        Masks that end up empty are dropped
+
+        Args:
+            masks (torch.Tensor): bool tensor of N image masks of shape (N, R, C)
+            bboxes (torch.Tensor): int tensor of N bounding boxes of shape (N, 4)
+
+        Returns:
+            masks, bboxes, and the int64 indices (M,) of the kept input masks
+        """
         masks = masks.to(torch.bool)
         device = masks.device
 
         num_masks = masks.size(0)
         if num_masks == 0:
-            return masks, bboxes
+            return masks, bboxes, torch.zeros(0, dtype=torch.int64, device=device)
 
         # order masks
         mask_sizes = torch.sum(masks, dim=(1, 2))
@@ -105,13 +122,14 @@ class SegmentRefinement(nn.Module):
             W = torch.ones((1, 1, N, N), dtype=m_new.dtype, device=device)
 
             # erode mask
-            for _ in range(self.config.dilation_passes):
+            for _ in range(self.config.passes):
                 m_new = nn.functional.conv2d(m_new, W, padding="same")
                 m_new[torch.abs(m_new - N**2) > self.config.kernel_tolerance] = 0
 
             # dilate mask
-            for _ in range(self.config.dilation_passes):
-                m_new = nn.functional.conv2d(m_new, W, padding="same")
+            if not self.config.erode_only:
+                for _ in range(self.config.passes):
+                    m_new = nn.functional.conv2d(m_new, W, padding="same")
 
             m_new = torch.squeeze(m_new, 1).to(torch.bool)
 
@@ -119,4 +137,4 @@ class SegmentRefinement(nn.Module):
         m_new = torch.index_select(m_new, 0, valid)
         b_new = torchvision.ops.masks_to_boxes(m_new).to(torch.int32)
         b_new[:, 2:] += 1
-        return m_new, b_new
+        return m_new, b_new, valid.reshape(-1)
