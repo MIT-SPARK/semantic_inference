@@ -106,7 +106,9 @@ class SegmentRefinement(nn.Module):
 
         valid = refined.flatten(1).any(dim=1).nonzero().flatten()
         refined = torch.index_select(refined, 0, valid)
-        return refined, self._bounding_boxes(refined), valid
+        boxes = torchvision.ops.masks_to_boxes(refined).to(torch.int32)
+        boxes[:, 2:] += 1
+        return refined, boxes, valid
 
     @staticmethod
     def _resolve_overlaps(masks):
@@ -149,24 +151,3 @@ class SegmentRefinement(nn.Module):
                 masks = nn.functional.conv2d(masks, W, padding="same")
 
         return torch.squeeze(masks, 1).to(torch.bool)
-
-    @staticmethod
-    def _bounding_boxes(masks):
-        device = masks.device
-        if not masks.is_cuda:
-            b_new = torchvision.ops.masks_to_boxes(masks).to(torch.int32)
-            b_new[:, 2:] += 1
-            return b_new
-
-        height, width = masks.shape[1:]
-        rows = masks.any(dim=2)
-        cols = masks.any(dim=1)
-        y = torch.arange(height, device=device)
-        x = torch.arange(width, device=device)
-        # Reductions over rows and columns avoid enumerating every foreground pixel.
-        x_min = torch.where(cols, x, width).amin(dim=1)
-        y_min = torch.where(rows, y, height).amin(dim=1)
-        x_max = torch.where(cols, x + 1, 0).amax(dim=1)
-        y_max = torch.where(rows, y + 1, 0).amax(dim=1)
-        b_new = torch.stack((x_min, y_min, x_max, y_max), dim=1).to(torch.int32)
-        return b_new
