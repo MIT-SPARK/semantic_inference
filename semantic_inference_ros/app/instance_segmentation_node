@@ -107,15 +107,21 @@ class InstanceSegmentationNode(Node):
         self._last_inference_time = self.get_clock().now().nanoseconds * 1e-9
         self.get_logger().debug("Published instance segmentation image.")
 
-        if (
-            self.config.visualize_semantic_img
-            and self._overlay_pub.get_subscription_count()
-        ):
-            category_names = self._model.category_names
-            color_img = get_semantic_overlay_img(category_names, ret, img)
-            self._overlay_pub.publish(
-                Conversions.to_image_msg(header, color_img, encoding="rgb8")
-            )
+        self.visualize(header, img, ret)
+
+    def visualize(self, header, img, ret):
+        """Publish an overlay when visualization is enabled and subscribers exist."""
+        if not self.config.visualize_semantic_img:
+            return
+
+        if self._overlay_pub.get_subscription_count() == 0:
+            return
+
+        category_names = self._model.category_names
+        color_img = get_semantic_overlay_img(category_names, ret, img)
+        self._overlay_pub.publish(
+            Conversions.to_image_msg(header, color_img, encoding="rgb8")
+        )
 
     def _publish_labelspace(self):
         # categories are [unknown] + [extra non-model labels] + [model labels]
