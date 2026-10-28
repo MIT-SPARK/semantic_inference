@@ -197,7 +197,7 @@ class InstanceSegmenter(nn.Module):
         if masks is not None and self.segment_refinement is not None:
             # Select all masks that are not empty after refinement
             masks, refined_boxes, kept = self.segment_refinement.refine(masks, boxes)
-            boxes = refined_boxes.to(device="cpu", dtype=torch.float32)
+            boxes = refined_boxes.to(torch.float32).cpu()
             categories = categories[kept.to(categories.device)]
             confidences = confidences[kept.to(confidences.device)]
             track_ids = np.asarray(track_ids)[kept.cpu().numpy()]
