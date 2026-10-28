@@ -118,21 +118,11 @@ class SegmentRefinement(nn.Module):
         sorted_idx = torch.argsort(mask_sizes.cpu(), descending=True)
         height, width = masks.shape[1:]
         img = torch.zeros((height, width), dtype=torch.int64, device=device)
-        if masks.is_cuda:
-            for idx in sorted_idx.tolist():
-                img = torch.where(masks[idx], idx + 1, img)
+        for idx in sorted_idx.tolist():
+            img[masks[idx]] = idx + 1
 
-            mask_ids = torch.arange(1, masks.size(0) + 1, device=device)
-            m_new = img.unsqueeze(0) == mask_ids[:, None, None]
-        else:
-            for idx in sorted_idx:
-                img[masks[idx]] = idx + 1
-
-            m_new = torch.zeros_like(masks)
-            for idx in sorted_idx:
-                m_new[idx, img == idx + 1] = 1
-
-        return m_new
+        mask_ids = torch.arange(1, masks.size(0) + 1, device=device)
+        return img.unsqueeze(0) == mask_ids[:, None, None]
 
     def _apply_morphology(self, masks):
         device = masks.device
