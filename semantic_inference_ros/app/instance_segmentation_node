@@ -8,7 +8,6 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
-import cv2
 import numpy as np
 import rclpy
 import spark_config as sc
@@ -99,7 +98,7 @@ class InstanceSegmentationNode(Node):
     def _spin_once(self, header, img):
         self.get_logger().debug(f"recived image of size: {img.shape}")
         if self.config.worker.encoding == "rgb8":
-            img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+            img = img[:, :, ::-1].copy()
 
         t0 = time.monotonic()
         with torch.no_grad():

@@ -555,7 +555,7 @@ class GDSam2InstanceSegmenterWrapper(nn.Module):
         from groundingdino.util.inference import predict
 
         # Grounding DINO and SAM 2 consume RGB images.
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        img = img[:, :, ::-1].copy()
         img_transformed = self.preprocess_image(img)
 
         # gdino prediction

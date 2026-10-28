@@ -33,7 +33,6 @@ import dataclasses
 from dataclasses import dataclass, field
 from typing import Any
 
-import cv2
 import numpy as np
 import torch
 from spark_config import Config, config_field
@@ -150,7 +149,7 @@ class InstanceSegmenter(nn.Module):
         Returns:
             Encoded image
         """
-        img = cv2.cvtColor(rgb_img, cv2.COLOR_RGB2BGR) if is_rgb_order else rgb_img
+        img = rgb_img[:, :, ::-1].copy() if is_rgb_order else rgb_img
         return self(img)
 
     @property
