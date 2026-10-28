@@ -376,7 +376,7 @@ class YoloInstanceSegmenterBase(nn.Module):
             return None, None, None, None
 
         categories = result.boxes.cls.to(torch.int).cpu()  # int8
-        masks = result.masks.data.to(torch.bool).cpu()
+        masks = result.masks.data.to(torch.bool)
         boxes = result.boxes.xyxy.cpu()  # float32
         confidences = result.boxes.conf.cpu()  # float32
 
@@ -384,10 +384,11 @@ class YoloInstanceSegmenterBase(nn.Module):
         if self.config.min_segmentation_size > 0:
             mask_sizes = masks.sum(dim=(1, 2))  # number of pixels in each mask
             size_indices = mask_sizes > self.config.min_segmentation_size
-            categories = categories[size_indices]
+            kept = size_indices.cpu()
+            categories = categories[kept]
             masks = masks[size_indices]
-            boxes = boxes[size_indices]
-            confidences = confidences[size_indices]
+            boxes = boxes[kept]
+            confidences = confidences[kept]
 
         return categories, masks, boxes, confidences
 
