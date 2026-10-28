@@ -376,6 +376,7 @@ class YoloInstanceSegmenterBase(nn.Module):
             # required for hydra, but slow down the model
             retina_masks=True,
             iou=self.config.overlap_merge_iou,
+            verbose=False,
         )[0]  # assume batch size 1
         if result.masks is None:
             return None, None, None, None
