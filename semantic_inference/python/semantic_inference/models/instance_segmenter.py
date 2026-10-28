@@ -33,6 +33,7 @@ import dataclasses
 from dataclasses import dataclass, field
 from typing import Any
 
+import cv2
 import numpy as np
 import torch
 from spark_config import Config, config_field
@@ -143,13 +144,13 @@ class InstanceSegmenter(nn.Module):
         Segment image and compute language embeddings for each mask.
 
         Args:
-            img (np.ndarry): uint8 image of shape (R, C, 3) in rgb order
-            is_rgb_order (bool): whether the image is rgb order or not
+            rgb_img (np.ndarray): uint8 image of shape (R, C, 3)
+            is_rgb_order (bool): True for RGB input, False for BGR input
 
         Returns:
             Encoded image
         """
-        img = rgb_img if is_rgb_order else rgb_img[:, :, ::-1].copy()
+        img = cv2.cvtColor(rgb_img, cv2.COLOR_RGB2BGR) if is_rgb_order else rgb_img
         return self(img)
 
     @property
@@ -162,17 +163,17 @@ class InstanceSegmenter(nn.Module):
         """Get category names."""
         return self.segmenter.category_names
 
-    def forward(self, rgb_img):
+    def forward(self, bgr_img):
         """
         Segment image and compute language embeddings for each mask.
 
         Args:
-            img (np.ndarray): uint8 image of shape (R, C, 3) in rgb order
+            bgr_img (np.ndarray): uint8 image of shape (R, C, 3) in BGR order
 
         Returns:
             Encoded image
         """
-        rotated = self._rotator.rotate(rgb_img)
+        rotated = self._rotator.rotate(bgr_img)
         categories, masks, boxes, confidences = self.segmenter(rotated)
 
         if self.instance_tracker is None:
@@ -205,7 +206,7 @@ class InstanceSegmenter(nn.Module):
                 masks = None
 
         if masks is None:
-            instances = np.zeros(rgb_img.shape[:2])
+            instances = np.zeros(bgr_img.shape[:2])
         else:
             instances = np.zeros(masks[0].shape, dtype=np.uint32)
             masks = masks.cpu().numpy()

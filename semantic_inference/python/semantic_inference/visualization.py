@@ -319,7 +319,7 @@ def make_colormap_legend(
 
 def get_semantic_overlay_img(category_names, ret, img):
     """
-    Process the result from instance segmenter and generate color image.
+    Generate a BGR overlay from instance segmentation results and a BGR image.
     The returned color image contain bounding boxes, masks, and category labels.
     """
 
@@ -331,8 +331,7 @@ def get_semantic_overlay_img(category_names, ret, img):
         # no bounding boxes to draw
         return img
 
-    # Convert RGB to BGR for OpenCV
-    vis_img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+    vis_img_bgr = img.copy()
 
     # Generate random colors for each class
     np.random.seed(42)  # for consistent colors
@@ -404,7 +403,4 @@ def get_semantic_overlay_img(category_names, ret, img):
             1,
         )
 
-    # Convert BGR back to RGB for displaying with matplotlib
-    vis_img_rgb = cv2.cvtColor(vis_img_bgr, cv2.COLOR_BGR2RGB)
-
-    return vis_img_rgb
+    return vis_img_bgr

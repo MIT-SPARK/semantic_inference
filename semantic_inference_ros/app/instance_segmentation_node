@@ -8,6 +8,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
+import cv2
 import numpy as np
 import rclpy
 import spark_config as sc
@@ -27,7 +28,9 @@ from semantic_inference_ros import Conversions, ImageWorkerConfig
 class InstanceSegmentationNodeConfig(sc.Config):
     """Configuration for ClipPublisherNode."""
 
-    worker: ImageWorkerConfig = field(default_factory=ImageWorkerConfig)
+    worker: ImageWorkerConfig = field(
+        default_factory=lambda: ImageWorkerConfig(encoding="bgr8")
+    )
     model: models.InstanceSegmenterConfig = field(
         default_factory=models.InstanceSegmenterConfig
     )
@@ -61,6 +64,11 @@ class InstanceSegmentationNode(Node):
             self.get_logger().info(f"Loading config from '{config_path}'")
             self.config = sc.Config.load(InstanceSegmentationNodeConfig, config_path)
 
+        if self.config.worker.encoding not in ("bgr8", "rgb8"):
+            raise ValueError(
+                "Instance segmentation requires bgr8 or rgb8 worker encoding"
+            )
+
         self.config.model.category_offset = 1 + len(self.config.extra_categories)
         self.get_logger().info(f"Initializing with {self.config.show()}")
         device = models.default_device()
@@ -90,9 +98,12 @@ class InstanceSegmentationNode(Node):
 
     def _spin_once(self, header, img):
         self.get_logger().debug(f"recived image of size: {img.shape}")
+        if self.config.worker.encoding == "rgb8":
+            img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+
         t0 = time.monotonic()
         with torch.no_grad():
-            ret = self._model.segment(img, is_rgb_order=True)
+            ret = self._model.segment(img, is_rgb_order=False)
 
         self._inference_times_ms.append((time.monotonic() - t0) * 1e3)
         if ret.masks is None:
@@ -120,7 +131,7 @@ class InstanceSegmentationNode(Node):
         category_names = self._model.category_names
         color_img = get_semantic_overlay_img(category_names, ret, img)
         self._overlay_pub.publish(
-            Conversions.to_image_msg(header, color_img, encoding="rgb8")
+            Conversions.to_image_msg(header, color_img, encoding="bgr8")
         )
 
     def _publish_labelspace(self):

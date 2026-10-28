@@ -85,3 +85,35 @@ def test_refinement_removes_every_detection(device):
     np.testing.assert_array_equal(result.instances, np.zeros((2, 3), dtype=np.uint32))
     assert result.masks is None
     assert result.track_ids.size == 0
+
+
+def test_rgb_and_bgr_entry_points_preserve_tracker_colors():
+    """RGB callers and native BGR callers produce the same masks and track IDs."""
+
+    class ColorDetections(nn.Module):
+        def forward(self, image):
+            masks = torch.from_numpy(image[:, :, 2] > 127).unsqueeze(0)
+            return (
+                torch.tensor([0]),
+                masks,
+                torch.tensor([[0.0, 0.0, 1.0, 1.0]]),
+                torch.tensor([1.0]),
+            )
+
+    class ColorTracker:
+        def update(self, categories, boxes, confidences, frame):
+            np.testing.assert_array_equal(frame[0, 0], [3, 17, 255])
+            return np.array([4])
+
+    config = InstanceSegmenterConfig()
+    config.instance_model = SimpleNamespace(create=ColorDetections)
+    config.instance_tracker = SimpleNamespace(create=ColorTracker)
+    model = InstanceSegmenter(config)
+    rgb = np.zeros((2, 3, 3), dtype=np.uint8)
+    rgb[0, 0] = [255, 17, 3]
+    rgb_result = model.segment(rgb)
+    bgr_result = model.segment(rgb[:, :, ::-1].copy(), is_rgb_order=False)
+    expected = np.zeros((2, 3), dtype=np.uint32)
+    expected[0, 0] = (5 << 16) | 1
+    np.testing.assert_array_equal(rgb_result.instances, expected)
+    np.testing.assert_array_equal(bgr_result.instances, expected)
