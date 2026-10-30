@@ -27,7 +27,9 @@ from semantic_inference_ros import Conversions, ImageWorkerConfig
 class InstanceSegmentationNodeConfig(sc.Config):
     """Configuration for ClipPublisherNode."""
 
-    worker: ImageWorkerConfig = field(default_factory=ImageWorkerConfig)
+    worker: ImageWorkerConfig = field(
+        default_factory=lambda: ImageWorkerConfig(encoding="bgr8")
+    )
     model: models.InstanceSegmenterConfig = field(
         default_factory=models.InstanceSegmenterConfig
     )
@@ -61,6 +63,11 @@ class InstanceSegmentationNode(Node):
             self.get_logger().info(f"Loading config from '{config_path}'")
             self.config = sc.Config.load(InstanceSegmentationNodeConfig, config_path)
 
+        if self.config.worker.encoding not in ("bgr8", "rgb8"):
+            raise ValueError(
+                "Instance segmentation requires bgr8 or rgb8 worker encoding"
+            )
+
         self.config.model.category_offset = 1 + len(self.config.extra_categories)
         self.get_logger().info(f"Initializing with {self.config.show()}")
         device = models.default_device()
@@ -90,9 +97,12 @@ class InstanceSegmentationNode(Node):
 
     def _spin_once(self, header, img):
         self.get_logger().debug(f"recived image of size: {img.shape}")
+        if self.config.worker.encoding == "rgb8":
+            img = img[:, :, ::-1].copy()
+
         t0 = time.monotonic()
         with torch.no_grad():
-            ret = self._model.segment(img, is_rgb_order=True)
+            ret = self._model.segment(img, is_rgb_order=False)
 
         self._inference_times_ms.append((time.monotonic() - t0) * 1e3)
         if ret.masks is None:
@@ -107,12 +117,21 @@ class InstanceSegmentationNode(Node):
         self._last_inference_time = self.get_clock().now().nanoseconds * 1e-9
         self.get_logger().debug("Published instance segmentation image.")
 
-        if self.config.visualize_semantic_img:
-            category_names = self._model.category_names
-            color_img = get_semantic_overlay_img(category_names, ret, img)
-            self._overlay_pub.publish(
-                Conversions.to_image_msg(header, color_img, encoding="rgb8")
-            )
+        self.visualize(header, img, ret)
+
+    def visualize(self, header, img, ret):
+        """Publish an overlay when visualization is enabled and subscribers exist."""
+        if not self.config.visualize_semantic_img:
+            return
+
+        if self._overlay_pub.get_subscription_count() == 0:
+            return
+
+        category_names = self._model.category_names
+        color_img = get_semantic_overlay_img(category_names, ret, img)
+        self._overlay_pub.publish(
+            Conversions.to_image_msg(header, color_img, encoding="bgr8")
+        )
 
     def _publish_labelspace(self):
         # categories are [unknown] + [extra non-model labels] + [model labels]

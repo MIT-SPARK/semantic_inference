@@ -143,13 +143,13 @@ class InstanceSegmenter(nn.Module):
         Segment image and compute language embeddings for each mask.
 
         Args:
-            img (np.ndarry): uint8 image of shape (R, C, 3) in rgb order
-            is_rgb_order (bool): whether the image is rgb order or not
+            rgb_img (np.ndarray): uint8 image of shape (R, C, 3)
+            is_rgb_order (bool): True for RGB input, False for BGR input
 
         Returns:
             Encoded image
         """
-        img = rgb_img if is_rgb_order else rgb_img[:, :, ::-1].copy()
+        img = rgb_img[:, :, ::-1].copy() if is_rgb_order else rgb_img
         return self(img)
 
     @property
@@ -162,17 +162,17 @@ class InstanceSegmenter(nn.Module):
         """Get category names."""
         return self.segmenter.category_names
 
-    def forward(self, rgb_img):
+    def forward(self, bgr_img):
         """
         Segment image and compute language embeddings for each mask.
 
         Args:
-            img (np.ndarray): uint8 image of shape (R, C, 3) in rgb order
+            bgr_img (np.ndarray): uint8 image of shape (R, C, 3) in BGR order
 
         Returns:
             Encoded image
         """
-        rotated = self._rotator.rotate(rgb_img)
+        rotated = self._rotator.rotate(bgr_img)
         categories, masks, boxes, confidences = self.segmenter(rotated)
 
         if self.instance_tracker is None:
@@ -197,7 +197,7 @@ class InstanceSegmenter(nn.Module):
         if masks is not None and self.segment_refinement is not None:
             # Select all masks that are not empty after refinement
             masks, refined_boxes, kept = self.segment_refinement.refine(masks, boxes)
-            boxes = refined_boxes.to(torch.float32)
+            boxes = refined_boxes.to(torch.float32).cpu()
             categories = categories[kept.to(categories.device)]
             confidences = confidences[kept.to(confidences.device)]
             track_ids = np.asarray(track_ids)[kept.cpu().numpy()]
@@ -205,7 +205,7 @@ class InstanceSegmenter(nn.Module):
                 masks = None
 
         if masks is None:
-            instances = np.zeros(rgb_img.shape[:2])
+            instances = np.zeros(bgr_img.shape[:2])
         else:
             instances = np.zeros(masks[0].shape, dtype=np.uint32)
             masks = masks.cpu().numpy()

@@ -100,41 +100,44 @@ class SegmentRefinement(nn.Module):
         if num_masks == 0:
             return masks, bboxes, torch.zeros(0, dtype=torch.int64, device=device)
 
-        # order masks
-        mask_sizes = torch.sum(masks, dim=(1, 2))
-        sorted_idx = torch.argsort(mask_sizes, descending=True)
+        refined = self._resolve_overlaps(masks)
+        if self.config.dilate_masks:
+            refined = self._apply_morphology(refined)
 
-        dims = masks.size()
-        img = torch.zeros((dims[1], dims[2], 1), dtype=sorted_idx.dtype, device=device)
-        # think about broadcasting this somehow
-        for idx in sorted_idx:
+        valid = refined.flatten(1).any(dim=1).nonzero().flatten()
+        refined = torch.index_select(refined, 0, valid)
+        boxes = torchvision.ops.masks_to_boxes(refined).to(torch.int32)
+        boxes[:, 2:] += 1
+        return refined, boxes, valid
+
+    @staticmethod
+    def _resolve_overlaps(masks):
+        device = masks.device
+        mask_sizes = torch.sum(masks, dim=(1, 2))
+        # CPU sorting preserves the original tie order for either device.
+        sorted_idx = torch.argsort(mask_sizes.cpu(), descending=True)
+        height, width = masks.shape[1:]
+        img = torch.zeros((height, width), dtype=torch.int64, device=device)
+        for idx in sorted_idx.tolist():
             img[masks[idx]] = idx + 1
 
-        m_new = torch.zeros_like(masks)
-        for idx in sorted_idx:
-            nms_indices = (img == idx + 1)[:, :, 0]
-            m_new[idx, nms_indices] = 1
+        mask_ids = torch.arange(1, masks.size(0) + 1, device=device)
+        return img.unsqueeze(0) == mask_ids[:, None, None]
 
-        # filter out small border artifacts
-        if self.config.dilate_masks:
-            N = self.config.kernel_size
-            m_new = m_new[:, None, :, :].to(torch.float32)
-            W = torch.ones((1, 1, N, N), dtype=m_new.dtype, device=device)
+    def _apply_morphology(self, masks):
+        device = masks.device
+        N = self.config.kernel_size
+        masks = masks[:, None, :, :].to(torch.float32)
+        W = torch.ones((1, 1, N, N), dtype=masks.dtype, device=device)
 
-            # erode mask
+        # erode mask
+        for _ in range(self.config.passes):
+            masks = nn.functional.conv2d(masks, W, padding="same")
+            masks[torch.abs(masks - N**2) > self.config.kernel_tolerance] = 0
+
+        # dilate mask
+        if not self.config.erode_only:
             for _ in range(self.config.passes):
-                m_new = nn.functional.conv2d(m_new, W, padding="same")
-                m_new[torch.abs(m_new - N**2) > self.config.kernel_tolerance] = 0
+                masks = nn.functional.conv2d(masks, W, padding="same")
 
-            # dilate mask
-            if not self.config.erode_only:
-                for _ in range(self.config.passes):
-                    m_new = nn.functional.conv2d(m_new, W, padding="same")
-
-            m_new = torch.squeeze(m_new, 1).to(torch.bool)
-
-        valid = torch.squeeze(torch.argwhere(torch.sum(m_new, dim=(1, 2))))
-        m_new = torch.index_select(m_new, 0, valid)
-        b_new = torchvision.ops.masks_to_boxes(m_new).to(torch.int32)
-        b_new[:, 2:] += 1
-        return m_new, b_new, valid.reshape(-1)
+        return torch.squeeze(masks, 1).to(torch.bool)

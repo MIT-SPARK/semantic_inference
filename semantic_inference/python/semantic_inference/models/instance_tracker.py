@@ -57,7 +57,7 @@ class InstanceTracker:
             categories: (n,) category ids, one per detection.
             boxes: (n, 4) xyxy boxes, one per detection.
             confidences: (n,) detection confidences.
-            frame: RGB image for this frame (H, W, 3), uint8.
+            frame: BGR image for this frame (H, W, 3), uint8.
 
         Returns:
             np.ndarray: (n,) int64 track id for every box (-1 means not associated)
@@ -91,7 +91,7 @@ class ClipReidAdapter:
             xi1, yi1 = max(int(x1), 0), max(int(y1), 0)
             xi2, yi2 = min(int(x2), w), min(int(y2), h)
             crop = img[yi1:yi2, xi1:xi2] if xi2 > xi1 and yi2 > yi1 else img
-            crops.append(self._clip._transform(Image.fromarray(crop)))
+            crops.append(self._clip._transform(Image.fromarray(crop[:, :, ::-1])))
 
         batch = torch.stack(crops).to(self._device)
         embeddings = self._clip(batch)

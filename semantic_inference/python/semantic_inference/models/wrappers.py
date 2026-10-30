@@ -340,7 +340,7 @@ class YoloInstanceSegmenterBase(nn.Module):
     """
     Base class for YOLO instance segmentation wrappers.
 
-    Subclasses must assign self.model in their __init__.
+    Subclasses must assign self.model and its inference stride self._stride.
     """
 
     def __init__(self, config):
@@ -362,21 +362,27 @@ class YoloInstanceSegmenterBase(nn.Module):
         return [v for k, v in self.model.names.items()]
 
     def forward(self, img):
-        """Segment image."""
+        """Segment a BGR image through Ultralytics' NumPy interface."""
+        # Match Ultralytics' stride rounding without a warning on every frame.
+        imgsz = [
+            (size + self._stride - 1) // self._stride * self._stride
+            for size in img.shape[:2]
+        ]
         result = self.model(
-            img,
+            np.ascontiguousarray(img),
             conf=self.config.confidence_threshold,
-            imgsz=(img.shape[0], img.shape[1]),
+            imgsz=imgsz,
             # Set True to maintain original image size for masks,
             # required for hydra, but slow down the model
             retina_masks=True,
             iou=self.config.overlap_merge_iou,
+            verbose=False,
         )[0]  # assume batch size 1
         if result.masks is None:
             return None, None, None, None
 
         categories = result.boxes.cls.to(torch.int).cpu()  # int8
-        masks = result.masks.data.to(torch.bool).cpu()
+        masks = result.masks.data.to(torch.bool)
         boxes = result.boxes.xyxy.cpu()  # float32
         confidences = result.boxes.conf.cpu()  # float32
 
@@ -384,10 +390,11 @@ class YoloInstanceSegmenterBase(nn.Module):
         if self.config.min_segmentation_size > 0:
             mask_sizes = masks.sum(dim=(1, 2))  # number of pixels in each mask
             size_indices = mask_sizes > self.config.min_segmentation_size
-            categories = categories[size_indices]
+            kept = size_indices.cpu()
+            categories = categories[kept]
             masks = masks[size_indices]
-            boxes = boxes[size_indices]
-            confidences = confidences[size_indices]
+            boxes = boxes[kept]
+            confidences = confidences[kept]
 
         return categories, masks, boxes, confidences
 
@@ -416,6 +423,7 @@ class YolosegInstanceSegmenterWrapper(YoloInstanceSegmenterBase):
 
         super().__init__(config)
         self.model = ultralytics.YOLO(self.config.model_name)
+        self._stride = max(int(self.model.model.stride.max()), 32)
 
     @classmethod
     def construct(cls, **kwargs):
@@ -446,6 +454,7 @@ class YoloeInstanceSegmenterWrapper(YoloInstanceSegmenterBase):
 
         super().__init__(config)
         self.model = ultralytics.YOLOE(self.config.model_name)
+        self._stride = max(int(self.model.model.stride.max()), 32)
         self.model.set_classes(self.config.text_prompt)
 
 
@@ -546,7 +555,8 @@ class GDSam2InstanceSegmenterWrapper(nn.Module):
         """Segment image."""
         from groundingdino.util.inference import predict
 
-        # preprocess img
+        # Grounding DINO and SAM 2 consume RGB images.
+        img = img[:, :, ::-1].copy()
         img_transformed = self.preprocess_image(img)
 
         # gdino prediction
