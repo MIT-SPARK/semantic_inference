@@ -136,8 +136,7 @@ void SimpleSink::dispatch(const LogEntry& entry) const {
 }
 
 struct SlogLogger : config::LoggerImpl {
-  void logImpl(const config::Severity severity,
-               const std::string& message) override {
+  void logImpl(const config::Severity severity, const std::string& message) override {
     switch (severity) {
       default:
       case config::Severity::kInfo:
