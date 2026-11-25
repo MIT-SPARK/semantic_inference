@@ -31,7 +31,7 @@
 
 #include "semantic_inference/logging.h"
 
-#include <config_utilities/internal/logger.h>
+#include <config_utilities/logging/set_logger.h>
 
 #include <filesystem>
 #include <iostream>
@@ -135,21 +135,21 @@ void SimpleSink::dispatch(const LogEntry& entry) const {
   std::cout << ss.str() << std::endl;
 }
 
-struct SlogLogger : config::internal::Logger {
-  void logImpl(const config::internal::Severity severity,
+struct SlogLogger : config::LoggerImpl {
+  void logImpl(const config::Severity severity,
                const std::string& message) override {
     switch (severity) {
       default:
-      case config::internal::Severity::kInfo:
+      case config::Severity::kInfo:
         logging::Logger::logMessage(Level::INFO, message);
         break;
-      case config::internal::Severity::kWarning:
+      case config::Severity::kWarning:
         logging::Logger::logMessage(Level::INFO, message);
         break;
-      case config::internal::Severity::kError:
+      case config::Severity::kError:
         logging::Logger::logMessage(Level::ERROR, message);
         break;
-      case config::internal::Severity::kFatal:
+      case config::Severity::kFatal:
         logging::Logger::logMessage(Level::FATAL, message);
         throw std::runtime_error(message);
         break;
@@ -158,7 +158,7 @@ struct SlogLogger : config::internal::Logger {
 };
 
 void setConfigUtilitiesLogger() {
-  config::internal::Logger::setLogger(std::make_shared<SlogLogger>());
+  config::setCustomLogger(std::make_shared<SlogLogger>());
 }
 
 }  // namespace logging
